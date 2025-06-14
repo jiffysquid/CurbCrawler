@@ -119,23 +119,35 @@ export default function Home() {
 
   // Handle location updates
   useEffect(() => {
-    if (location && currentSession) {
-      // Add location to current session
-      addLocationMutation.mutate({
-        sessionId: currentSession.id,
-        latitude: location.lat,
-        longitude: location.lng,
-        timestamp: new Date().toISOString(),
-        accuracy: location.accuracy || undefined
-      });
+    let intervalId: NodeJS.Timeout;
+    
+    if (location && currentSession && currentSession.isActive) {
+      // Add location to current session every 10 seconds during active tracking
+      intervalId = setInterval(() => {
+        if (location && currentSession) {
+          addLocationMutation.mutate({
+            sessionId: currentSession.id,
+            latitude: location.lat,
+            longitude: location.lng,
+            timestamp: new Date().toISOString(),
+            accuracy: location.accuracy || undefined
+          });
+        }
+      }, 10000);
 
-      // Lookup suburb for current location
+      // Lookup suburb for current location (only once when location changes)
       suburbLookupMutation.mutate({
         lat: location.lat,
         lng: location.lng
       });
     }
-  }, [location, currentSession]);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [location?.lat, location?.lng, currentSession?.id, currentSession?.isActive]);
 
   // Show location permission error
   useEffect(() => {

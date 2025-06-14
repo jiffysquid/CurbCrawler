@@ -62,3 +62,14 @@ export type SuburbBoundary = {
   coordinates: [number, number][];
   properties?: Record<string, any>;
 };
+
+export type PublicToilet = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  address?: string;
+  openHours?: string;
+  accessible?: boolean;
+  properties?: Record<string, any>;
+};

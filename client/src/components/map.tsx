@@ -5,20 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Import Leaflet dynamically to avoid SSR issues
+// Import Leaflet CSS
+import 'leaflet/dist/leaflet.css';
+
+// Leaflet instance
 let L: any = null;
-if (typeof window !== 'undefined') {
-  import('leaflet').then((leaflet) => {
-    L = leaflet.default;
-    // Fix default markers
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-    });
-  });
-}
 
 interface MapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -46,23 +37,43 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Initialize map
   useEffect(() => {
-    if (!mapRef.current || !L || mapInstanceRef.current) return;
+    const initMap = async () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map centered on Brisbane
-    const map = L.map(mapRef.current, {
-      center: [-27.4705, 153.0260],
-      zoom: 12,
-      zoomControl: true,
-    });
+      try {
+        // Import Leaflet dynamically
+        const leaflet = await import('leaflet');
+        L = leaflet.default;
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(map);
+        // Fix default markers
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
 
-    mapInstanceRef.current = map;
-    setIsMapReady(true);
+        // Initialize map centered on Brisbane
+        const map = L.map(mapRef.current, {
+          center: [-27.4705, 153.0260],
+          zoom: 12,
+          zoomControl: true,
+        });
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19
+        }).addTo(map);
+
+        mapInstanceRef.current = map;
+        setIsMapReady(true);
+      } catch (error) {
+        console.error('Failed to initialize map:', error);
+      }
+    };
+
+    initMap();
 
     return () => {
       if (mapInstanceRef.current) {

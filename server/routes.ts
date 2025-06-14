@@ -7,7 +7,7 @@ import axios from "axios";
 
 // ODS API integration for Brisbane suburb boundaries
 const ODS_API_KEY = process.env.ODS_API_KEY || process.env.VITE_ODS_API_KEY || "";
-const BRISBANE_SUBURBS_API_URL = "https://data.gov.au/geoserver/brisbane-city-council/ows";
+const QLD_DATA_API_URL = "https://www.data.qld.gov.au/api/3/action/datastore_search";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -106,48 +106,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ODS API integration for suburb boundaries
+  // Suburb boundaries using Nominatim/OpenStreetMap
   app.get("/api/suburbs/boundaries", async (req, res) => {
     try {
-      const { lat, lng, zoom } = req.query;
+      const { lat, lng } = req.query;
       
-      if (!ODS_API_KEY) {
-        return res.status(500).json({ 
-          message: "ODS API key not configured. Please set ODS_API_KEY environment variable." 
-        });
-      }
-
-      // Brisbane City Council suburb boundaries from Queensland Government Open Data
-      const response = await axios.get(BRISBANE_SUBURBS_API_URL, {
+      // Use Nominatim to get suburb boundaries around Brisbane
+      const response = await axios.get('https://nominatim.openstreetmap.org/search', {
         params: {
-          service: "WFS",
-          version: "1.0.0",
-          request: "GetFeature",
-          typeName: "brisbane-city-council:suburb_boundaries",
-          outputFormat: "application/json",
-          key: ODS_API_KEY,
-          ...(lat && lng && {
-            bbox: `${parseFloat(lng as string) - 0.1},${parseFloat(lat as string) - 0.1},${parseFloat(lng as string) + 0.1},${parseFloat(lat as string) + 0.1}`
-          })
+          q: 'Brisbane Queensland Australia',
+          format: 'geojson',
+          polygon_geojson: 1,
+          addressdetails: 1,
+          limit: 10,
+          extratags: 1
+        },
+        headers: {
+          'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
         }
       });
 
       const suburbs = response.data.features?.map((feature: any) => ({
-        name: feature.properties.suburb_name || feature.properties.name,
-        coordinates: feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]), // Swap lng,lat to lat,lng
+        name: feature.properties.display_name?.split(',')[0] || 'Brisbane Area',
+        coordinates: feature.geometry.type === 'Polygon' 
+          ? feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]])
+          : [],
         properties: feature.properties
       })) || [];
 
       res.json(suburbs);
     } catch (error) {
       console.error("Error fetching suburb boundaries:", error);
-      if (axios.isAxiosError(error)) {
-        res.status(error.response?.status || 500).json({ 
-          message: `ODS API Error: ${error.response?.data?.message || error.message}` 
-        });
-      } else {
-        res.status(500).json({ message: "Failed to fetch suburb boundaries" });
-      }
+      res.status(500).json({ message: "Failed to fetch suburb boundaries" });
     }
   });
 
@@ -192,6 +182,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         res.status(500).json({ message: "Failed to lookup suburb" });
+      }
+    }
+  });
+
+  // Public toilets in Brisbane area
+  app.get("/api/toilets", async (req, res) => {
+    try {
+      const { lat, lng, radius = 2 } = req.query;
+      
+      if (!ODS_API_KEY) {
+        return res.status(500).json({ 
+          message: "ODS API key not configured. Please set ODS_API_KEY environment variable." 
+        });
+      }
+
+      // Brisbane City Council public toilets dataset
+      const response = await axios.get(BRISBANE_SUBURBS_API_URL, {
+        params: {
+          service: "WFS",
+          version: "1.0.0",
+          request: "GetFeature",
+          typeName: "brisbane-city-council:public_toilets",
+          outputFormat: "application/json",
+          key: ODS_API_KEY,
+          ...(lat && lng && {
+            bbox: `${parseFloat(lng as string) - parseFloat(radius as string)/100},${parseFloat(lat as string) - parseFloat(radius as string)/100},${parseFloat(lng as string) + parseFloat(radius as string)/100},${parseFloat(lat as string) + parseFloat(radius as string)/100}`
+          })
+        }
+      });
+
+      const toilets = response.data.features?.map((feature: any) => ({
+        id: feature.id,
+        name: feature.properties.name || feature.properties.facility_name || 'Public Toilet',
+        lat: feature.geometry.coordinates[1],
+        lng: feature.geometry.coordinates[0],
+        address: feature.properties.address || feature.properties.location,
+        openHours: feature.properties.opening_hours || feature.properties.hours,
+        accessible: feature.properties.accessible || feature.properties.disability_access,
+        properties: feature.properties
+      })) || [];
+
+      res.json(toilets);
+    } catch (error) {
+      console.error("Error fetching public toilets:", error);
+      if (axios.isAxiosError(error)) {
+        res.status(error.response?.status || 500).json({ 
+          message: `ODS API Error: ${error.response?.data?.message || error.message}` 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to fetch public toilets" });
       }
     }
   });
