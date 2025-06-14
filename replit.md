@@ -99,8 +99,11 @@ The application is configured for deployment on Replit's autoscale platform:
 
 ## Changelog
 
-Changelog:
-- June 14, 2025. Initial setup
+- June 14, 2025: Initial setup
+- June 14, 2025: Added public toilet locations using OpenStreetMap Overpass API
+- June 14, 2025: Implemented different colored paths for each tracking session
+- June 14, 2025: Fixed map display issues and UI layering with proper z-index handling
+- June 14, 2025: Enhanced session controls with real-time statistics display
 
 ## User Preferences
 

@@ -268,16 +268,18 @@ export default function Home() {
   return (
     <div className="relative h-screen overflow-hidden">
       {/* Map Container */}
-      <Map
-        currentLocation={location}
-        sessionLocations={sessionLocations}
-        currentSuburb={currentSuburb}
-        isTracking={isTracking}
-        allSessions={sessions}
-      />
+      <div className="absolute inset-0 z-0">
+        <Map
+          currentLocation={location}
+          sessionLocations={sessionLocations}
+          currentSuburb={currentSuburb}
+          isTracking={isTracking}
+          allSessions={sessions}
+        />
+      </div>
 
       {/* Mobile Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 md:hidden">
+      <div className="absolute top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 md:hidden">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Clearout Tracker</h1>
           <Button
@@ -291,18 +293,20 @@ export default function Home() {
       </div>
 
       {/* Session Controls */}
-      <SessionControls
-        isTracking={isTracking}
-        currentSuburb={currentSuburb}
-        stats={stats}
-        location={location}
-        onStartSession={handleStartSession}
-        onStopSession={handleStopSession}
-        isLoading={createSessionMutation.isPending || updateSessionMutation.isPending}
-      />
+      <div className="z-40 relative">
+        <SessionControls
+          isTracking={isTracking}
+          currentSuburb={currentSuburb}
+          stats={stats}
+          location={location}
+          onStartSession={handleStartSession}
+          onStopSession={handleStopSession}
+          isLoading={createSessionMutation.isPending || updateSessionMutation.isPending}
+        />
+      </div>
 
       {/* Desktop Sidebar */}
-      <div className="absolute top-0 right-0 h-full w-80 bg-white shadow-xl border-l border-gray-200 z-30 hidden md:block">
+      <div className="absolute top-0 right-0 h-full w-80 bg-white shadow-xl border-l border-gray-200 z-40 hidden md:block">
         {/* Sidebar Header */}
         <div className="bg-gray-900 text-white p-6">
           <h1 className="text-xl font-bold">Clearout Tracker</h1>
@@ -348,7 +352,7 @@ export default function Home() {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <div 
             className="absolute inset-0 bg-black/50" 
             onClick={() => setIsMobileMenuOpen(false)}

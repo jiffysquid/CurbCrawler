@@ -82,6 +82,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           center: [-27.4705, 153.0260],
           zoom: 12,
           zoomControl: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          boxZoom: true,
+          keyboard: true,
+          dragging: true,
+          touchZoom: true,
         });
 
         // Add OpenStreetMap tiles
