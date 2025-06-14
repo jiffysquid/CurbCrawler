@@ -185,6 +185,78 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
   }, [publicToilets]);
 
+  // Handle historical session routes with different colors
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !allSessions.length) return;
+
+    // Clear existing historical routes
+    historicalRoutesRef.current.forEach(route => {
+      mapInstanceRef.current.removeLayer(route);
+    });
+    historicalRoutesRef.current = [];
+
+    // Add historical session routes with different colors
+    allSessions.forEach((session, index) => {
+      if (session.routeCoordinates && Array.isArray(session.routeCoordinates) && session.routeCoordinates.length > 1) {
+        const color = sessionColors[index % sessionColors.length];
+        const routeCoords = session.routeCoordinates.map((point: any) => [point.lat, point.lng]);
+        
+        const polyline = L.polyline(routeCoords, {
+          color: color,
+          weight: 3,
+          opacity: 0.7,
+          smoothFactor: 1
+        }).addTo(mapInstanceRef.current);
+
+        // Add popup with session info
+        polyline.bindPopup(`
+          <div class="text-sm">
+            <strong>Session ${session.id}</strong><br/>
+            <small>Started: ${new Date(session.startTime).toLocaleDateString()}</small><br/>
+            <small>Duration: ${session.duration ? Math.round(session.duration) : 0} minutes</small><br/>
+            <small>Distance: ${session.distance?.toFixed(1) || '0.0'} km</small><br/>
+            <small>Suburbs: ${session.suburbsVisited?.length || 0}</small>
+          </div>
+        `);
+
+        historicalRoutesRef.current.push(polyline);
+
+        // Add start and end markers for completed sessions
+        if (!session.isActive && session.startLocation && session.endLocation) {
+          const startIcon = L.divIcon({
+            className: 'session-start-marker',
+            html: `
+              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}"></div>
+            `,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+          });
+
+          const endIcon = L.divIcon({
+            className: 'session-end-marker',
+            html: `
+              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}">
+                <div class="w-1 h-1 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+              </div>
+            `,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+          });
+
+          const startMarker = L.marker([session.startLocation.lat, session.startLocation.lng], { icon: startIcon })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(`<div class="text-sm"><strong>Session ${session.id} Start</strong></div>`);
+
+          const endMarker = L.marker([session.endLocation.lat, session.endLocation.lng], { icon: endIcon })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(`<div class="text-sm"><strong>Session ${session.id} End</strong></div>`);
+
+          historicalRoutesRef.current.push(startMarker, endMarker);
+        }
+      }
+    });
+  }, [allSessions]);
+
   // Update current location marker
   useEffect(() => {
     if (!mapInstanceRef.current || !L || !currentLocation) return;
