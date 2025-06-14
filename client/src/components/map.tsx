@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LocationPoint, SuburbBoundary } from "@shared/schema";
+import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,21 +16,45 @@ interface MapProps {
   sessionLocations: LocationPoint[];
   currentSuburb: string;
   isTracking: boolean;
+  allSessions?: SessionWithStats[];
 }
 
-export default function Map({ currentLocation, sessionLocations, currentSuburb, isTracking }: MapProps) {
+export default function Map({ currentLocation, sessionLocations, currentSuburb, isTracking, allSessions = [] }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const routePolylineRef = useRef<any>(null);
   const suburbPolygonsRef = useRef<any[]>([]);
   const currentLocationMarkerRef = useRef<any>(null);
+  const toiletMarkersRef = useRef<any[]>([]);
+  const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const { toast } = useToast();
+
+  // Session colors for different paths
+  const sessionColors = [
+    '#10B981', // Green
+    '#3B82F6', // Blue  
+    '#F59E0B', // Orange
+    '#EF4444', // Red
+    '#8B5CF6', // Purple
+    '#06B6D4', // Cyan
+    '#F97316', // Orange-red
+    '#84CC16', // Lime
+    '#EC4899', // Pink
+    '#6366F1'  // Indigo
+  ];
 
   // Fetch suburb boundaries based on current location
   const { data: suburbBoundaries = [], isError: suburbError } = useQuery<SuburbBoundary[]>({
     queryKey: ['/api/suburbs/boundaries', currentLocation?.lat, currentLocation?.lng],
+    enabled: !!currentLocation && isMapReady,
+    retry: 2,
+  });
+
+  // Fetch public toilets near current location
+  const { data: publicToilets = [] } = useQuery<PublicToilet[]>({
+    queryKey: ['/api/toilets', currentLocation?.lat, currentLocation?.lng],
     enabled: !!currentLocation && isMapReady,
     retry: 2,
   });
@@ -121,6 +145,45 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       });
     }
   }, [suburbError, toast]);
+
+  // Handle public toilet markers
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !publicToilets.length) return;
+
+    // Clear existing toilet markers
+    toiletMarkersRef.current.forEach(marker => {
+      mapInstanceRef.current.removeLayer(marker);
+    });
+    toiletMarkersRef.current = [];
+
+    // Add toilet markers
+    publicToilets.forEach(toilet => {
+      const toiletIcon = L.divIcon({
+        className: 'toilet-marker',
+        html: `
+          <div class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+            🚽
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      const marker = L.marker([toilet.lat, toilet.lng], { icon: toiletIcon })
+        .addTo(mapInstanceRef.current)
+        .bindPopup(`
+          <div class="text-sm">
+            <strong>${toilet.name}</strong><br/>
+            ${toilet.address ? `${toilet.address}<br/>` : ''}
+            <small>Hours: ${toilet.openHours || '24/7'}</small><br/>
+            ${toilet.accessible ? '<small>♿ Accessible</small><br/>' : ''}
+            ${toilet.fee ? '<small>💰 Fee required</small>' : '<small>🆓 Free</small>'}
+          </div>
+        `);
+
+      toiletMarkersRef.current.push(marker);
+    });
+  }, [publicToilets]);
 
   // Update current location marker
   useEffect(() => {

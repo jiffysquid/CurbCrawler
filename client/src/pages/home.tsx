@@ -112,10 +112,10 @@ export default function Home() {
 
   // Set current session from active session query
   useEffect(() => {
-    if (activeSession && !currentSession) {
+    if (activeSession && (!currentSession || currentSession.id !== activeSession.id)) {
       setCurrentSession(activeSession);
     }
-  }, [activeSession, currentSession]);
+  }, [activeSession]);
 
   // Handle location updates
   useEffect(() => {

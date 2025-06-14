@@ -150,89 +150,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Latitude and longitude are required" });
       }
 
-      if (!ODS_API_KEY) {
-        return res.status(500).json({ 
-          message: "ODS API key not configured. Please set ODS_API_KEY environment variable." 
-        });
-      }
-
-      // Use point-in-polygon query to find which suburb contains the coordinates
-      const response = await axios.get(BRISBANE_SUBURBS_API_URL, {
+      // Use Nominatim reverse geocoding
+      const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
         params: {
-          service: "WFS",
-          version: "1.0.0",
-          request: "GetFeature",
-          typeName: "brisbane-city-council:suburb_boundaries",
-          outputFormat: "application/json",
-          key: ODS_API_KEY,
-          cql_filter: `INTERSECTS(the_geom, POINT(${lng} ${lat}))`
+          lat: lat,
+          lon: lng,
+          format: 'json',
+          addressdetails: 1
+        },
+        headers: {
+          'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
         }
       });
 
-      const suburb = response.data.features?.[0]?.properties?.suburb_name || 
-                    response.data.features?.[0]?.properties?.name || 
+      const suburb = response.data.address?.suburb || 
+                    response.data.address?.neighbourhood ||
+                    response.data.address?.city_district ||
+                    response.data.address?.city ||
                     "Unknown";
 
       res.json({ suburb });
     } catch (error) {
       console.error("Error looking up suburb:", error);
-      if (axios.isAxiosError(error)) {
-        res.status(error.response?.status || 500).json({ 
-          message: `ODS API Error: ${error.response?.data?.message || error.message}` 
-        });
-      } else {
-        res.status(500).json({ message: "Failed to lookup suburb" });
-      }
+      res.status(500).json({ message: "Failed to lookup suburb" });
     }
   });
 
-  // Public toilets in Brisbane area
+  // Public toilets using Overpass API (OpenStreetMap)
   app.get("/api/toilets", async (req, res) => {
     try {
       const { lat, lng, radius = 2 } = req.query;
-      
-      if (!ODS_API_KEY) {
-        return res.status(500).json({ 
-          message: "ODS API key not configured. Please set ODS_API_KEY environment variable." 
-        });
-      }
+      const centerLat = lat ? parseFloat(lat as string) : -27.4705;
+      const centerLng = lng ? parseFloat(lng as string) : 153.0260;
+      const searchRadius = parseFloat(radius as string) * 1000; // Convert km to meters
 
-      // Brisbane City Council public toilets dataset
-      const response = await axios.get(BRISBANE_SUBURBS_API_URL, {
-        params: {
-          service: "WFS",
-          version: "1.0.0",
-          request: "GetFeature",
-          typeName: "brisbane-city-council:public_toilets",
-          outputFormat: "application/json",
-          key: ODS_API_KEY,
-          ...(lat && lng && {
-            bbox: `${parseFloat(lng as string) - parseFloat(radius as string)/100},${parseFloat(lat as string) - parseFloat(radius as string)/100},${parseFloat(lng as string) + parseFloat(radius as string)/100},${parseFloat(lat as string) + parseFloat(radius as string)/100}`
-          })
+      // Use Overpass API to find public toilets
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng});
+        );
+        out geom;
+      `;
+
+      const response = await axios.post('https://overpass-api.de/api/interpreter', overpassQuery, {
+        headers: {
+          'Content-Type': 'text/plain',
+          'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
         }
       });
 
-      const toilets = response.data.features?.map((feature: any) => ({
-        id: feature.id,
-        name: feature.properties.name || feature.properties.facility_name || 'Public Toilet',
-        lat: feature.geometry.coordinates[1],
-        lng: feature.geometry.coordinates[0],
-        address: feature.properties.address || feature.properties.location,
-        openHours: feature.properties.opening_hours || feature.properties.hours,
-        accessible: feature.properties.accessible || feature.properties.disability_access,
-        properties: feature.properties
+      const toilets = response.data.elements?.map((element: any) => ({
+        id: element.id.toString(),
+        name: element.tags?.name || 'Public Toilet',
+        lat: element.lat,
+        lng: element.lon,
+        address: element.tags?.["addr:full"] || element.tags?.["addr:street"],
+        openHours: element.tags?.opening_hours || '24/7',
+        accessible: element.tags?.wheelchair === 'yes',
+        fee: element.tags?.fee === 'yes',
+        properties: element.tags
       })) || [];
 
       res.json(toilets);
     } catch (error) {
       console.error("Error fetching public toilets:", error);
-      if (axios.isAxiosError(error)) {
-        res.status(error.response?.status || 500).json({ 
-          message: `ODS API Error: ${error.response?.data?.message || error.message}` 
-        });
-      } else {
-        res.status(500).json({ message: "Failed to fetch public toilets" });
-      }
+      res.status(500).json({ message: "Failed to fetch public toilets" });
     }
   });
 
