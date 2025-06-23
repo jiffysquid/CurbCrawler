@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           brisbaneDate: brisbaneTime.toISOString(),
           month: month + 1,
           date: date,
-          lastUpdated: now.toISOString(),
+          lastUpdated: brisbaneTime.toISOString(),
           message: "Brisbane Council clearout schedules typically resume mid-July after the financial year break"
         });
         return;
@@ -340,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           brisbaneDate: brisbaneTime.toISOString(),
           month: month + 1,
           date: date,
-          lastUpdated: now.toISOString(),
+          lastUpdated: brisbaneTime.toISOString(),
           message: "Unable to retrieve current clearout schedule from Brisbane Council"
         });
         return;
@@ -379,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         month: month + 1,
         date: date,
         weekOfMonth,
-        lastUpdated: now.toISOString(),
+        lastUpdated: brisbaneTime.toISOString(),
         warning: "Schedule approximated from Brisbane Council patterns - actual dates may vary"
       });
       
