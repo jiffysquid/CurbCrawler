@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,13 +6,44 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Battery, Database, AlertTriangle } from "lucide-react";
+import { Map, Battery, Database, AlertTriangle, Focus } from "lucide-react";
 
 export default function Settings() {
   const [mapStyle, setMapStyle] = useState<string>("street");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
+  const [focusArea, setFocusArea] = useState<string>("brisbane-city");
   const { toast } = useToast();
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedFocusArea = localStorage.getItem('focusArea');
+    const savedMapStyle = localStorage.getItem('mapStyle');
+    const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
+    const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
+    
+    if (savedFocusArea) setFocusArea(savedFocusArea);
+    if (savedMapStyle) setMapStyle(savedMapStyle);
+    if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
+    if (savedShowSuburbs) setShowSuburbBoundaries(savedShowSuburbs === 'true');
+  }, []);
+
+  // Save settings to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('focusArea', focusArea);
+  }, [focusArea]);
+
+  useEffect(() => {
+    localStorage.setItem('mapStyle', mapStyle);
+  }, [mapStyle]);
+
+  useEffect(() => {
+    localStorage.setItem('gpsAccuracy', gpsAccuracy);
+  }, [gpsAccuracy]);
+
+  useEffect(() => {
+    localStorage.setItem('showSuburbBoundaries', String(showSuburbBoundaries));
+  }, [showSuburbBoundaries]);
 
   const handleClearData = () => {
     // In a real app, this would clear session data from storage
@@ -45,6 +76,29 @@ export default function Settings() {
                 <SelectItem value="terrain">Terrain</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="focus-area" className="text-xs font-medium">Focus Area</Label>
+            <Select value={focusArea} onValueChange={setFocusArea}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="brisbane-city">Brisbane City Center</SelectItem>
+                <SelectItem value="fortitude-valley">Fortitude Valley</SelectItem>
+                <SelectItem value="south-brisbane">South Brisbane</SelectItem>
+                <SelectItem value="new-farm">New Farm</SelectItem>
+                <SelectItem value="west-end">West End</SelectItem>
+                <SelectItem value="kangaroo-point">Kangaroo Point</SelectItem>
+                <SelectItem value="spring-hill">Spring Hill</SelectItem>
+                <SelectItem value="paddington">Paddington</SelectItem>
+                <SelectItem value="current-location">Current Location</SelectItem>
+              </SelectContent>
+            </Select>
+            <CardDescription className="text-xs">
+              Area to focus on when using the focus button
+            </CardDescription>
           </div>
 
           <div className="flex items-center justify-between">

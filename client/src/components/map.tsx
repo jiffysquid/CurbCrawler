@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Crosshair } from "lucide-react";
+import { Crosshair, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getFocusAreaCoordinates } from "@/lib/utils";
 
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
@@ -30,7 +31,26 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [showSuburbs, setShowSuburbs] = useState(true);
+  const [focusArea, setFocusArea] = useState<string>('brisbane-city');
   const { toast } = useToast();
+
+  // Load focus area from localStorage and listen for changes
+  useEffect(() => {
+    const savedFocusArea = localStorage.getItem('focusArea');
+    if (savedFocusArea) {
+      setFocusArea(savedFocusArea);
+    }
+
+    // Listen for storage changes from settings panel
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'focusArea' && e.newValue) {
+        setFocusArea(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Session colors for different paths
   const sessionColors = [
@@ -431,6 +451,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   };
 
+  const focusOnArea = () => {
+    if (mapInstanceRef.current) {
+      const coordinates = getFocusAreaCoordinates(focusArea, currentLocation);
+      mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], coordinates.zoom);
+    }
+  };
+
   return (
     <div className="relative h-full w-full">
       <div 
@@ -509,12 +536,23 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           </span>
         </Button>
         
-        {/* Center on location button */}
+        {/* Focus Area button */}
+        <Button
+          onClick={focusOnArea}
+          size="sm"
+          className="bg-primary hover:bg-blue-700 text-white shadow-lg"
+          title={`Focus on ${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
+        >
+          <Focus className="h-4 w-4" />
+        </Button>
+        
+        {/* Center on current location button */}
         {currentLocation && (
           <Button
             onClick={centerOnCurrentLocation}
             size="sm"
-            className="bg-primary hover:bg-blue-700 text-white shadow-lg"
+            className="bg-gray-600 hover:bg-gray-700 text-white shadow-lg"
+            title="Center on current location"
           >
             <Crosshair className="h-4 w-4" />
           </Button>
