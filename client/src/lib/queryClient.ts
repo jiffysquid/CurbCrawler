@@ -34,11 +34,12 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      return null as T;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    return data as T;
   };
 
 export const queryClient = new QueryClient({

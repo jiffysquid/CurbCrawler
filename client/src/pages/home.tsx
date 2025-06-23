@@ -25,7 +25,7 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   // Fetch active session on mount
-  const { data: activeSession, isLoading: isLoadingActiveSession } = useQuery({
+  const { data: activeSession, isLoading: isLoadingActiveSession } = useQuery<Session | null>({
     queryKey: ['/api/sessions/active'],
   });
 
@@ -112,10 +112,10 @@ export default function Home() {
 
   // Set current session from active session query
   useEffect(() => {
-    if (activeSession && activeSession.id && (!currentSession || currentSession.id !== activeSession.id)) {
+    if (activeSession && activeSession.id && (!currentSession || (currentSession.id !== activeSession.id))) {
       setCurrentSession(activeSession);
     }
-  }, [activeSession?.id]);
+  }, [activeSession?.id, currentSession?.id]);
 
   // Handle location updates
   useEffect(() => {

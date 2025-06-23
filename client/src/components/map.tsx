@@ -229,35 +229,40 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
         // Add start and end markers for completed sessions
         if (!session.isActive && session.startLocation && session.endLocation) {
-          const startIcon = L.divIcon({
-            className: 'session-start-marker',
-            html: `
-              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}"></div>
-            `,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-          });
+          const startLoc = session.startLocation as any;
+          const endLoc = session.endLocation as any;
+          
+          if (startLoc.lat && startLoc.lng && endLoc.lat && endLoc.lng) {
+            const startIcon = L.divIcon({
+              className: 'session-start-marker',
+              html: `
+                <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}"></div>
+              `,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6]
+            });
 
-          const endIcon = L.divIcon({
-            className: 'session-end-marker',
-            html: `
-              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}">
-                <div class="w-1 h-1 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-              </div>
-            `,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-          });
+            const endIcon = L.divIcon({
+              className: 'session-end-marker',
+              html: `
+                <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}">
+                  <div class="w-1 h-1 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+                </div>
+              `,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6]
+            });
 
-          const startMarker = L.marker([session.startLocation.lat, session.startLocation.lng], { icon: startIcon })
-            .addTo(mapInstanceRef.current)
-            .bindPopup(`<div class="text-sm"><strong>Session ${session.id} Start</strong></div>`);
+            const startMarker = L.marker([startLoc.lat, startLoc.lng], { icon: startIcon })
+              .addTo(mapInstanceRef.current)
+              .bindPopup(`<div class="text-sm"><strong>Session ${session.id} Start</strong></div>`);
 
-          const endMarker = L.marker([session.endLocation.lat, session.endLocation.lng], { icon: endIcon })
-            .addTo(mapInstanceRef.current)
-            .bindPopup(`<div class="text-sm"><strong>Session ${session.id} End</strong></div>`);
+            const endMarker = L.marker([endLoc.lat, endLoc.lng], { icon: endIcon })
+              .addTo(mapInstanceRef.current)
+              .bindPopup(`<div class="text-sm"><strong>Session ${session.id} End</strong></div>`);
 
-          historicalRoutesRef.current.push(startMarker, endMarker);
+            historicalRoutesRef.current.push(startMarker, endMarker);
+          }
         }
       }
     });

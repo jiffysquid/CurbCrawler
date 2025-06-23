@@ -30,8 +30,16 @@ export class MemStorage implements IStorage {
   async createSession(insertSession: InsertSession): Promise<Session> {
     const id = this.sessionIdCounter++;
     const session: Session = {
-      ...insertSession,
       id,
+      startTime: insertSession.startTime,
+      endTime: insertSession.endTime || null,
+      duration: insertSession.duration || null,
+      distance: insertSession.distance || null,
+      isActive: insertSession.isActive || true,
+      suburbsVisited: insertSession.suburbsVisited || null,
+      routeCoordinates: insertSession.routeCoordinates || null,
+      startLocation: insertSession.startLocation || null,
+      endLocation: insertSession.endLocation || null,
     };
     this.sessions.set(id, session);
     return session;
@@ -77,8 +85,13 @@ export class MemStorage implements IStorage {
   async addLocation(insertLocation: InsertLocation): Promise<Location> {
     const id = this.locationIdCounter++;
     const location: Location = {
-      ...insertLocation,
       id,
+      sessionId: insertLocation.sessionId,
+      latitude: insertLocation.latitude,
+      longitude: insertLocation.longitude,
+      timestamp: insertLocation.timestamp,
+      suburb: insertLocation.suburb || null,
+      accuracy: insertLocation.accuracy || null,
     };
     this.locations.set(id, location);
     return location;

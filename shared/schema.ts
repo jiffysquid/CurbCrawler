@@ -31,6 +31,8 @@ export const insertSessionSchema = createInsertSchema(sessions).omit({
 
 export const insertLocationSchema = createInsertSchema(locations).omit({
   id: true,
+}).extend({
+  sessionId: z.number(),
 });
 
 export const updateSessionSchema = createInsertSchema(sessions).partial().omit({
