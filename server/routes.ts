@@ -174,33 +174,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const suburbPromises = suburbNames.map(async (suburbName) => {
         try {
-          const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-            params: {
+          // Try multiple search strategies for better boundary results
+          const searchStrategies = [
+            // Strategy 1: Specific administrative boundary search
+            {
               q: suburbName,
               format: 'geojson',
               polygon_geojson: 1,
               addressdetails: 1,
-              limit: 1
+              limit: 5,
+              featureType: 'boundary'
             },
-            headers: {
-              'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
-            },
-            timeout: 10000
-          });
+            // Strategy 2: General place search
+            {
+              q: suburbName,
+              format: 'geojson',
+              polygon_geojson: 1,
+              addressdetails: 1,
+              limit: 3
+            }
+          ];
 
-          if (response.data.features && response.data.features.length > 0) {
-            const feature = response.data.features[0];
-            if (feature.geometry && feature.geometry.type === 'Polygon') {
-              return {
-                name: feature.properties.display_name.split(',')[0],
-                coordinates: feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]),
-                properties: feature.properties
-              };
+          for (const params of searchStrategies) {
+            const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+              params,
+              headers: {
+                'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
+              },
+              timeout: 10000
+            });
+
+            if (response.data.features && response.data.features.length > 0) {
+              // Find the best feature with polygon geometry
+              const polygonFeature = response.data.features.find((feature: any) => 
+                feature.geometry && 
+                (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') &&
+                feature.properties.display_name.toLowerCase().includes(suburbName.split(',')[0].toLowerCase())
+              );
+
+              if (polygonFeature) {
+                let coordinates: number[][] = [];
+                
+                if (polygonFeature.geometry.type === 'Polygon') {
+                  coordinates = polygonFeature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]);
+                } else if (polygonFeature.geometry.type === 'MultiPolygon') {
+                  // Use the largest polygon from multipolygon
+                  const polygons = polygonFeature.geometry.coordinates;
+                  const largestPolygon = polygons.reduce((largest: any, current: any) => 
+                    current[0].length > largest[0].length ? current : largest
+                  );
+                  coordinates = largestPolygon[0].map((coord: number[]) => [coord[1], coord[0]]);
+                }
+
+                if (coordinates.length > 3) {
+                  return {
+                    name: suburbName.split(',')[0],
+                    coordinates,
+                    properties: polygonFeature.properties
+                  };
+                }
+              }
             }
           }
           return null;
         } catch (error) {
-          console.log(`Failed to fetch boundary for ${suburbName}`);
+          console.log(`Failed to fetch boundary for ${suburbName}:`, error);
           return null;
         }
       });
