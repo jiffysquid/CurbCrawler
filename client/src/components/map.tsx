@@ -404,23 +404,42 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Handle vehicle marker display
   useEffect(() => {
-    if (!mapInstanceRef.current || !L || !currentLocation) return;
+    console.log('Vehicle marker effect triggered:', { 
+      mapReady: !!mapInstanceRef.current, 
+      leafletLoaded: !!L, 
+      hasLocation: !!currentLocation,
+      focusArea,
+      currentLocation 
+    });
+    
+    if (!mapInstanceRef.current || !L || !currentLocation) {
+      console.log('Vehicle marker: Missing requirements');
+      return;
+    }
 
     // Remove existing vehicle marker
     if (vehicleMarkerRef.current) {
       mapInstanceRef.current.removeLayer(vehicleMarkerRef.current);
+      console.log('Removed existing vehicle marker');
     }
 
     // Create vehicle icon based on selected vehicle type
     let vehicleIcon;
     if (focusArea === 'imax-van') {
       // Use the provided IMAX van image
-      vehicleIcon = L.icon({
-        iconUrl: '/attached_assets/imax_1750683369388.png',
+      vehicleIcon = L.divIcon({
+        className: 'vehicle-marker',
+        html: `
+          <div class="relative w-10 h-10 flex items-center justify-center">
+            <img src="/attached_assets/imax_1750683369388.png" 
+                 alt="IMAX Van" 
+                 class="w-10 h-10 object-contain drop-shadow-lg rounded-lg bg-white/90 p-1"
+                 onerror="console.error('Failed to load vehicle image')" />
+          </div>
+        `,
         iconSize: [40, 40],
         iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-        className: 'vehicle-marker drop-shadow-lg'
+        popupAnchor: [0, -20]
       });
     } else {
       // Use emoji icons for other vehicle types
@@ -438,19 +457,25 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
 
     // Create vehicle marker
-    vehicleMarkerRef.current = L.marker([currentLocation.lat, currentLocation.lng], { 
-      icon: vehicleIcon 
-    }).addTo(mapInstanceRef.current);
+    try {
+      vehicleMarkerRef.current = L.marker([currentLocation.lat, currentLocation.lng], { 
+        icon: vehicleIcon 
+      }).addTo(mapInstanceRef.current);
 
-    // Add popup with vehicle info
-    vehicleMarkerRef.current.bindPopup(`
-      <div class="text-sm">
-        <strong>${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong><br/>
-        <small>Vehicle Position</small><br/>
-        <small>Lat: ${currentLocation.lat.toFixed(6)}</small><br/>
-        <small>Lng: ${currentLocation.lng.toFixed(6)}</small>
-      </div>
-    `);
+      console.log('Vehicle marker created successfully at:', currentLocation.lat, currentLocation.lng);
+
+      // Add popup with vehicle info
+      vehicleMarkerRef.current.bindPopup(`
+        <div class="text-sm">
+          <strong>${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong><br/>
+          <small>Vehicle Position</small><br/>
+          <small>Lat: ${currentLocation.lat.toFixed(6)}</small><br/>
+          <small>Lng: ${currentLocation.lng.toFixed(6)}</small>
+        </div>
+      `);
+    } catch (error) {
+      console.error('Failed to create vehicle marker:', error);
+    }
   }, [currentLocation, focusArea]);
 
   // Update route polyline

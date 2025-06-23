@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
@@ -23,6 +23,35 @@ export default function Home() {
   const { data: sessions = [] } = useQuery<SessionWithStats[]>({
     queryKey: ['/api/sessions'],
   });
+
+  // Initialize geolocation on page load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+          console.log('Location obtained:', position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          toast({
+            title: "Location Access Required",
+            description: "Please allow location access to see your vehicle marker and use tracking features.",
+            variant: "destructive",
+          });
+        },
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000, 
+          maximumAge: 60000 
+        }
+      );
+    }
+  }, [toast]);
 
   // Simple geolocation
   const startWatching = () => {
