@@ -426,20 +426,37 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     // Create vehicle icon based on selected vehicle type
     let vehicleIcon;
     if (focusArea === 'imax-van') {
-      // Use the provided IMAX van image
+      // Use a custom IMAX van SVG
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker',
         html: `
-          <div class="relative w-10 h-10 flex items-center justify-center">
-            <img src="/attached_assets/imax_1750683369388.png" 
-                 alt="IMAX Van" 
-                 class="w-10 h-10 object-contain drop-shadow-lg rounded-lg bg-white/90 p-1"
-                 onerror="console.error('Failed to load vehicle image')" />
+          <div class="relative w-12 h-12 flex items-center justify-center">
+            <svg width="48" height="48" viewBox="0 0 48 48" class="drop-shadow-lg">
+              <!-- Van body -->
+              <rect x="6" y="18" width="36" height="16" rx="2" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+              <!-- Van roof -->
+              <rect x="8" y="12" width="32" height="8" rx="2" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.5"/>
+              <!-- Windshield -->
+              <rect x="10" y="14" width="8" height="4" rx="1" fill="#93c5fd" stroke="#1f2937" stroke-width="0.5"/>
+              <!-- Side windows -->
+              <rect x="20" y="14" width="6" height="4" rx="1" fill="#93c5fd" stroke="#1f2937" stroke-width="0.5"/>
+              <rect x="28" y="14" width="6" height="4" rx="1" fill="#93c5fd" stroke="#1f2937" stroke-width="0.5"/>
+              <!-- Front grille -->
+              <rect x="4" y="20" width="2" height="12" rx="1" fill="#374151"/>
+              <!-- Wheels -->
+              <circle cx="14" cy="36" r="4" fill="#374151" stroke="#000" stroke-width="1"/>
+              <circle cx="14" cy="36" r="2" fill="#6b7280"/>
+              <circle cx="34" cy="36" r="4" fill="#374151" stroke="#000" stroke-width="1"/>
+              <circle cx="34" cy="36" r="2" fill="#6b7280"/>
+              <!-- IMAX logo area -->
+              <rect x="22" y="22" width="12" height="6" rx="1" fill="#3b82f6"/>
+              <text x="28" y="26.5" text-anchor="middle" fill="white" font-size="6" font-weight="bold">IMAX</text>
+            </svg>
           </div>
         `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+        popupAnchor: [0, -24]
       });
     } else {
       // Use emoji icons for other vehicle types
