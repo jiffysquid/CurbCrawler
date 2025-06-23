@@ -115,16 +115,16 @@ export default function Home() {
     if (activeSession && activeSession.id && (!currentSession || (currentSession.id !== activeSession.id))) {
       setCurrentSession(activeSession);
     }
-  }, [activeSession?.id, currentSession?.id]);
+  }, [activeSession]);
 
   // Handle location updates
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
-    if (location && currentSession && currentSession.isActive) {
+    if (location && currentSession?.isActive) {
       // Add location to current session every 10 seconds during active tracking
       intervalId = setInterval(() => {
-        if (location && currentSession) {
+        if (location && currentSession?.id) {
           addLocationMutation.mutate({
             sessionId: currentSession.id,
             latitude: location.lat,
@@ -134,12 +134,6 @@ export default function Home() {
           });
         }
       }, 10000);
-
-      // Lookup suburb for current location (only once when location changes)
-      suburbLookupMutation.mutate({
-        lat: location.lat,
-        lng: location.lng
-      });
     }
 
     return () => {
@@ -148,6 +142,16 @@ export default function Home() {
       }
     };
   }, [location?.lat, location?.lng, currentSession?.id, currentSession?.isActive]);
+
+  // Separate effect for suburb lookup to avoid infinite loops
+  useEffect(() => {
+    if (location && !suburbLookupMutation.isPending) {
+      suburbLookupMutation.mutate({
+        lat: location.lat,
+        lng: location.lng
+      });
+    }
+  }, [location?.lat, location?.lng]);
 
   // Show location permission error
   useEffect(() => {

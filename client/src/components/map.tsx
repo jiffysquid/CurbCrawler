@@ -88,6 +88,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           keyboard: true,
           dragging: true,
           touchZoom: true,
+          tap: true,
+          tapTolerance: 15,
         });
 
         // Add OpenStreetMap tiles
@@ -360,7 +362,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   return (
     <div className="relative h-full w-full">
-      <div ref={mapRef} className="h-full w-full" />
+      <div 
+        ref={mapRef} 
+        className="h-full w-full z-0" 
+        style={{ 
+          cursor: 'grab'
+        }} 
+      />
       
       {/* Center on location button */}
       {currentLocation && (

@@ -66,6 +66,32 @@
   width: 100%;
   font-family: 'Inter', system-ui, sans-serif;
   z-index: 1;
+  cursor: grab !important;
+  touch-action: manipulation !important;
+}
+
+.leaflet-container:active {
+  cursor: grabbing !important;
+}
+
+.leaflet-container .leaflet-control-container {
+  pointer-events: auto !important;
+}
+
+.leaflet-container a {
+  pointer-events: auto !important;
+}
+
+.leaflet-dragging .leaflet-container {
+  cursor: grabbing !important;
+}
+
+.leaflet-container .leaflet-marker-pane {
+  pointer-events: auto !important;
+}
+
+.leaflet-container .leaflet-popup-pane {
+  pointer-events: auto !important;
 }
 
 .leaflet-control-container .leaflet-control {
