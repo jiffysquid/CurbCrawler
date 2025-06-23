@@ -270,9 +270,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Brisbane Council Clearout Schedule
   app.get("/api/clearout-schedule", async (req, res) => {
     try {
-      // Get current Brisbane time
-      const now = new Date();
-      const brisbaneTime = new Date(now.toLocaleString("en-US", {timeZone: "Australia/Brisbane"}));
+      // Spoof date to mid-July for testing (remove this for production)
+      const spoofedDate = new Date('2025-07-15T10:00:00');
+      const brisbaneTime = new Date(spoofedDate.toLocaleString("en-US", {timeZone: "Australia/Brisbane"}));
       
       console.log(`Current Brisbane time: ${brisbaneTime.toISOString()}`);
       console.log(`Brisbane date: ${brisbaneTime.getDate()}/${brisbaneTime.getMonth() + 1}/${brisbaneTime.getFullYear()}`);
