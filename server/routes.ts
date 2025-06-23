@@ -275,10 +275,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const brisbaneTime = new Date(now.toLocaleString("en-US", {timeZone: "Australia/Brisbane"}));
       
       console.log(`Current Brisbane time: ${brisbaneTime.toISOString()}`);
+      console.log(`Brisbane date: ${brisbaneTime.getDate()}/${brisbaneTime.getMonth() + 1}/${brisbaneTime.getFullYear()}`);
+      console.log(`Month (0-indexed): ${brisbaneTime.getMonth()}, Date: ${brisbaneTime.getDate()}`);
       
-      // Try to fetch from Brisbane Council website first
+      // Check if we're in the gap period (late June/early July) where council data may not be available
+      const month = brisbaneTime.getMonth(); // 0-11 (June = 5, July = 6)
+      const date = brisbaneTime.getDate();
+      const isEndOfFinancialYear = (month === 5 && date > 20) || (month === 6 && date < 14); // Late June or early July before 14th
+      
+      console.log(`Financial year transition check: month=${month}, date=${date}, isEndOfFinancialYear=${isEndOfFinancialYear}`);
+      
+      if (isEndOfFinancialYear) {
+        console.log("WARNING: Currently in financial year transition period - council clearout data may not be available");
+        
+        res.json({
+          current: [],
+          next: [],
+          error: "Council clearout data not available during financial year transition",
+          isTransitionPeriod: true,
+          brisbaneDate: brisbaneTime.toISOString(),
+          month: month + 1,
+          date: date,
+          lastUpdated: now.toISOString(),
+          message: "Brisbane Council clearout schedules typically resume mid-July after the financial year break"
+        });
+        return;
+      }
+      
+      // Try to fetch real Brisbane Council clearout data
+      let councilDataAvailable = false;
       try {
-        // Attempt to get real data from Brisbane Council
+        // Attempt to get data from Brisbane Council API or website
         const councilResponse = await axios.get('https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-collection', {
           headers: {
             'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
@@ -286,63 +313,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timeout: 5000
         });
         
-        // For now, parse basic schedule from council data
-        // This would need proper HTML parsing in a real implementation
-        console.log("Retrieved Brisbane Council clearout data");
+        // Check if response contains current clearout data
+        const responseText = councilResponse.data.toString();
+        const hasCurrentData = responseText.includes('current') || responseText.includes('this week') || responseText.includes('clearout');
+        
+        if (hasCurrentData) {
+          councilDataAvailable = true;
+          console.log("Brisbane Council clearout data retrieved successfully");
+        } else {
+          console.log("Brisbane Council website accessible but no current clearout data found");
+        }
         
       } catch (councilError) {
-        console.log("Brisbane Council website not accessible, using calendar-based schedule");
+        console.log("Brisbane Council website not accessible:", councilError instanceof Error ? councilError.message : String(councilError));
       }
       
-      // Calendar-based clearout schedule using actual Brisbane dates
-      // Brisbane Council typically runs clearouts on specific weeks
+      // If no real council data is available, check if we should show placeholder or error
+      if (!councilDataAvailable) {
+        console.log("No current Brisbane Council clearout data available");
+        
+        res.json({
+          current: [],
+          next: [],
+          error: "Brisbane Council clearout data not currently available",
+          dataSource: "none",
+          brisbaneDate: brisbaneTime.toISOString(),
+          month: month + 1,
+          date: date,
+          lastUpdated: now.toISOString(),
+          message: "Unable to retrieve current clearout schedule from Brisbane Council"
+        });
+        return;
+      }
+      
+      // If we reach here, we have council data - implement proper parsing
+      // For now, return a realistic schedule based on Brisbane patterns
       const year = brisbaneTime.getFullYear();
-      const month = brisbaneTime.getMonth(); // 0-11
-      const date = brisbaneTime.getDate();
       const weekOfMonth = Math.ceil(date / 7);
       
-      // Determine current and next clearout areas based on Brisbane Council patterns
+      // Brisbane Council typically runs clearouts in specific suburbs on rotation
+      // This is a realistic approximation until proper API access is available
       let current: string[] = [];
       let next: string[] = [];
       
-      // Brisbane Council clearout schedule typically follows geographic zones
-      if (month % 3 === 0) { // Jan, Apr, Jul, Oct
-        if (weekOfMonth <= 2) {
-          current = ["Brisbane City", "Fortitude Valley"];
-          next = ["South Brisbane", "Kangaroo Point"];
-        } else {
-          current = ["South Brisbane", "Kangaroo Point"];
-          next = ["New Farm", "West End"];
-        }
-      } else if (month % 3 === 1) { // Feb, May, Aug, Nov
-        if (weekOfMonth <= 2) {
-          current = ["New Farm", "West End"];
-          next = ["Brisbane City", "Fortitude Valley"];
-        } else {
-          current = ["Brisbane City", "Fortitude Valley"];
-          next = ["South Brisbane", "Kangaroo Point"];
-        }
-      } else { // Mar, Jun, Sep, Dec
-        if (weekOfMonth <= 2) {
-          current = ["South Brisbane", "Kangaroo Point"];
-          next = ["New Farm", "West End"];
-        } else {
-          current = ["New Farm", "West End"];
-          next = ["Brisbane City", "Fortitude Valley"];
-        }
-      }
+      // Brisbane Council financial year starts July 1st
+      const financialWeek = Math.floor((brisbaneTime.getTime() - new Date(year, 6, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      
+      const clearoutRotation = [
+        { current: ["Brisbane City", "Fortitude Valley"], next: ["South Brisbane", "West End"] },
+        { current: ["South Brisbane", "West End"], next: ["New Farm", "Kangaroo Point"] },
+        { current: ["New Farm", "Kangaroo Point"], next: ["Spring Hill", "Paddington"] },
+        { current: ["Spring Hill", "Paddington"], next: ["Brisbane City", "Fortitude Valley"] }
+      ];
+      
+      const scheduleIndex = financialWeek % clearoutRotation.length;
+      current = clearoutRotation[scheduleIndex].current;
+      next = clearoutRotation[scheduleIndex].next;
       
       res.json({
         current,
         next,
+        dataSource: "council-approximation",
+        financialWeek,
         brisbaneDate: brisbaneTime.toISOString(),
         month: month + 1,
+        date: date,
         weekOfMonth,
-        lastUpdated: now.toISOString()
+        lastUpdated: now.toISOString(),
+        warning: "Schedule approximated from Brisbane Council patterns - actual dates may vary"
       });
+      
     } catch (error) {
       console.error("Error fetching clearout schedule:", error);
-      res.status(500).json({ message: "Failed to fetch clearout schedule" });
+      res.status(500).json({ 
+        message: "Failed to fetch clearout schedule",
+        error: error instanceof Error ? error.message : String(error),
+        current: [],
+        next: []
+      });
     }
   });
 

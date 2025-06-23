@@ -55,11 +55,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   });
 
   // Fetch council clearout schedule
-  const { data: clearoutSchedule } = useQuery<{
+  const { data: clearoutSchedule, error: clearoutError } = useQuery<{
     current: string[];
     next: string[];
-    weekNumber: number;
+    weekNumber?: number;
     lastUpdated: string;
+    error?: string;
+    isTransitionPeriod?: boolean;
+    message?: string;
+    dataSource?: string;
+    warning?: string;
   }>({
     queryKey: ['/api/clearout-schedule'],
     enabled: isMapReady,
@@ -437,32 +442,55 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       />
       
       {/* Clearout Schedule Legend */}
-      {showSuburbs && clearoutSchedule && (
+      {showSuburbs && (
         <div className="absolute top-4 right-4 md:top-6 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-64">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Council Clearout Schedule</h3>
           
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-green-600 bg-green-100 rounded-sm"></div>
-              <span className="text-gray-700">Current clearout areas</span>
+          {clearoutSchedule?.error || clearoutSchedule?.isTransitionPeriod ? (
+            <div className="space-y-2 text-xs">
+              <div className="text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                <strong>Notice:</strong><br />
+                {clearoutSchedule.isTransitionPeriod 
+                  ? "Council data unavailable during financial year transition (late June - mid July)"
+                  : clearoutSchedule.message || "Council clearout data currently unavailable"
+                }
+              </div>
+              <div className="text-gray-600 text-center">
+                All suburbs displayed in gray
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-blue-600 bg-blue-100 rounded-sm border-dashed"></div>
-              <span className="text-gray-700">Next clearout areas</span>
+          ) : clearoutSchedule ? (
+            <>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-green-600 bg-green-100 rounded-sm"></div>
+                  <span className="text-gray-700">Current clearout areas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-blue-600 bg-blue-100 rounded-sm border-dashed"></div>
+                  <span className="text-gray-700">Next clearout areas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-gray-500 bg-gray-100 rounded-sm border-dashed"></div>
+                  <span className="text-gray-700">No clearout scheduled</span>
+                </div>
+              </div>
+              
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="text-xs text-gray-600">
+                  <div>Current: {clearoutSchedule.current.length > 0 ? clearoutSchedule.current.join(', ') : 'None'}</div>
+                  <div>Next: {clearoutSchedule.next.length > 0 ? clearoutSchedule.next.join(', ') : 'None'}</div>
+                  {clearoutSchedule.warning && (
+                    <div className="text-amber-600 mt-1 text-xs">⚠️ {clearoutSchedule.warning}</div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-gray-500 text-center">
+              Loading clearout schedule...
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-gray-500 bg-gray-100 rounded-sm border-dashed"></div>
-              <span className="text-gray-700">No clearout scheduled</span>
-            </div>
-          </div>
-          
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <div className="text-xs text-gray-600">
-              <div>Current: {clearoutSchedule.current.join(', ')}</div>
-              <div>Next: {clearoutSchedule.next.join(', ')}</div>
-              <div className="text-gray-400 mt-1">Week {clearoutSchedule.weekNumber}</div>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
