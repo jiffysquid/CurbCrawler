@@ -12,6 +12,7 @@ export default function Settings() {
   const [mapStyle, setMapStyle] = useState<string>("street");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
+  const [showToilets, setShowToilets] = useState<boolean>(true);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const { toast } = useToast();
 
@@ -21,11 +22,13 @@ export default function Settings() {
     const savedMapStyle = localStorage.getItem('mapStyle');
     const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
+    const savedShowToilets = localStorage.getItem('showToilets');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
     if (savedMapStyle) setMapStyle(savedMapStyle);
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
     if (savedShowSuburbs) setShowSuburbBoundaries(savedShowSuburbs === 'true');
+    if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
   }, []);
 
   // Save settings to localStorage when they change
@@ -44,6 +47,10 @@ export default function Settings() {
   useEffect(() => {
     localStorage.setItem('showSuburbBoundaries', String(showSuburbBoundaries));
   }, [showSuburbBoundaries]);
+
+  useEffect(() => {
+    localStorage.setItem('showToilets', String(showToilets));
+  }, [showToilets]);
 
   const handleClearData = () => {
     // In a real app, this would clear session data from storage
@@ -108,6 +115,19 @@ export default function Settings() {
             <Switch
               checked={showSuburbBoundaries}
               onCheckedChange={setShowSuburbBoundaries}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-medium">Show Public Toilets</Label>
+              <CardDescription className="text-xs">
+                Display public toilet locations on the map
+              </CardDescription>
+            </div>
+            <Switch
+              checked={showToilets}
+              onCheckedChange={setShowToilets}
             />
           </div>
         </CardContent>

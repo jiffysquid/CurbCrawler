@@ -107,6 +107,10 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 23, 2025: Implemented Brisbane Council clearout schedule system with financial year transition detection
 - June 23, 2025: Added vehicle-focused map navigation with configurable vehicle types
 - June 23, 2025: Replaced geographic focus areas with vehicle-centered positioning using IMAX van asset
+- June 23, 2025: Moved show/hide toggles for suburbs and toilets from map controls to settings panel
+- June 23, 2025: Implemented map rotation controls with fixed vehicle marker orientation
+- June 23, 2025: Added separate Start Recording and End Recording buttons to session controls
+- June 23, 2025: Enhanced vehicle marker scaling with zoom level and rotation compensation
 
 ## User Preferences
 

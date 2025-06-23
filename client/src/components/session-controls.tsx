@@ -1,4 +1,4 @@
-import { Play, Square, MapPin } from "lucide-react";
+import { Play, Square, MapPin, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -61,16 +61,21 @@ export default function SessionControls({
           {/* Control Buttons */}
           <div className="flex space-x-2 mb-3">
             <Button
-              onClick={isTracking ? onStopSession : onStartSession}
-              disabled={isLoading || (!isTracking && !location)}
-              className={`flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 ${
-                isTracking 
-                  ? 'bg-secondary hover:bg-green-600 text-white' 
-                  : 'bg-primary hover:bg-blue-700 text-white'
-              }`}
+              onClick={onStartSession}
+              disabled={isLoading || isTracking || !location}
+              className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
             >
-              {isTracking ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              <span>{isTracking ? 'Stop Session' : 'Start Session'}</span>
+              <Circle className="h-4 w-4 fill-current" />
+              <span>Start Recording</span>
+            </Button>
+            
+            <Button
+              onClick={onStopSession}
+              disabled={isLoading || !isTracking}
+              className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400"
+            >
+              <Square className="h-4 w-4" />
+              <span>End Recording</span>
             </Button>
           </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -35,25 +35,54 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showSuburbs, setShowSuburbs] = useState(true);
   const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
+  const [mapRotation, setMapRotation] = useState(0);
   const { toast } = useToast();
 
-  // Load focus area from localStorage and listen for changes
+  // Load settings from localStorage and listen for changes
   useEffect(() => {
     const savedFocusArea = localStorage.getItem('focusArea');
-    if (savedFocusArea) {
-      setFocusArea(savedFocusArea);
-    }
+    const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
+    const savedShowToilets = localStorage.getItem('showToilets');
+    
+    if (savedFocusArea) setFocusArea(savedFocusArea);
+    if (savedShowSuburbs) setShowSuburbs(savedShowSuburbs === 'true');
+    if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
 
     // Listen for storage changes from settings panel
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'focusArea' && e.newValue) {
         setFocusArea(e.newValue);
       }
+      if (e.key === 'showSuburbBoundaries' && e.newValue) {
+        setShowSuburbs(e.newValue === 'true');
+      }
+      if (e.key === 'showToilets' && e.newValue) {
+        setShowToilets(e.newValue === 'true');
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Map rotation function
+  const rotateMap = useCallback((angle: number) => {
+    if (!mapInstanceRef.current) return;
+    
+    const mapContainer = mapInstanceRef.current.getContainer();
+    if (!mapContainer) return;
+    
+    if (angle === 0) {
+      // Reset rotation
+      setMapRotation(0);
+      mapContainer.style.transform = 'rotate(0deg)';
+    } else {
+      // Add to current rotation
+      const newRotation = mapRotation + angle;
+      setMapRotation(newRotation);
+      mapContainer.style.transform = `rotate(${newRotation}deg)`;
+    }
+  }, [mapRotation]);
 
   // Session colors for different paths
   const sessionColors = [
@@ -436,13 +465,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
       const scaledSize = Math.round(baseSize * scaleFactor);
       
-      // Use your actual IMAX van image with scaling
-      vehicleIcon = L.icon({
-        iconUrl: imaxVanImage,
+      // Use divIcon for better rotation control with IMAX van image
+      vehicleIcon = L.divIcon({
+        className: 'vehicle-marker-image',
+        html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+          <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>`,
         iconSize: [scaledSize, scaledSize],
-        iconAnchor: [scaledSize / 2, scaledSize / 2],
-        popupAnchor: [0, -scaledSize / 2],
-        className: 'vehicle-marker-image'
+        iconAnchor: [scaledSize / 2, scaledSize / 2]
       });
     } else {
       // Use emoji icons for other vehicle types
@@ -500,18 +530,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         
         let vehicleIcon;
         if (focusArea === 'imax-van') {
-          vehicleIcon = L.icon({
-            iconUrl: imaxVanImage,
+          vehicleIcon = L.divIcon({
+            className: 'vehicle-marker-image',
+            html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+              <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
+            </div>`,
             iconSize: [scaledSize, scaledSize],
-            iconAnchor: [scaledSize / 2, scaledSize / 2],
-            popupAnchor: [0, -scaledSize / 2],
-            className: 'vehicle-marker-image'
+            iconAnchor: [scaledSize / 2, scaledSize / 2]
           });
         } else {
           const vehicleEmoji = getVehicleIcon(focusArea);
           vehicleIcon = L.divIcon({
             className: 'vehicle-marker',
-            html: `<div class="text-2xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">${vehicleEmoji}</div>`,
+            html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center;" class="text-2xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">${vehicleEmoji}</div>`,
             iconSize: [scaledSize, scaledSize],
             iconAnchor: [scaledSize / 2, scaledSize / 2]
           });
@@ -539,7 +570,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         mapInstanceRef.current.off('zoomend', handleZoomEnd);
       }
     };
-  }, [currentLocation, focusArea, imaxVanImage]);
+  }, [currentLocation, focusArea, imaxVanImage, mapRotation]);
 
   // Update route polyline
   useEffect(() => {
@@ -663,31 +694,36 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
       {/* Map controls */}
       <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
-        {/* Suburbs toggle button */}
-        <Button
-          onClick={() => setShowSuburbs(!showSuburbs)}
-          size="sm"
-          variant={showSuburbs ? "default" : "outline"}
-          className="bg-white hover:bg-gray-100 text-gray-700 shadow-lg border"
-          title={showSuburbs ? "Hide suburb boundaries" : "Show suburb boundaries"}
-        >
-          <span className="text-xs font-medium">
-            {showSuburbs ? "Hide Suburbs" : "Show Suburbs"}
-          </span>
-        </Button>
-        
-        {/* Toilets toggle button */}
-        <Button
-          onClick={() => setShowToilets(!showToilets)}
-          size="sm"
-          variant={showToilets ? "default" : "outline"}
-          className="bg-white hover:bg-gray-100 text-gray-700 shadow-lg border"
-          title={showToilets ? "Hide public toilets" : "Show public toilets"}
-        >
-          <span className="text-xs font-medium">
-            {showToilets ? "Hide Toilets" : "Show Toilets"}
-          </span>
-        </Button>
+        {/* Map rotation controls */}
+        <div className="bg-white rounded-lg shadow-lg border flex">
+          <Button
+            onClick={() => rotateMap(-45)}
+            size="sm"
+            variant="ghost"
+            className="h-9 w-9 p-0 hover:bg-gray-100"
+            title="Rotate map counter-clockwise"
+          >
+            <span className="text-sm">↺</span>
+          </Button>
+          <Button
+            onClick={() => rotateMap(0)}
+            size="sm"
+            variant="ghost"
+            className="h-9 w-9 p-0 hover:bg-gray-100"
+            title="Reset map rotation"
+          >
+            <span className="text-sm">⌂</span>
+          </Button>
+          <Button
+            onClick={() => rotateMap(45)}
+            size="sm"
+            variant="ghost"
+            className="h-9 w-9 p-0 hover:bg-gray-100"
+            title="Rotate map clockwise"
+          >
+            <span className="text-sm">↻</span>
+          </Button>
+        </div>
         
         {/* Focus on Vehicle button */}
         <Button
