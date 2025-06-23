@@ -168,12 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fallback to Nominatim API for individual suburb boundaries
       const suburbNames = [
-        "Brisbane City, Queensland, Australia",
-        "Fortitude Valley, Brisbane, Queensland, Australia", 
-        "South Brisbane, Queensland, Australia",
-        "New Farm, Brisbane, Queensland, Australia",
-        "West End, Brisbane, Queensland, Australia",
-        "Kangaroo Point, Brisbane, Queensland, Australia"
+        "Sunnybank, Brisbane, Queensland, Australia",
+        "Sunnybank Hills, Brisbane, Queensland, Australia"
       ];
 
       const suburbPromises = suburbNames.map(async (suburbName) => {
@@ -337,12 +333,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dayOfYear = Math.floor((brisbaneTime.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
         const weekOfYear = Math.floor(dayOfYear / 7);
         
-        // Brisbane's typical 4-week rotation schedule
+        // Sunnybank area 2-week rotation schedule
         const clearoutRotation = [
-          { current: ["Brisbane City", "Fortitude Valley"], next: ["South Brisbane", "West End"] },
-          { current: ["South Brisbane", "West End"], next: ["New Farm", "Kangaroo Point"] },
-          { current: ["New Farm", "Kangaroo Point"], next: ["Spring Hill", "Paddington"] },
-          { current: ["Spring Hill", "Paddington"], next: ["Brisbane City", "Fortitude Valley"] }
+          { current: ["Sunnybank"], next: ["Sunnybank Hills"] },
+          { current: ["Sunnybank Hills"], next: ["Sunnybank"] }
         ];
         
         const scheduleIndex = weekOfYear % clearoutRotation.length;
