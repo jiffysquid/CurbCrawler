@@ -338,24 +338,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Try to fetch real Brisbane Council clearout data
       let councilDataAvailable = false;
+      let councilData: any = null;
+      
       try {
-        // Attempt to get data from Brisbane Council API or website
-        const councilResponse = await axios.get('https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-collection', {
-          headers: {
-            'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
-          },
-          timeout: 5000
-        });
-        
-        // Check if response contains current clearout data
-        const responseText = councilResponse.data.toString();
-        const hasCurrentData = responseText.includes('current') || responseText.includes('this week') || responseText.includes('clearout');
-        
-        if (hasCurrentData) {
-          councilDataAvailable = true;
-          console.log("Brisbane Council clearout data retrieved successfully");
-        } else {
-          console.log("Brisbane Council website accessible but no current clearout data found");
+        // Try multiple Brisbane Council data sources
+        const councilUrls = [
+          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-collection',
+          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-clearout',
+          'https://brisbane.qld.gov.au/about-council/governance-strategy/business-community/development-guidelines/assessment-tools/applications-interactive-maps'
+        ];
+
+        for (const url of councilUrls) {
+          try {
+            const councilResponse = await axios.get(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+              },
+              timeout: 10000
+            });
+            
+            if (councilResponse.status === 200) {
+              const responseText = councilResponse.data.toString();
+              console.log(`Successfully connected to ${url}`);
+              
+              // Look for clearout schedule patterns in the HTML
+              const clearoutPatterns = [
+                /clearout.*?week/gi,
+                /kerbside.*?collection/gi,
+                /bulky.*?goods/gi,
+                /collection.*?schedule/gi,
+                /pickup.*?dates/gi
+              ];
+              
+              let foundScheduleData = false;
+              for (const pattern of clearoutPatterns) {
+                if (pattern.test(responseText)) {
+                  foundScheduleData = true;
+                  console.log(`Found clearout data pattern: ${pattern}`);
+                  break;
+                }
+              }
+              
+              if (foundScheduleData) {
+                councilDataAvailable = true;
+                councilData = responseText;
+                console.log("Brisbane Council clearout data retrieved successfully");
+                break;
+              }
+            }
+          } catch (urlError) {
+            console.log(`Failed to access ${url}:`, urlError instanceof Error ? urlError.message : String(urlError));
+            continue;
+          }
         }
         
       } catch (councilError) {
@@ -395,8 +434,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // If we reach here, we have council data - implement proper parsing
-      // For now, return a realistic schedule based on Brisbane patterns
+      // If we reach here, we have council data - parse it for real schedule information
+      if (councilDataAvailable && councilData) {
+        console.log("Parsing real Brisbane Council clearout data");
+        
+        try {
+          // Extract suburb names and schedule information from the HTML
+          const suburbMatches = councilData.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*(?:clearout|collection|pickup)/gi) || [];
+          const weekMatches = councilData.match(/(this\s+week|next\s+week|week\s+of|current\s+week)/gi) || [];
+          
+          // Look for specific suburb mentions in the content
+          const knownSuburbs = [
+            'Sunnybank', 'Sunnybank Hills', 'Brisbane City', 'Fortitude Valley', 
+            'South Brisbane', 'West End', 'New Farm', 'Kangaroo Point',
+            'Spring Hill', 'Paddington', 'Toowong', 'Indooroopilly'
+          ];
+          
+          let current: string[] = [];
+          let next: string[] = [];
+          
+          // Parse the content for current and next week schedules
+          const lines = councilData.split('\n');
+          let inCurrentWeek = false;
+          let inNextWeek = false;
+          
+          for (const line of lines) {
+            const lowerLine = line.toLowerCase();
+            
+            // Check for week indicators
+            if (lowerLine.includes('current week') || lowerLine.includes('this week')) {
+              inCurrentWeek = true;
+              inNextWeek = false;
+            } else if (lowerLine.includes('next week') || lowerLine.includes('following week')) {
+              inCurrentWeek = false;
+              inNextWeek = true;
+            }
+            
+            // Extract suburb names from the current context
+            for (const suburb of knownSuburbs) {
+              if (lowerLine.includes(suburb.toLowerCase())) {
+                if (inCurrentWeek && !current.includes(suburb)) {
+                  current.push(suburb);
+                } else if (inNextWeek && !next.includes(suburb)) {
+                  next.push(suburb);
+                }
+              }
+            }
+          }
+          
+          // If we found real data, use it
+          if (current.length > 0 || next.length > 0) {
+            res.json({
+              current,
+              next,
+              dataSource: "council-website",
+              brisbaneDate: brisbaneTime.toISOString(),
+              month: month + 1,
+              date: date,
+              lastUpdated: brisbaneTime.toISOString(),
+              message: "Schedule retrieved from Brisbane Council website"
+            });
+            return;
+          }
+        } catch (parseError) {
+          console.log("Error parsing council data, falling back to pattern-based schedule");
+        }
+      }
+      
+      // Fallback to pattern-based schedule if real data parsing fails
       const year = brisbaneTime.getFullYear();
       const weekOfMonth = Math.ceil(date / 7);
       
@@ -443,19 +548,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public toilets using Overpass API (OpenStreetMap)
+  // Public toilets using Overpass API (OpenStreetMap) - filtered to active suburbs
   app.get("/api/toilets", async (req, res) => {
     try {
-      const { lat, lng, radius = 2 } = req.query;
-      const centerLat = lat ? parseFloat(lat as string) : -27.4705;
-      const centerLng = lng ? parseFloat(lng as string) : 153.0260;
+      const { lat, lng, radius = 5 } = req.query;
+      
+      // Define Sunnybank area coordinates for focused toilet search
+      const sunnybankCenter = { lat: -27.5906, lng: 153.0566 }; // Sunnybank center
+      const sunnybankHillsCenter = { lat: -27.6089, lng: 153.0644 }; // Sunnybank Hills center
+      
+      // Use provided coordinates or default to Sunnybank area
+      const centerLat = lat ? parseFloat(lat as string) : sunnybankCenter.lat;
+      const centerLng = lng ? parseFloat(lng as string) : sunnybankCenter.lng;
       const searchRadius = parseFloat(radius as string) * 1000; // Convert km to meters
 
-      // Use Overpass API to find public toilets
+      // Use Overpass API to find public toilets in Sunnybank area
       const overpassQuery = `
         [out:json][timeout:25];
         (
           node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng});
+          node["amenity"="toilets"](around:${searchRadius},${sunnybankCenter.lat},${sunnybankCenter.lng});
+          node["amenity"="toilets"](around:${searchRadius},${sunnybankHillsCenter.lat},${sunnybankHillsCenter.lng});
         );
         out geom;
       `;
@@ -467,12 +580,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      const toilets = response.data.elements?.map((element: any) => ({
+      // Filter toilets to only include those in Sunnybank area
+      const toilets = response.data.elements?.filter((element: any) => {
+        const lat = element.lat;
+        const lng = element.lon;
+        
+        // Check if toilet is within reasonable distance of Sunnybank centers
+        const distanceToSunnybank = Math.sqrt(
+          Math.pow(lat - sunnybankCenter.lat, 2) + Math.pow(lng - sunnybankCenter.lng, 2)
+        );
+        const distanceToSunnybankHills = Math.sqrt(
+          Math.pow(lat - sunnybankHillsCenter.lat, 2) + Math.pow(lng - sunnybankHillsCenter.lng, 2)
+        );
+        
+        // Include if within 0.02 degrees (~2km) of either suburb center
+        return distanceToSunnybank < 0.02 || distanceToSunnybankHills < 0.02;
+      }).map((element: any) => ({
         id: element.id.toString(),
         name: element.tags?.name || 'Public Toilet',
         lat: element.lat,
         lng: element.lon,
-        address: element.tags?.["addr:full"] || element.tags?.["addr:street"],
+        address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || 'Sunnybank Area',
         openHours: element.tags?.opening_hours || '24/7',
         accessible: element.tags?.wheelchair === 'yes',
         fee: element.tags?.fee === 'yes',
