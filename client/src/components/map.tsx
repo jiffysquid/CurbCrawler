@@ -4,7 +4,7 @@ import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Crosshair, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getFocusAreaCoordinates } from "@/lib/utils";
+import { getVehicleFocusCoordinates, getVehicleIcon } from "@/lib/utils";
 
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
@@ -27,11 +27,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const routePolylineRef = useRef<any>(null);
   const suburbPolygonsRef = useRef<any[]>([]);
   const currentLocationMarkerRef = useRef<any>(null);
+  const vehicleMarkerRef = useRef<any>(null);
   const toiletMarkersRef = useRef<any[]>([]);
   const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [showSuburbs, setShowSuburbs] = useState(true);
-  const [focusArea, setFocusArea] = useState<string>('brisbane-city');
+  const [focusArea, setFocusArea] = useState<string>('imax-van');
   const { toast } = useToast();
 
   // Load focus area from localStorage and listen for changes
@@ -401,6 +402,57 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   }, [currentLocation, currentSuburb, isTracking]);
 
+  // Handle vehicle marker display
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !currentLocation) return;
+
+    // Remove existing vehicle marker
+    if (vehicleMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(vehicleMarkerRef.current);
+    }
+
+    // Create vehicle icon based on selected vehicle type
+    let vehicleIcon;
+    if (focusArea === 'imax-van') {
+      // Use the provided IMAX van image
+      vehicleIcon = L.icon({
+        iconUrl: '/attached_assets/imax_1750683369388.png',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20],
+        className: 'vehicle-marker drop-shadow-lg'
+      });
+    } else {
+      // Use emoji icons for other vehicle types
+      const vehicleEmoji = getVehicleIcon(focusArea);
+      vehicleIcon = L.divIcon({
+        className: 'vehicle-marker',
+        html: `
+          <div class="text-3xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">
+            ${vehicleEmoji}
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+    }
+
+    // Create vehicle marker
+    vehicleMarkerRef.current = L.marker([currentLocation.lat, currentLocation.lng], { 
+      icon: vehicleIcon 
+    }).addTo(mapInstanceRef.current);
+
+    // Add popup with vehicle info
+    vehicleMarkerRef.current.bindPopup(`
+      <div class="text-sm">
+        <strong>${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong><br/>
+        <small>Vehicle Position</small><br/>
+        <small>Lat: ${currentLocation.lat.toFixed(6)}</small><br/>
+        <small>Lng: ${currentLocation.lng.toFixed(6)}</small>
+      </div>
+    `);
+  }, [currentLocation, focusArea]);
+
   // Update route polyline
   useEffect(() => {
     if (!mapInstanceRef.current || !L || sessionLocations.length === 0) return;
@@ -451,9 +503,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   };
 
-  const focusOnArea = () => {
+  const focusOnVehicle = () => {
     if (mapInstanceRef.current) {
-      const coordinates = getFocusAreaCoordinates(focusArea, currentLocation);
+      const coordinates = getVehicleFocusCoordinates(focusArea, currentLocation);
       mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], coordinates.zoom);
     }
   };
@@ -536,12 +588,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           </span>
         </Button>
         
-        {/* Focus Area button */}
+        {/* Focus on Vehicle button */}
         <Button
-          onClick={focusOnArea}
+          onClick={focusOnVehicle}
           size="sm"
           className="bg-primary hover:bg-blue-700 text-white shadow-lg"
-          title={`Focus on ${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
+          title={`Focus on vehicle (${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())})`}
         >
           <Focus className="h-4 w-4" />
         </Button>

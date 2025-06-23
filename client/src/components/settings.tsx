@@ -12,7 +12,7 @@ export default function Settings() {
   const [mapStyle, setMapStyle] = useState<string>("street");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
-  const [focusArea, setFocusArea] = useState<string>("brisbane-city");
+  const [focusArea, setFocusArea] = useState<string>("imax-van");
   const { toast } = useToast();
 
   // Load settings from localStorage on mount
@@ -79,25 +79,22 @@ export default function Settings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="focus-area" className="text-xs font-medium">Focus Area</Label>
+            <Label htmlFor="vehicle-type" className="text-xs font-medium">Vehicle Type</Label>
             <Select value={focusArea} onValueChange={setFocusArea}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="brisbane-city">Brisbane City Center</SelectItem>
-                <SelectItem value="fortitude-valley">Fortitude Valley</SelectItem>
-                <SelectItem value="south-brisbane">South Brisbane</SelectItem>
-                <SelectItem value="new-farm">New Farm</SelectItem>
-                <SelectItem value="west-end">West End</SelectItem>
-                <SelectItem value="kangaroo-point">Kangaroo Point</SelectItem>
-                <SelectItem value="spring-hill">Spring Hill</SelectItem>
-                <SelectItem value="paddington">Paddington</SelectItem>
-                <SelectItem value="current-location">Current Location</SelectItem>
+                <SelectItem value="imax-van">IMAX Van (White)</SelectItem>
+                <SelectItem value="small-car">Small Car</SelectItem>
+                <SelectItem value="large-car">Large Car</SelectItem>
+                <SelectItem value="suv">SUV</SelectItem>
+                <SelectItem value="truck">Truck</SelectItem>
+                <SelectItem value="motorcycle">Motorcycle</SelectItem>
               </SelectContent>
             </Select>
             <CardDescription className="text-xs">
-              Area to focus on when using the focus button
+              Vehicle type to display when focusing on your position
             </CardDescription>
           </div>
 

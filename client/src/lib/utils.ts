@@ -98,20 +98,38 @@ export function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-export function getFocusAreaCoordinates(focusArea: string, currentLocation?: { lat: number; lng: number } | null): { lat: number; lng: number; zoom: number } {
-  const focusAreas = {
-    'brisbane-city': { lat: -27.4698, lng: 153.0251, zoom: 15 },
-    'fortitude-valley': { lat: -27.4568, lng: 153.0371, zoom: 15 },
-    'south-brisbane': { lat: -27.4833, lng: 153.0167, zoom: 15 },
-    'new-farm': { lat: -27.4644, lng: 153.0406, zoom: 15 },
-    'west-end': { lat: -27.4833, lng: 153.0083, zoom: 15 },
-    'kangaroo-point': { lat: -27.4789, lng: 153.0406, zoom: 15 },
-    'spring-hill': { lat: -27.4625, lng: 153.0221, zoom: 15 },
-    'paddington': { lat: -27.4603, lng: 153.0103, zoom: 15 },
-    'current-location': currentLocation 
-      ? { lat: currentLocation.lat, lng: currentLocation.lng, zoom: 16 }
-      : { lat: -27.4698, lng: 153.0251, zoom: 12 }
-  };
+export function getVehicleFocusCoordinates(vehicleType: string, currentLocation?: { lat: number; lng: number } | null): { lat: number; lng: number; zoom: number } {
+  // Focus always centers on current vehicle location with appropriate zoom level
+  if (currentLocation) {
+    const zoomLevels = {
+      'imax-van': 17,
+      'small-car': 18,
+      'large-car': 17,
+      'suv': 17,
+      'truck': 16,
+      'motorcycle': 18
+    };
+    
+    return {
+      lat: currentLocation.lat,
+      lng: currentLocation.lng,
+      zoom: zoomLevels[vehicleType as keyof typeof zoomLevels] || 17
+    };
+  }
+  
+  // Default to Brisbane city center if no location available
+  return { lat: -27.4698, lng: 153.0251, zoom: 12 };
+}
 
-  return focusAreas[focusArea as keyof typeof focusAreas] || focusAreas['brisbane-city'];
+export function getVehicleIcon(vehicleType: string): string {
+  const vehicleIcons = {
+    'imax-van': '@assets/imax_1750683369388.png',
+    'small-car': '🚗',
+    'large-car': '🚙',
+    'suv': '🚙',
+    'truck': '🚛',
+    'motorcycle': '🏍️'
+  };
+  
+  return vehicleIcons[vehicleType as keyof typeof vehicleIcons] || '🚗';
 }

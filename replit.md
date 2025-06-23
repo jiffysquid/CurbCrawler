@@ -104,6 +104,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 14, 2025: Implemented different colored paths for each tracking session
 - June 14, 2025: Fixed map display issues and UI layering with proper z-index handling
 - June 14, 2025: Enhanced session controls with real-time statistics display
+- June 23, 2025: Implemented Brisbane Council clearout schedule system with financial year transition detection
+- June 23, 2025: Added vehicle-focused map navigation with configurable vehicle types
+- June 23, 2025: Replaced geographic focus areas with vehicle-centered positioning using IMAX van asset
 
 ## User Preferences
 
