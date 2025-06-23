@@ -33,6 +33,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [showSuburbs, setShowSuburbs] = useState(true);
+  const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const { toast } = useToast();
 
@@ -249,7 +250,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Handle public toilet markers
   useEffect(() => {
-    if (!mapInstanceRef.current || !L || !publicToilets.length) return;
+    if (!mapInstanceRef.current || !L) return;
 
     // Clear existing toilet markers
     toiletMarkersRef.current.forEach(marker => {
@@ -257,34 +258,36 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
     toiletMarkersRef.current = [];
 
-    // Add toilet markers
-    publicToilets.forEach(toilet => {
-      const toiletIcon = L.divIcon({
-        className: 'toilet-marker',
-        html: `
-          <div class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
-            🚽
-          </div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+    // Only add toilet markers if showToilets is true and we have data
+    if (showToilets && publicToilets.length > 0) {
+      publicToilets.forEach(toilet => {
+        const toiletIcon = L.divIcon({
+          className: 'toilet-marker',
+          html: `
+            <div class="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+              🚽
+            </div>
+          `,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([toilet.lat, toilet.lng], { icon: toiletIcon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup(`
+            <div class="text-sm">
+              <strong>${toilet.name}</strong><br/>
+              ${toilet.address ? `${toilet.address}<br/>` : ''}
+              <small>Hours: ${toilet.openHours || '24/7'}</small><br/>
+              ${toilet.accessible ? '<small>♿ Accessible</small><br/>' : ''}
+              ${toilet.fee ? '<small>💰 Fee required</small>' : '<small>🆓 Free</small>'}
+            </div>
+          `);
+
+        toiletMarkersRef.current.push(marker);
       });
-
-      const marker = L.marker([toilet.lat, toilet.lng], { icon: toiletIcon })
-        .addTo(mapInstanceRef.current)
-        .bindPopup(`
-          <div class="text-sm">
-            <strong>${toilet.name}</strong><br/>
-            ${toilet.address ? `${toilet.address}<br/>` : ''}
-            <small>Hours: ${toilet.openHours || '24/7'}</small><br/>
-            ${toilet.accessible ? '<small>♿ Accessible</small><br/>' : ''}
-            ${toilet.fee ? '<small>💰 Fee required</small>' : '<small>🆓 Free</small>'}
-          </div>
-        `);
-
-      toiletMarkersRef.current.push(marker);
-    });
-  }, [publicToilets]);
+    }
+  }, [publicToilets, showToilets]);
 
   // Handle historical session routes with different colors
   useEffect(() => {
@@ -427,12 +430,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     // Create vehicle icon based on selected vehicle type
     let vehicleIcon;
     if (focusArea === 'imax-van') {
-      // Use your actual IMAX van image
+      // Calculate size based on zoom level for map scaling
+      const currentZoom = mapInstanceRef.current.getZoom();
+      const baseSize = 30;
+      const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
+      const scaledSize = Math.round(baseSize * scaleFactor);
+      
+      // Use your actual IMAX van image with scaling
       vehicleIcon = L.icon({
         iconUrl: imaxVanImage,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
+        iconSize: [scaledSize, scaledSize],
+        iconAnchor: [scaledSize / 2, scaledSize / 2],
+        popupAnchor: [0, -scaledSize / 2],
         className: 'vehicle-marker-image'
       });
     } else {
@@ -471,6 +480,66 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       console.error('Failed to create vehicle marker:', error);
     }
   }, [currentLocation, focusArea]);
+
+  // Add zoom event listener for vehicle marker scaling
+  useEffect(() => {
+    if (!mapInstanceRef.current || !vehicleMarkerRef.current) return;
+
+    const handleZoomEnd = () => {
+      // Trigger vehicle marker recreation to update size
+      if (currentLocation) {
+        // Remove and recreate marker with new size
+        if (vehicleMarkerRef.current) {
+          mapInstanceRef.current.removeLayer(vehicleMarkerRef.current);
+        }
+        
+        const currentZoom = mapInstanceRef.current.getZoom();
+        const baseSize = 30;
+        const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
+        const scaledSize = Math.round(baseSize * scaleFactor);
+        
+        let vehicleIcon;
+        if (focusArea === 'imax-van') {
+          vehicleIcon = L.icon({
+            iconUrl: imaxVanImage,
+            iconSize: [scaledSize, scaledSize],
+            iconAnchor: [scaledSize / 2, scaledSize / 2],
+            popupAnchor: [0, -scaledSize / 2],
+            className: 'vehicle-marker-image'
+          });
+        } else {
+          const vehicleEmoji = getVehicleIcon(focusArea);
+          vehicleIcon = L.divIcon({
+            className: 'vehicle-marker',
+            html: `<div class="text-2xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">${vehicleEmoji}</div>`,
+            iconSize: [scaledSize, scaledSize],
+            iconAnchor: [scaledSize / 2, scaledSize / 2]
+          });
+        }
+
+        vehicleMarkerRef.current = L.marker([currentLocation.lat, currentLocation.lng], { 
+          icon: vehicleIcon 
+        }).addTo(mapInstanceRef.current);
+
+        vehicleMarkerRef.current.bindPopup(`
+          <div class="text-sm">
+            <strong>${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong><br/>
+            <small>Vehicle Position</small><br/>
+            <small>Lat: ${currentLocation.lat.toFixed(6)}</small><br/>
+            <small>Lng: ${currentLocation.lng.toFixed(6)}</small>
+          </div>
+        `);
+      }
+    };
+
+    mapInstanceRef.current.on('zoomend', handleZoomEnd);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.off('zoomend', handleZoomEnd);
+      }
+    };
+  }, [currentLocation, focusArea, imaxVanImage]);
 
   // Update route polyline
   useEffect(() => {
@@ -604,6 +673,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         >
           <span className="text-xs font-medium">
             {showSuburbs ? "Hide Suburbs" : "Show Suburbs"}
+          </span>
+        </Button>
+        
+        {/* Toilets toggle button */}
+        <Button
+          onClick={() => setShowToilets(!showToilets)}
+          size="sm"
+          variant={showToilets ? "default" : "outline"}
+          className="bg-white hover:bg-gray-100 text-gray-700 shadow-lg border"
+          title={showToilets ? "Hide public toilets" : "Show public toilets"}
+        >
+          <span className="text-xs font-medium">
+            {showToilets ? "Hide Toilets" : "Show Toilets"}
           </span>
         </Button>
         
