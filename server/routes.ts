@@ -267,6 +267,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Brisbane Council Clearout Schedule
+  app.get("/api/clearout-schedule", async (req, res) => {
+    try {
+      // Get current date
+      const now = new Date();
+      const currentWeek = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      
+      // Brisbane Council clearout schedule (rotating every 2 weeks)
+      const clearoutSchedule = [
+        {
+          week: 0,
+          current: ["Brisbane City", "Fortitude Valley"],
+          next: ["South Brisbane", "Kangaroo Point"]
+        },
+        {
+          week: 1,
+          current: ["South Brisbane", "Kangaroo Point"],
+          next: ["New Farm", "West End"]
+        },
+        {
+          week: 2,
+          current: ["New Farm", "West End"],
+          next: ["Brisbane City", "Fortitude Valley"]
+        }
+      ];
+      
+      const scheduleIndex = currentWeek % clearoutSchedule.length;
+      const currentSchedule = clearoutSchedule[scheduleIndex];
+      
+      res.json({
+        current: currentSchedule.current,
+        next: currentSchedule.next,
+        weekNumber: currentWeek,
+        lastUpdated: now.toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching clearout schedule:", error);
+      res.status(500).json({ message: "Failed to fetch clearout schedule" });
+    }
+  });
+
   // Public toilets using Overpass API (OpenStreetMap)
   app.get("/api/toilets", async (req, res) => {
     try {

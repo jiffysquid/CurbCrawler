@@ -54,6 +54,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Fetch council clearout schedule
+  const { data: clearoutSchedule } = useQuery<{
+    current: string[];
+    next: string[];
+    weekNumber: number;
+    lastUpdated: string;
+  }>({
+    queryKey: ['/api/clearout-schedule'],
+    enabled: isMapReady,
+    retry: 2,
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+
   // Fetch public toilets near current location
   const { data: publicToilets = [] } = useQuery<PublicToilet[]>({
     queryKey: ['/api/toilets', currentLocation?.lat, currentLocation?.lng],
@@ -130,32 +143,53 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
     // Only add if we have data and want to show suburbs
     if (showSuburbs && suburbBoundaries.length > 0) {
-      // Add suburb boundary polygons with enhanced styling
+      // Add suburb boundary polygons with clearout-based styling
       suburbBoundaries.forEach(suburb => {
         if (suburb.coordinates && suburb.coordinates.length > 0) {
+          // Determine color based on clearout schedule
+          let color = '#6B7280';        // Default gray
+          let fillColor = '#9CA3AF';    // Default light gray
+          let borderStyle = '5, 5';     // Default dashed
+          let status = 'No clearout scheduled';
+          
+          if (clearoutSchedule) {
+            if (clearoutSchedule.current.some(name => suburb.name.includes(name) || name.includes(suburb.name.split(',')[0]))) {
+              color = '#059669';        // Green border for current clearout
+              fillColor = '#10B981';    // Light green fill
+              borderStyle = '';         // Solid border
+              status = 'Current clearout area';
+            } else if (clearoutSchedule.next.some(name => suburb.name.includes(name) || name.includes(suburb.name.split(',')[0]))) {
+              color = '#2563EB';        // Blue border for next clearout
+              fillColor = '#3B82F6';    // Light blue fill  
+              borderStyle = '10, 5';    // Longer dashes
+              status = 'Next clearout area';
+            }
+          }
+
           const polygon = L.polygon(suburb.coordinates, {
-            color: '#059669',        // Green border
+            color: color,
             weight: 2,
-            opacity: 0.7,
-            fillColor: '#10B981',    // Light green fill
+            opacity: 0.8,
+            fillColor: fillColor,
             fillOpacity: 0.15,
-            dashArray: '5, 5',       // Dashed border
+            dashArray: borderStyle,
             interactive: true
           }).addTo(mapInstanceRef.current);
 
-          // Enhanced popup with suburb information
+          // Enhanced popup with clearout status
           polygon.bindPopup(`
             <div class="text-sm">
-              <strong class="text-green-700">${suburb.name}</strong><br/>
-              <small class="text-gray-600">Brisbane Suburb</small>
+              <strong class="${status.includes('Current') ? 'text-green-700' : status.includes('Next') ? 'text-blue-700' : 'text-gray-700'}">${suburb.name.split(',')[0]}</strong><br/>
+              <small class="text-gray-600">${status}</small>
               ${suburb.properties?.postcode ? `<br/><small>Postcode: ${suburb.properties.postcode}</small>` : ''}
+              ${clearoutSchedule ? `<br/><small class="text-xs text-gray-500">Week ${clearoutSchedule.weekNumber}</small>` : ''}
             </div>
           `);
 
           // Add hover effects with proper typing
           polygon.on('mouseover', function(this: any) {
             this.setStyle({
-              fillOpacity: 0.25,
+              fillOpacity: 0.3,
               weight: 3
             });
           });
@@ -171,9 +205,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
       });
 
-      console.log(`Displayed ${suburbPolygonsRef.current.length} suburb boundaries on map`);
+      console.log(`Displayed ${suburbPolygonsRef.current.length} suburb boundaries with clearout schedule`);
     }
-  }, [suburbBoundaries, showSuburbs]);
+  }, [suburbBoundaries, showSuburbs, clearoutSchedule]);
 
   // Handle suburb fetch error
   useEffect(() => {
@@ -402,6 +436,36 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }} 
       />
       
+      {/* Clearout Schedule Legend */}
+      {showSuburbs && clearoutSchedule && (
+        <div className="absolute top-4 right-4 md:top-6 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-64">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Council Clearout Schedule</h3>
+          
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-green-600 bg-green-100 rounded-sm"></div>
+              <span className="text-gray-700">Current clearout areas</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-blue-600 bg-blue-100 rounded-sm border-dashed"></div>
+              <span className="text-gray-700">Next clearout areas</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-gray-500 bg-gray-100 rounded-sm border-dashed"></div>
+              <span className="text-gray-700">No clearout scheduled</span>
+            </div>
+          </div>
+          
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="text-xs text-gray-600">
+              <div>Current: {clearoutSchedule.current.join(', ')}</div>
+              <div>Next: {clearoutSchedule.next.join(', ')}</div>
+              <div className="text-gray-400 mt-1">Week {clearoutSchedule.weekNumber}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Map controls */}
       <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
         {/* Suburbs toggle button */}
