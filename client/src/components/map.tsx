@@ -4,7 +4,7 @@ import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Crosshair, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getVehicleFocusCoordinates, getVehicleIcon } from "@/lib/utils";
+import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
 
 // Import Leaflet CSS
@@ -36,6 +36,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
+  const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
   // Load settings from localStorage and listen for changes
@@ -65,24 +66,48 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Map rotation function
-  const rotateMap = useCallback((angle: number) => {
-    if (!mapInstanceRef.current) return;
+  // Automatic map rotation based on driving direction
+  const updateMapRotation = useCallback((newLocation: { lat: number; lng: number }) => {
+    if (!mapInstanceRef.current || !isTracking) return;
     
-    const mapContainer = mapInstanceRef.current.getContainer();
-    if (!mapContainer) return;
-    
-    if (angle === 0) {
-      // Reset rotation
-      setMapRotation(0);
-      mapContainer.style.transform = 'rotate(0deg)';
-    } else {
-      // Add to current rotation
-      const newRotation = mapRotation + angle;
-      setMapRotation(newRotation);
-      mapContainer.style.transform = `rotate(${newRotation}deg)`;
+    const prevLocation = previousLocationRef.current;
+    if (!prevLocation) {
+      // Store first location
+      previousLocationRef.current = newLocation;
+      return;
     }
-  }, [mapRotation]);
+    
+    // Calculate bearing between previous and current location
+    const bearing = calculateBearing(
+      prevLocation.lat,
+      prevLocation.lng,
+      newLocation.lat,
+      newLocation.lng
+    );
+    
+    // Only update rotation if there's significant movement (>5 meters)
+    const distance = calculateDistance(
+      prevLocation.lat,
+      prevLocation.lng,
+      newLocation.lat,
+      newLocation.lng
+    ) * 1000; // Convert to meters
+    
+    if (distance > 5) {
+      const mapContainer = mapInstanceRef.current.getContainer();
+      if (mapContainer) {
+        // Convert bearing to rotation angle (bearing is from north, we want map rotation)
+        const rotationAngle = -(bearing - 90); // Adjust for map orientation
+        setMapRotation(rotationAngle);
+        mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
+        mapContainer.style.transformOrigin = 'center';
+        mapContainer.style.transition = 'transform 0.5s ease-out';
+      }
+      
+      // Update previous location
+      previousLocationRef.current = newLocation;
+    }
+  }, [isTracking]);
 
   // Session colors for different paths
   const sessionColors = [
@@ -506,10 +531,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           <small>Lng: ${currentLocation.lng.toFixed(6)}</small>
         </div>
       `);
+
+      // Update map rotation based on driving direction
+      updateMapRotation(currentLocation);
     } catch (error) {
       console.error('Failed to create vehicle marker:', error);
     }
-  }, [currentLocation, focusArea]);
+  }, [currentLocation, focusArea, updateMapRotation]);
 
   // Add zoom event listener for vehicle marker scaling
   useEffect(() => {
@@ -694,36 +722,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
       {/* Map controls */}
       <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
-        {/* Map rotation controls */}
-        <div className="bg-white rounded-lg shadow-lg border flex">
-          <Button
-            onClick={() => rotateMap(-45)}
-            size="sm"
-            variant="ghost"
-            className="h-9 w-9 p-0 hover:bg-gray-100"
-            title="Rotate map counter-clockwise"
-          >
-            <span className="text-sm">↺</span>
-          </Button>
-          <Button
-            onClick={() => rotateMap(0)}
-            size="sm"
-            variant="ghost"
-            className="h-9 w-9 p-0 hover:bg-gray-100"
-            title="Reset map rotation"
-          >
-            <span className="text-sm">⌂</span>
-          </Button>
-          <Button
-            onClick={() => rotateMap(45)}
-            size="sm"
-            variant="ghost"
-            className="h-9 w-9 p-0 hover:bg-gray-100"
-            title="Rotate map clockwise"
-          >
-            <span className="text-sm">↻</span>
-          </Button>
-        </div>
+
         
         {/* Focus on Vehicle button */}
         <Button
