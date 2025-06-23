@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 interface GeolocationState {
   location: { lat: number; lng: number; accuracy?: number } | null;
@@ -6,27 +6,14 @@ interface GeolocationState {
   isLoading: boolean;
 }
 
-interface GeolocationOptions {
-  enableHighAccuracy?: boolean;
-  timeout?: number;
-  maximumAge?: number;
-}
-
-export function useGeolocation(options: GeolocationOptions = {}) {
+export function useGeolocation() {
   const [state, setState] = useState<GeolocationState>({
     location: null,
     error: null,
     isLoading: false,
   });
 
-  const [watchId, setWatchId] = useState<number | null>(null);
-
-  const defaultOptions: PositionOptions = {
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 60000,
-    ...options,
-  };
+  const watchIdRef = useRef<number | null>(null);
 
   const updateLocation = useCallback((position: GeolocationPosition) => {
     setState({
@@ -77,9 +64,13 @@ export function useGeolocation(options: GeolocationOptions = {}) {
     navigator.geolocation.getCurrentPosition(
       updateLocation,
       updateError,
-      defaultOptions
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
     );
-  }, [updateLocation, updateError, defaultOptions]);
+  }, [updateLocation, updateError]);
 
   const startWatching = useCallback(() => {
     if (!navigator.geolocation) {
@@ -91,8 +82,8 @@ export function useGeolocation(options: GeolocationOptions = {}) {
       return;
     }
 
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -100,38 +91,28 @@ export function useGeolocation(options: GeolocationOptions = {}) {
     const id = navigator.geolocation.watchPosition(
       updateLocation,
       updateError,
-      defaultOptions
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
     );
 
-    setWatchId(id);
-  }, [updateLocation, updateError, defaultOptions, watchId]);
+    watchIdRef.current = id;
+  }, [updateLocation, updateError]);
 
   const stopWatching = useCallback(() => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      setWatchId(null);
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
     }
-  }, [watchId]);
-
-  // Get initial position on mount
-  useEffect(() => {
-    getCurrentPosition();
-  }, [getCurrentPosition]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-  }, [watchId]);
+  }, []);
 
   return {
     ...state,
     getCurrentPosition,
     startWatching,
     stopWatching,
-    isWatching: watchId !== null,
+    isWatching: watchIdRef.current !== null,
   };
 }
