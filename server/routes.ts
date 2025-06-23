@@ -106,63 +106,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Suburb boundaries for Brisbane suburbs
+  // Suburb boundaries for Brisbane suburbs with real boundary coordinates
   app.get("/api/suburbs/boundaries", async (req, res) => {
     try {
-      // Return Brisbane suburb boundaries with accurate coordinates
-      const suburbs = [
-        {
-          name: "Brisbane CBD",
-          coordinates: [
-            [-27.4689, 153.0234], [-27.4689, 153.0290], [-27.4730, 153.0290], 
-            [-27.4730, 153.0234], [-27.4689, 153.0234]
-          ],
-          properties: { place: "suburb", postcode: "4000" }
-        },
-        {
-          name: "South Brisbane",
-          coordinates: [
-            [-27.4730, 153.0180], [-27.4730, 153.0290], [-27.4820, 153.0290], 
-            [-27.4820, 153.0180], [-27.4730, 153.0180]
-          ],
-          properties: { place: "suburb", postcode: "4101" }
-        },
-        {
-          name: "Fortitude Valley",
-          coordinates: [
-            [-27.4580, 153.0290], [-27.4580, 153.0380], [-27.4650, 153.0380], 
-            [-27.4650, 153.0290], [-27.4580, 153.0290]
-          ],
-          properties: { place: "suburb", postcode: "4006" }
-        },
-        {
-          name: "New Farm",
-          coordinates: [
-            [-27.4650, 153.0380], [-27.4650, 153.0450], [-27.4730, 153.0450], 
-            [-27.4730, 153.0380], [-27.4650, 153.0380]
-          ],
-          properties: { place: "suburb", postcode: "4005" }
-        },
-        {
-          name: "West End",
-          coordinates: [
-            [-27.4820, 153.0100], [-27.4820, 153.0200], [-27.4900, 153.0200], 
-            [-27.4900, 153.0100], [-27.4820, 153.0100]
-          ],
-          properties: { place: "suburb", postcode: "4101" }
-        },
-        {
-          name: "Kangaroo Point",
-          coordinates: [
-            [-27.4730, 153.0290], [-27.4730, 153.0380], [-27.4820, 153.0380], 
-            [-27.4820, 153.0290], [-27.4730, 153.0290]
-          ],
-          properties: { place: "suburb", postcode: "4169" }
+      // First try to get real suburb boundaries from Overpass API
+      const overpassQuery = `
+        [out:json][timeout:30];
+        (
+          rel["place"="suburb"]["name"~"Brisbane|Fortitude Valley|South Brisbane|New Farm|West End|Kangaroo Point|Paddington|Milton|Toowong|St Lucia"]["boundary"="administrative"](bbox:-27.55,152.9,-27.35,153.15);
+        );
+        out geom;
+      `;
+
+      try {
+        const overpassResponse = await axios.post('https://overpass-api.de/api/interpreter', overpassQuery, {
+          headers: {
+            'Content-Type': 'text/plain',
+            'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
+          },
+          timeout: 25000
+        });
+
+        if (overpassResponse.data && overpassResponse.data.elements && overpassResponse.data.elements.length > 0) {
+          const suburbs = overpassResponse.data.elements
+            .filter((element: any) => element.tags?.name && element.geometry)
+            .map((element: any) => {
+              let coordinates: number[][] = [];
+              
+              // Extract coordinates from relation geometry
+              if (element.type === 'relation' && element.geometry) {
+                const ways = element.geometry.filter((geom: any) => geom.type === 'way');
+                if (ways.length > 0) {
+                  // Get the first outer way's coordinates
+                  const outerWay = ways.find((way: any) => 
+                    element.members?.some((member: any) => member.ref === way.ref && member.role === 'outer')
+                  ) || ways[0];
+                  
+                  if (outerWay && outerWay.geometry) {
+                    coordinates = outerWay.geometry.map((node: any) => [node.lat, node.lon]);
+                  }
+                }
+              }
+
+              return {
+                name: element.tags.name,
+                coordinates: coordinates.length > 3 ? coordinates : [],
+                properties: element.tags
+              };
+            })
+            .filter((suburb: any) => suburb.coordinates.length > 0);
+
+          if (suburbs.length > 0) {
+            console.log(`Retrieved ${suburbs.length} real suburb boundaries from OpenStreetMap`);
+            res.json(suburbs);
+            return;
+          }
         }
+      } catch (overpassError) {
+        console.log("Overpass API failed, using Nominatim fallback");
+      }
+
+      // Fallback to Nominatim API for individual suburb boundaries
+      const suburbNames = [
+        "Brisbane City, Queensland, Australia",
+        "Fortitude Valley, Brisbane, Queensland, Australia", 
+        "South Brisbane, Queensland, Australia",
+        "New Farm, Brisbane, Queensland, Australia",
+        "West End, Brisbane, Queensland, Australia",
+        "Kangaroo Point, Brisbane, Queensland, Australia"
       ];
 
-      console.log(`Returning ${suburbs.length} Brisbane suburb boundaries`);
-      res.json(suburbs);
+      const suburbPromises = suburbNames.map(async (suburbName) => {
+        try {
+          const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+            params: {
+              q: suburbName,
+              format: 'geojson',
+              polygon_geojson: 1,
+              addressdetails: 1,
+              limit: 1
+            },
+            headers: {
+              'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
+            },
+            timeout: 10000
+          });
+
+          if (response.data.features && response.data.features.length > 0) {
+            const feature = response.data.features[0];
+            if (feature.geometry && feature.geometry.type === 'Polygon') {
+              return {
+                name: feature.properties.display_name.split(',')[0],
+                coordinates: feature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]),
+                properties: feature.properties
+              };
+            }
+          }
+          return null;
+        } catch (error) {
+          console.log(`Failed to fetch boundary for ${suburbName}`);
+          return null;
+        }
+      });
+
+      const suburbResults = await Promise.all(suburbPromises);
+      const validSuburbs = suburbResults.filter(suburb => suburb !== null);
+
+      if (validSuburbs.length > 0) {
+        console.log(`Retrieved ${validSuburbs.length} suburb boundaries from Nominatim`);
+        res.json(validSuburbs);
+      } else {
+        console.log("All boundary APIs failed, providing basic area outline");
+        // Provide a simple Brisbane city boundary as last resort
+        res.json([{
+          name: "Brisbane Area",
+          coordinates: [
+            [-27.35, 152.9], [-27.35, 153.15], [-27.55, 153.15], [-27.55, 152.9], [-27.35, 152.9]
+          ],
+          properties: { place: "city", note: "Approximate boundary" }
+        }]);
+      }
     } catch (error) {
       console.error("Error fetching suburb boundaries:", error);
       res.status(500).json({ message: "Failed to fetch suburb boundaries" });
