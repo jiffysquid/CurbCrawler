@@ -29,6 +29,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const toiletMarkersRef = useRef<any[]>([]);
   const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [showSuburbs, setShowSuburbs] = useState(true);
   const { toast } = useToast();
 
   // Session colors for different paths
@@ -45,11 +46,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     '#6366F1'  // Indigo
   ];
 
-  // Fetch suburb boundaries based on current location
+  // Fetch suburb boundaries for Brisbane area
   const { data: suburbBoundaries = [], isError: suburbError } = useQuery<SuburbBoundary[]>({
-    queryKey: ['/api/suburbs/boundaries', currentLocation?.lat, currentLocation?.lng],
-    enabled: !!currentLocation && isMapReady,
+    queryKey: ['/api/suburbs/boundaries'],
+    enabled: isMapReady,
     retry: 2,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Fetch public toilets near current location
@@ -118,7 +120,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Handle suburb boundaries
   useEffect(() => {
-    if (!mapInstanceRef.current || !L || !suburbBoundaries.length) return;
+    if (!mapInstanceRef.current || !L) return;
 
     // Clear existing suburb polygons
     suburbPolygonsRef.current.forEach(polygon => {
@@ -126,22 +128,52 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
     suburbPolygonsRef.current = [];
 
-    // Add new suburb polygons
-    suburbBoundaries.forEach(suburb => {
-      if (suburb.coordinates && suburb.coordinates.length > 0) {
-        const polygon = L.polygon(suburb.coordinates, {
-          color: '#2563EB',
-          weight: 2,
-          opacity: 0.8,
-          fillColor: '#2563EB',
-          fillOpacity: 0.1
-        }).addTo(mapInstanceRef.current);
+    // Only add if we have data and want to show suburbs
+    if (showSuburbs && suburbBoundaries.length > 0) {
+      // Add suburb boundary polygons with enhanced styling
+      suburbBoundaries.forEach(suburb => {
+        if (suburb.coordinates && suburb.coordinates.length > 0) {
+          const polygon = L.polygon(suburb.coordinates, {
+            color: '#059669',        // Green border
+            weight: 2,
+            opacity: 0.7,
+            fillColor: '#10B981',    // Light green fill
+            fillOpacity: 0.15,
+            dashArray: '5, 5',       // Dashed border
+            interactive: true
+          }).addTo(mapInstanceRef.current);
 
-        polygon.bindPopup(`<strong>${suburb.name}</strong>`);
-        suburbPolygonsRef.current.push(polygon);
-      }
-    });
-  }, [suburbBoundaries]);
+          // Enhanced popup with suburb information
+          polygon.bindPopup(`
+            <div class="text-sm">
+              <strong class="text-green-700">${suburb.name}</strong><br/>
+              <small class="text-gray-600">Brisbane Suburb</small>
+              ${suburb.properties?.postcode ? `<br/><small>Postcode: ${suburb.properties.postcode}</small>` : ''}
+            </div>
+          `);
+
+          // Add hover effects with proper typing
+          polygon.on('mouseover', function(this: any) {
+            this.setStyle({
+              fillOpacity: 0.25,
+              weight: 3
+            });
+          });
+
+          polygon.on('mouseout', function(this: any) {
+            this.setStyle({
+              fillOpacity: 0.15,
+              weight: 2
+            });
+          });
+
+          suburbPolygonsRef.current.push(polygon);
+        }
+      });
+
+      console.log(`Displayed ${suburbPolygonsRef.current.length} suburb boundaries on map`);
+    }
+  }, [suburbBoundaries, showSuburbs]);
 
   // Handle suburb fetch error
   useEffect(() => {
@@ -370,16 +402,32 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }} 
       />
       
-      {/* Center on location button */}
-      {currentLocation && (
+      {/* Map controls */}
+      <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
+        {/* Suburbs toggle button */}
         <Button
-          onClick={centerOnCurrentLocation}
+          onClick={() => setShowSuburbs(!showSuburbs)}
           size="sm"
-          className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 bg-primary hover:bg-blue-700 text-white shadow-lg"
+          variant={showSuburbs ? "default" : "outline"}
+          className="bg-white hover:bg-gray-100 text-gray-700 shadow-lg border"
+          title={showSuburbs ? "Hide suburb boundaries" : "Show suburb boundaries"}
         >
-          <Crosshair className="h-4 w-4" />
+          <span className="text-xs font-medium">
+            {showSuburbs ? "Hide Suburbs" : "Show Suburbs"}
+          </span>
         </Button>
-      )}
+        
+        {/* Center on location button */}
+        {currentLocation && (
+          <Button
+            onClick={centerOnCurrentLocation}
+            size="sm"
+            className="bg-primary hover:bg-blue-700 text-white shadow-lg"
+          >
+            <Crosshair className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       {/* Loading indicator */}
       {!isMapReady && (
