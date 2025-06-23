@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
@@ -115,13 +115,13 @@ export default function Home() {
     if (activeSession && activeSession.id && (!currentSession || (currentSession.id !== activeSession.id))) {
       setCurrentSession(activeSession);
     }
-  }, [activeSession]);
+  }, [activeSession?.id]);
 
-  // Handle location updates
+  // Handle location updates - only when session becomes active
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
-    if (location && currentSession?.isActive) {
+    if (currentSession?.isActive && location) {
       // Add location to current session every 10 seconds during active tracking
       intervalId = setInterval(() => {
         if (location && currentSession?.id) {
@@ -141,17 +141,14 @@ export default function Home() {
         clearInterval(intervalId);
       }
     };
-  }, [location?.lat, location?.lng, currentSession?.id, currentSession?.isActive]);
+  }, [currentSession?.isActive, currentSession?.id]);
 
-  // Separate effect for suburb lookup to avoid infinite loops
-  useEffect(() => {
-    if (location && !suburbLookupMutation.isPending) {
-      suburbLookupMutation.mutate({
-        lat: location.lat,
-        lng: location.lng
-      });
+  // Lookup suburb only when starting a session to avoid infinite loops
+  const lookupSuburbOnce = (lat: number, lng: number) => {
+    if (!suburbLookupMutation.isPending) {
+      suburbLookupMutation.mutate({ lat, lng });
     }
-  }, [location?.lat, location?.lng]);
+  };
 
   // Show location permission error
   useEffect(() => {
@@ -173,6 +170,9 @@ export default function Home() {
       });
       return;
     }
+
+    // Lookup suburb for current location
+    lookupSuburbOnce(location.lat, location.lng);
 
     const sessionData = {
       startTime: new Date().toISOString(),
