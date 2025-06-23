@@ -34,6 +34,12 @@ export default function Settings() {
   // Save settings to localStorage when they change
   useEffect(() => {
     localStorage.setItem('focusArea', focusArea);
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'focusArea',
+      newValue: focusArea,
+      storageArea: localStorage
+    }));
   }, [focusArea]);
 
   useEffect(() => {
@@ -46,10 +52,22 @@ export default function Settings() {
 
   useEffect(() => {
     localStorage.setItem('showSuburbBoundaries', String(showSuburbBoundaries));
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'showSuburbBoundaries',
+      newValue: String(showSuburbBoundaries),
+      storageArea: localStorage
+    }));
   }, [showSuburbBoundaries]);
 
   useEffect(() => {
     localStorage.setItem('showToilets', String(showToilets));
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'showToilets',
+      newValue: String(showToilets),
+      storageArea: localStorage
+    }));
   }, [showToilets]);
 
   const handleClearData = () => {
