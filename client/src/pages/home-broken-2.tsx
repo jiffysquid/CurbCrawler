@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
@@ -11,32 +11,68 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Session, SessionWithStats, LocationPoint } from "@shared/schema";
 
+// Utility functions
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371; // Radius of the Earth in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+const formatDuration = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
+};
+
 type TabType = 'sessions' | 'settings';
 
 export default function Home() {
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [sessionLocations, setSessionLocations] = useState<LocationPoint[]>([]);
+  const [currentSuburb, setCurrentSuburb] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('sessions');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  const { location, startWatching, stopWatching } = useGeolocation();
+  const { location, error: locationError, startWatching, stopWatching } = useGeolocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch sessions
+  // Fetch active session on mount
+  const { data: activeSession, isLoading: isLoadingActiveSession } = useQuery<Session | null>({
+    queryKey: ['/api/sessions/active'],
+  });
+
+  // Fetch all sessions for history
   const { data: sessions = [], isLoading: isLoadingSessions } = useQuery<SessionWithStats[]>({
     queryKey: ['/api/sessions'],
   });
 
-  // Create session mutation
+  // Create new session mutation
   const createSessionMutation = useMutation({
     mutationFn: async (sessionData: any) => {
       const response = await apiRequest('POST', '/api/sessions', sessionData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newSession) => {
+      setCurrentSession(newSession);
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions/active'] });
       toast({
         title: "Session Started",
-        description: "Tracking session started successfully.",
+        description: "Tracking session has been started successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to start tracking session.",
+        variant: "destructive",
       });
     }
   });
@@ -49,12 +85,63 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions/active'] });
       toast({
         title: "Session Updated",
-        description: "Session updated successfully.",
+        description: "Session has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update session.",
+        variant: "destructive",
       });
     }
   });
+
+  // Add location mutation
+  const addLocationMutation = useMutation({
+    mutationFn: async (locationData: any) => {
+      const response = await apiRequest('POST', '/api/locations', locationData);
+      return response.json();
+    },
+    onSuccess: (newLocation) => {
+      setSessionLocations(prev => [...prev, {
+        lat: newLocation.latitude,
+        lng: newLocation.longitude,
+        timestamp: newLocation.timestamp,
+        suburb: newLocation.suburb,
+        accuracy: newLocation.accuracy
+      }]);
+    }
+  });
+
+  // Suburb lookup mutation
+  const suburbLookupMutation = useMutation({
+    mutationFn: async ({ lat, lng }: { lat: number; lng: number }) => {
+      const response = await fetch(`/api/suburbs/lookup?lat=${lat}&lng=${lng}`);
+      if (!response.ok) throw new Error('Failed to lookup suburb');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Only update suburb if it's different to prevent loops
+      if (data.suburb && data.suburb !== currentSuburb) {
+        setCurrentSuburb(data.suburb);
+      }
+    }
+  });
+
+  // Show location permission error
+  useEffect(() => {
+    if (locationError) {
+      toast({
+        title: "Location Error",
+        description: locationError,
+        variant: "destructive",
+      });
+    }
+  }, [locationError]);
 
   const handleStartSession = () => {
     if (!location) {
@@ -66,14 +153,19 @@ export default function Home() {
       return;
     }
 
+    // Lookup suburb for current location
+    suburbLookupMutation.mutate({ lat: location.lat, lng: location.lng });
+
     const sessionData = {
       startTime: new Date().toISOString(),
       isActive: true,
       startLocation: {
         lat: location.lat,
         lng: location.lng,
-        suburb: 'Unknown'
-      }
+        suburb: currentSuburb
+      },
+      routeCoordinates: [],
+      suburbsVisited: currentSuburb ? [currentSuburb] : []
     };
 
     createSessionMutation.mutate(sessionData);
@@ -81,30 +173,61 @@ export default function Home() {
   };
 
   const handleStopSession = () => {
-    const activeSession = sessions.find(s => s.isActive);
-    if (!activeSession || !location) return;
+    if (!currentSession || !location) return;
+
+    const endTime = new Date().toISOString();
+    const startTime = new Date(currentSession.startTime);
+    const duration = Math.round((new Date(endTime).getTime() - startTime.getTime()) / (1000 * 60));
+    
+    // Calculate distance from route coordinates
+    const distance = calculateRouteDistance(sessionLocations);
+    
+    // Get unique suburbs visited
+    const uniqueSuburbs = Array.from(new Set(sessionLocations.map(loc => loc.suburb).filter(Boolean)));
 
     const updates = {
-      endTime: new Date().toISOString(),
+      endTime,
+      duration,
+      distance,
       isActive: false,
       endLocation: {
         lat: location.lat,
         lng: location.lng,
-        suburb: 'Unknown'
-      }
+        suburb: currentSuburb
+      },
+      routeCoordinates: sessionLocations,
+      suburbsVisited: uniqueSuburbs
     };
 
-    updateSessionMutation.mutate({ id: activeSession.id, updates });
+    updateSessionMutation.mutate({ id: currentSession.id, updates });
+    setCurrentSession(null);
+    setSessionLocations([]);
     stopWatching();
   };
 
-  const activeSession = sessions.find(s => s.isActive);
-  const isTracking = Boolean(activeSession);
+  const calculateRouteDistance = (locations: LocationPoint[]): number => {
+    if (locations.length < 2) return 0;
+    
+    let totalDistance = 0;
+    for (let i = 1; i < locations.length; i++) {
+      const distance = calculateDistance(
+        locations[i-1].lat, locations[i-1].lng,
+        locations[i].lat, locations[i].lng
+      );
+      totalDistance += distance;
+    }
+    return Math.round(totalDistance * 1000); // Convert to meters
+  };
+
+  // Simplified session state - use activeSession directly without causing loops
+  const isTracking = Boolean(activeSession?.isActive || currentSession?.isActive);
+
+
 
   const stats = {
-    duration: '0m',
-    distance: '0m',
-    suburbs: 0
+    duration: currentSession ? formatDuration(Math.round((Date.now() - new Date(currentSession.startTime).getTime()) / (1000 * 60))) : '0m',
+    distance: sessionLocations.length > 0 ? `${Math.round(calculateRouteDistance(sessionLocations))}m` : '0m',
+    suburbs: new Set(sessionLocations.map(loc => loc.suburb).filter(Boolean)).size
   };
 
   return (
@@ -113,8 +236,8 @@ export default function Home() {
       <div className="flex-1 relative">
         <Map
           currentLocation={location}
-          sessionLocations={[]}
-          currentSuburb="Unknown"
+          sessionLocations={sessionLocations}
+          currentSuburb={currentSuburb}
           isTracking={isTracking}
           allSessions={sessions}
         />
@@ -123,7 +246,7 @@ export default function Home() {
         <div className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-10">
           <SessionControls
             isTracking={isTracking}
-            currentSuburb="Unknown"
+            currentSuburb={currentSuburb}
             stats={stats}
             location={location}
             onStartSession={handleStartSession}
@@ -194,6 +317,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
           <div className="absolute right-0 top-0 h-full w-80 bg-background border-l shadow-lg">
             <div className="h-full flex flex-col">
+              {/* Tab Navigation */}
               <div className="border-b bg-muted/50">
                 <div className="flex">
                   <button
@@ -219,6 +343,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Tab Content */}
               <div className="flex-1 overflow-hidden">
                 {activeTab === 'sessions' ? (
                   <SessionHistory 
