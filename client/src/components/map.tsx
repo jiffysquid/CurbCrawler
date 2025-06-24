@@ -36,7 +36,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
-  const [showInfo, setShowInfo] = useState(false);
+
   const [showDemographics, setShowDemographics] = useState(false);
   const [currentSuburbName, setCurrentSuburbName] = useState<string>('Unknown');
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -290,16 +290,33 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
     suburbPolygonsRef.current = [];
 
-    // Only add if we have data and want to show suburbs
+    // Only add if we have data and want to show suburbs - filter for current and next week only
     if (showSuburbs && suburbBoundaries.length > 0) {
+      // Filter boundaries to show only current and next week clearouts
+      const relevantBoundaries = suburbBoundaries.filter(suburb => {
+        if (clearoutSchedule) {
+          const suburbBaseName = suburb.name.split(',')[0].trim();
+          const isCurrentClearout = clearoutSchedule.current.some(name => 
+            suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
+            name.toLowerCase().includes(suburbBaseName.toLowerCase())
+          );
+          const isNextClearout = clearoutSchedule.next.some(name => 
+            suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
+            name.toLowerCase().includes(suburbBaseName.toLowerCase())
+          );
+          return isCurrentClearout || isNextClearout;
+        }
+        return false;
+      });
+      
       // Add suburb boundary polygons with clearout-based styling
-      suburbBoundaries.forEach(suburb => {
+      relevantBoundaries.forEach(suburb => {
         if (suburb.coordinates && suburb.coordinates.length > 0) {
           // Determine color based on clearout schedule
-          let color = '#6B7280';        // Default gray
-          let fillColor = '#9CA3AF';    // Default light gray
-          let borderStyle = '5, 5';     // Default dashed
-          let status = 'No clearout scheduled';
+          let color = '#059669';        // Default green for current
+          let fillColor = '#10B981';    // Green fill
+          let borderStyle = '';         // Solid line
+          let status = 'Current week clearout';
           
           if (clearoutSchedule) {
             console.log(`Checking suburb ${suburb.name} against clearout schedule:`, clearoutSchedule);
@@ -316,8 +333,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             
             console.log(`${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
             
-            if (isCurrentClearout) {
-              color = '#059669';        // Green border for current clearout
+            if (isNextClearout && !isCurrentClearout) {
+              color = '#2563EB';        // Blue border for next clearout
               fillColor = '#10B981';    // Light green fill
               borderStyle = '';         // Solid border
               status = 'Current clearout area (July 21-27)';
@@ -386,7 +403,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
       });
 
-      console.log(`Displayed ${suburbPolygonsRef.current.length} suburb boundaries with clearout schedule`);
+      console.log(`Displayed ${relevantBoundaries.length} relevant suburb boundaries (current + next week clearouts)`);
     }
   }, [suburbBoundaries, showSuburbs, clearoutSchedule]);
 
@@ -775,58 +792,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       )}
 
-      {/* Clearout Schedule Legend */}
-      {showSuburbs && showInfo && (
-        <div className="absolute top-4 right-4 md:top-6 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-64">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Council Clearout Schedule</h3>
-          
-          {clearoutSchedule?.error || clearoutSchedule?.isTransitionPeriod ? (
-            <div className="space-y-2 text-xs">
-              <div className="text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                <strong>Notice:</strong><br />
-                {clearoutSchedule.isTransitionPeriod 
-                  ? "Council data unavailable during financial year transition (late June - mid July)"
-                  : clearoutSchedule.message || "Council clearout data currently unavailable"
-                }
-              </div>
-              <div className="text-gray-600 text-center">
-                All suburbs displayed in gray
-              </div>
-            </div>
-          ) : clearoutSchedule ? (
-            <>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-green-600 bg-green-100 rounded-sm"></div>
-                  <span className="text-gray-700">Current clearout areas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-blue-600 bg-blue-100 rounded-sm border-dashed"></div>
-                  <span className="text-gray-700">Next clearout areas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-gray-500 bg-gray-100 rounded-sm border-dashed"></div>
-                  <span className="text-gray-700">No clearout scheduled</span>
-                </div>
-              </div>
-              
-              <div className="mt-2 pt-2 border-t border-gray-200">
-                <div className="text-xs text-gray-600">
-                  <div>Current: {clearoutSchedule.current.length > 0 ? clearoutSchedule.current.join(', ') : 'None'}</div>
-                  <div>Next: {clearoutSchedule.next.length > 0 ? clearoutSchedule.next.join(', ') : 'None'}</div>
-                  {clearoutSchedule.warning && (
-                    <div className="text-amber-600 mt-1 text-xs">⚠️ {clearoutSchedule.warning}</div>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-gray-500 text-center">
-              Loading clearout schedule...
-            </div>
-          )}
-        </div>
-      )}
+
 
       {/* Demographics Overlay */}
       {showDemographics && (
@@ -900,15 +866,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           <BarChart3 className="h-4 w-4" />
         </Button>
         
-        {/* Info button */}
-        <Button
-          onClick={() => setShowInfo(!showInfo)}
-          size="sm"
-          className={`${showInfo ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'} text-white shadow-lg`}
-          title="Toggle clearout schedule info"
-        >
-          <Info className="h-4 w-4" />
-        </Button>
+
         
         {/* Focus on Vehicle button */}
         <Button
