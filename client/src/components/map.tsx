@@ -152,8 +152,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   // Fetch public toilets near current location
   const { data: publicToilets = [] } = useQuery<PublicToilet[]>({
     queryKey: ['/api/toilets', currentLocation?.lat, currentLocation?.lng],
+    queryFn: async () => {
+      if (!currentLocation) return [];
+      const params = new URLSearchParams({
+        lat: currentLocation.lat.toString(),
+        lng: currentLocation.lng.toString(),
+        radius: '5'
+      });
+      const response = await fetch(`/api/toilets?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch toilets');
+      return response.json();
+    },
     enabled: !!currentLocation && isMapReady,
     retry: 2,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Initialize map
