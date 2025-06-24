@@ -329,7 +329,25 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             }
           }
 
-          const polygon = L.polygon(suburb.coordinates, {
+          // Ensure coordinates are in correct format [lat, lng]
+          const formattedCoords = suburb.coordinates.map((coord: number[]) => {
+            // Handle both [lat, lng] and [lng, lat] formats
+            if (Array.isArray(coord) && coord.length >= 2) {
+              const lat = coord[0];
+              const lng = coord[1];
+              // Brisbane coordinates should have lat around -27 and lng around 153
+              if (lat > 0 || lng < 0) {
+                // Likely [lng, lat] format, swap them
+                return [lng, lat];
+              }
+              return [lat, lng];
+            }
+            return coord;
+          });
+
+          console.log(`Creating polygon for ${suburb.name} with ${formattedCoords.length} coordinates`);
+          
+          const polygon = L.polygon(formattedCoords, {
             color: color,
             weight: 2,
             opacity: 0.8,
