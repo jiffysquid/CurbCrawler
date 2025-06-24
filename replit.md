@@ -124,6 +124,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 24, 2025: Fixed geo_shape parsing to handle Brisbane Council's nested Feature/geometry structure correctly
 - June 24, 2025: Suburb boundaries now display 100 authentic Brisbane suburbs with proper coordinate conversion and clearout schedule color coding
 - June 24, 2025: Filtered suburb display to show only current and next week clearout areas, removed redundant info button
+- June 24, 2025: Configured geolocation for production deployment - uses real GPS on deployed app, test coordinates in development
 
 ## User Preferences
 

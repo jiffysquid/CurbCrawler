@@ -61,13 +61,33 @@ export function useGeolocation() {
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
+    // Check if we're in development mode (localhost or replit.dev preview)
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname.includes('replit.dev') ||
+                         window.location.hostname.includes('127.0.0.1');
+    
+    if (isDevelopment) {
+      console.log("Development mode: Using St Lucia coordinates for testing");
+      updateLocation({
+        coords: {
+          latitude: -27.4969,
+          longitude: 153.0142,
+          accuracy: 10
+        } as GeolocationCoordinates,
+        timestamp: Date.now()
+      } as GeolocationPosition);
+      return;
+    }
+
+    // Production mode: Use real GPS
+    console.log("Production mode: Using real GPS coordinates");
     navigator.geolocation.getCurrentPosition(
       updateLocation,
       updateError,
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
+        timeout: 15000,
+        maximumAge: 300000, // 5 minutes
       }
     );
   }, [updateLocation, updateError]);
@@ -88,13 +108,33 @@ export function useGeolocation() {
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
+    // Check if we're in development mode
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname.includes('replit.dev') ||
+                         window.location.hostname.includes('127.0.0.1');
+    
+    if (isDevelopment) {
+      console.log("Development mode: Using static St Lucia coordinates");
+      updateLocation({
+        coords: {
+          latitude: -27.4969,
+          longitude: 153.0142,
+          accuracy: 10
+        } as GeolocationCoordinates,
+        timestamp: Date.now()
+      } as GeolocationPosition);
+      return;
+    }
+
+    // Production mode: Start real GPS watching
+    console.log("Production mode: Starting real GPS tracking");
     const id = navigator.geolocation.watchPosition(
       updateLocation,
       updateError,
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
+        timeout: 15000,
+        maximumAge: 300000, // 5 minutes
       }
     );
 
