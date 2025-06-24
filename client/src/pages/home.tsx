@@ -159,7 +159,7 @@ export default function Home() {
         />
         
         {/* Session Controls Overlay */}
-        <div className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-10">
+        <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-auto md:w-80 z-20">
           <SessionControls
             isTracking={isTracking}
             currentSuburb="Unknown"
@@ -175,7 +175,7 @@ export default function Home() {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="absolute top-4 right-4 z-20 md:hidden">
+        <div className="absolute top-20 right-4 z-20 md:hidden">
           <Button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             size="sm"

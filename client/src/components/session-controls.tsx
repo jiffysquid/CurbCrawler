@@ -32,9 +32,8 @@ export default function SessionControls({
   onStopRecording
 }: SessionControlsProps) {
   return (
-    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-auto md:w-80 z-20">
-      <Card className="bg-white/95 backdrop-blur-sm shadow-lg border border-gray-200">
-        <CardContent className="p-4">
+    <Card className="bg-white/95 backdrop-blur-sm shadow-lg border border-gray-200">
+      <CardContent className="p-4">
           {/* Current Session Status */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
@@ -149,6 +148,5 @@ export default function SessionControls({
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }
