@@ -208,28 +208,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       if (clearoutSchedule.next) {
         clearoutSchedule.next.forEach(suburb => params.append('next', suburb));
       }
-      console.log('Fetching demographics with params:', params.toString());
       const response = await fetch(`/api/suburbs/demographics?${params}`);
       if (!response.ok) throw new Error('Failed to fetch demographics');
-      const data = await response.json();
-      console.log('Demographics data received:', data);
-      return data;
+      return response.json();
     },
     enabled: !!clearoutSchedule && isMapReady,
     retry: 2,
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
 
-  // Debug demographics rendering conditions
-  useEffect(() => {
-    console.log('Demographics render conditions:', {
-      showSuburbs,
-      showDemographics,
-      suburbDemographicsLength: suburbDemographics.length,
-      clearoutSchedule: !!clearoutSchedule,
-      isMapReady
-    });
-  }, [showSuburbs, showDemographics, suburbDemographics, clearoutSchedule, isMapReady]);
+
 
   // Initialize map
   useEffect(() => {
@@ -819,7 +807,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       )}
 
       {/* Demographics Overlay */}
-      {showSuburbs && showDemographics && suburbDemographics.length > 0 && (
+      {showDemographics && suburbDemographics.length > 0 && (
         <div className="absolute top-20 right-4 md:top-20 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-72">
           <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
