@@ -235,16 +235,30 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           let status = 'No clearout scheduled';
           
           if (clearoutSchedule) {
-            if (clearoutSchedule.current.some(name => suburb.name.includes(name) || name.includes(suburb.name.split(',')[0]))) {
+            console.log(`Checking suburb ${suburb.name} against clearout schedule:`, clearoutSchedule);
+            
+            const suburbBaseName = suburb.name.split(',')[0].trim();
+            const isCurrentClearout = clearoutSchedule.current.some(name => 
+              suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
+              name.toLowerCase().includes(suburbBaseName.toLowerCase())
+            );
+            const isNextClearout = clearoutSchedule.next.some(name => 
+              suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
+              name.toLowerCase().includes(suburbBaseName.toLowerCase())
+            );
+            
+            console.log(`${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
+            
+            if (isCurrentClearout) {
               color = '#059669';        // Green border for current clearout
               fillColor = '#10B981';    // Light green fill
               borderStyle = '';         // Solid border
-              status = 'Current clearout area';
-            } else if (clearoutSchedule.next.some(name => suburb.name.includes(name) || name.includes(suburb.name.split(',')[0]))) {
+              status = 'Current clearout area (July 21-27)';
+            } else if (isNextClearout) {
               color = '#2563EB';        // Blue border for next clearout
               fillColor = '#3B82F6';    // Light blue fill  
               borderStyle = '10, 5';    // Longer dashes
-              status = 'Next clearout area';
+              status = 'Next clearout area (July 28-Aug 3)';
             }
           }
 
