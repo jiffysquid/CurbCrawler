@@ -120,7 +120,7 @@ export default function SessionControls({
                   <div className="text-sm font-medium text-gray-900">
                     {currentSuburb || 'Unknown Suburb'}
                   </div>
-                  <div className="text-xs text-gray-500">Current Location</div>
+                  <div className="text-xs text-gray-500">Current Location • GPS Tracking</div>
                   {location && (
                     <div className="text-xs text-gray-400 mt-1">
                       {location.lat.toFixed(6)}, {location.lng.toFixed(6)}

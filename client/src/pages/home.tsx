@@ -6,6 +6,7 @@ import SessionControls from "@/components/session-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
 import { useToast } from "@/hooks/use-toast";
+import { useGeolocation } from "@/hooks/use-geolocation";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats } from "@shared/schema";
@@ -19,57 +20,61 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   
   const { toast } = useToast();
+  
+  // Use the geolocation hook for continuous GPS tracking
+  const { location: gpsLocation, error: gpsError, isLoading: gpsLoading, isWatching, startWatching, stopWatching } = useGeolocation();
 
   // Fetch sessions
   const { data: sessions = [] } = useQuery<SessionWithStats[]>({
     queryKey: ['/api/sessions'],
   });
 
-  // Initialize geolocation on page load
+  // Initialize GPS tracking on page load
   useEffect(() => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-          });
-          console.log('Location obtained:', position.coords.latitude, position.coords.longitude);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          toast({
-            title: "Location Access Required",
-            description: "Please allow location access to see your vehicle marker and use tracking features.",
-            variant: "destructive",
-          });
-        },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 10000, 
-          maximumAge: 60000 
-        }
-      );
-    }
-  }, [toast]);
-
-  // Simple geolocation
-  const startWatching = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
+      // Check if we're in development mode (only localhost)
+      const isDevelopment = window.location.hostname === 'localhost';
+      
+      if (isDevelopment) {
+        console.log("Development mode: Using St Lucia coordinates for testing");
         setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          lat: -27.4969,
+          lng: 153.0142,
+          accuracy: 10,
         });
+        return;
+      }
+
+      // Production mode: Start continuous GPS tracking immediately
+      console.log("Production mode: Starting continuous GPS tracking");
+      startWatching();
+    } else {
+      toast({
+        title: "Geolocation Not Supported",
+        description: "Your device doesn't support location services.",
+        variant: "destructive",
       });
     }
-  };
+  }, [toast, startWatching]);
 
-  const stopWatching = () => {
-    // Simple stop function
-  };
+  // Update location state when GPS location changes
+  useEffect(() => {
+    if (gpsLocation) {
+      setLocation(gpsLocation);
+      console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
+    }
+  }, [gpsLocation]);
+
+  // Handle GPS errors
+  useEffect(() => {
+    if (gpsError) {
+      toast({
+        title: "Location Access Required",
+        description: "Please allow location access to use GPS tracking features. Check your browser permissions.",
+        variant: "destructive",
+      });
+    }
+  }, [gpsError, toast]);
 
   // Create session mutation
   const createSessionMutation = useMutation({
@@ -89,7 +94,9 @@ export default function Home() {
 
   const handleStartSession = () => {
     if (!location) {
-      startWatching();
+      if (!isWatching) {
+        startWatching();
+      }
       toast({
         title: "Location Required",
         description: "Getting your location to start tracking.",
@@ -132,7 +139,11 @@ export default function Home() {
 
   const handleStartRecording = () => {
     setIsRecording(true);
-    console.log("Started recording clearout search path");
+    // Ensure GPS tracking is active when recording starts
+    if (!isWatching) {
+      startWatching();
+    }
+    console.log("Started recording clearout search path - GPS tracking active");
   };
 
   const handleStopRecording = () => {

@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface GeolocationState {
   location: { lat: number; lng: number; accuracy?: number } | null;
   error: string | null;
   isLoading: boolean;
+  isWatching: boolean;
 }
 
 export function useGeolocation() {
@@ -11,12 +12,15 @@ export function useGeolocation() {
     location: null,
     error: null,
     isLoading: false,
+    isWatching: false,
   });
 
   const watchIdRef = useRef<number | null>(null);
 
   const updateLocation = useCallback((position: GeolocationPosition) => {
-    setState({
+    console.log('GPS update:', position.coords.latitude, position.coords.longitude, 'accuracy:', position.coords.accuracy + 'm');
+    setState(prev => ({
+      ...prev,
       location: {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
@@ -24,10 +28,11 @@ export function useGeolocation() {
       },
       error: null,
       isLoading: false,
-    });
+    }));
   }, []);
 
   const updateError = useCallback((error: GeolocationPositionError) => {
+    console.error('GPS error:', error.message);
     let errorMessage = 'Unable to retrieve location';
     
     switch (error.code) {
@@ -42,69 +47,29 @@ export function useGeolocation() {
         break;
     }
 
-    setState({
-      location: null,
+    setState(prev => ({
+      ...prev,
       error: errorMessage,
       isLoading: false,
-    });
+    }));
   }, []);
-
-  const getCurrentPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      setState({
-        location: null,
-        error: 'Geolocation is not supported by this browser.',
-        isLoading: false,
-      });
-      return;
-    }
-
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    // Only use test coordinates for localhost development
-    const isDevelopment = window.location.hostname === 'localhost';
-    
-    if (isDevelopment) {
-      console.log("Development mode: Using St Lucia coordinates for testing");
-      updateLocation({
-        coords: {
-          latitude: -27.4969,
-          longitude: 153.0142,
-          accuracy: 10
-        } as GeolocationCoordinates,
-        timestamp: Date.now()
-      } as GeolocationPosition);
-      return;
-    }
-
-    // Production mode: Use real GPS
-    console.log("Production mode: Using real GPS coordinates");
-    navigator.geolocation.getCurrentPosition(
-      updateLocation,
-      updateError,
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000, // 5 minutes
-      }
-    );
-  }, [updateLocation, updateError]);
 
   const startWatching = useCallback(() => {
     if (!navigator.geolocation) {
-      setState({
-        location: null,
+      setState(prev => ({
+        ...prev,
         error: 'Geolocation is not supported by this browser.',
         isLoading: false,
-      });
+      }));
       return;
     }
 
+    // Stop any existing watch
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    setState(prev => ({ ...prev, isLoading: true, error: null, isWatching: true }));
 
     // Only use test coordinates for localhost development  
     const isDevelopment = window.location.hostname === 'localhost';
@@ -122,33 +87,43 @@ export function useGeolocation() {
       return;
     }
 
-    // Production mode: Start real GPS watching
-    console.log("Production mode: Starting real GPS tracking");
+    // Production mode: Start continuous GPS tracking
+    console.log("Production mode: Starting continuous GPS tracking with watchPosition");
     const id = navigator.geolocation.watchPosition(
       updateLocation,
       updateError,
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000, // 5 minutes
+        timeout: 10000,
+        maximumAge: 5000, // Accept cached location up to 5 seconds old
       }
     );
 
     watchIdRef.current = id;
+    console.log('GPS watch started with ID:', id);
   }, [updateLocation, updateError]);
 
   const stopWatching = useCallback(() => {
     if (watchIdRef.current !== null) {
+      console.log('Stopping GPS watch with ID:', watchIdRef.current);
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    setState(prev => ({ ...prev, isWatching: false }));
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
   return {
     ...state,
-    getCurrentPosition,
     startWatching,
     stopWatching,
-    isWatching: watchIdRef.current !== null,
   };
 }
