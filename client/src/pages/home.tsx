@@ -16,6 +16,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('sessions');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   
   const { toast } = useToast();
 
@@ -129,6 +130,16 @@ export default function Home() {
   const activeSession = sessions.find(s => s.isActive);
   const isTracking = Boolean(activeSession);
 
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    console.log("Started recording clearout search path");
+  };
+
+  const handleStopRecording = () => {
+    setIsRecording(false);
+    console.log("Stopped recording clearout search path");
+  };
+
   const stats = {
     duration: '0m',
     distance: '0m',
@@ -157,9 +168,9 @@ export default function Home() {
             onStartSession={handleStartSession}
             onStopSession={handleStopSession}
             isLoading={createSessionMutation.isPending || updateSessionMutation.isPending}
-            isRecording={false}
-            onStartRecording={() => console.log("Start recording path")}
-            onStopRecording={() => console.log("Stop recording path")}
+            isRecording={isRecording}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
           />
         </div>
 

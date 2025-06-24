@@ -112,22 +112,30 @@ export default function SessionControls({
             </div>
           )}
 
-          {/* Current Suburb Display */}
+          {/* Current Location & Recording Status */}
           <div className="p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <div>
-                <div className="text-sm font-medium text-gray-900">
-                  {currentSuburb || 'Unknown Suburb'}
-                </div>
-                <div className="text-xs text-gray-500">Current Location</div>
-                {location && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                    {location.accuracy && ` (±${Math.round(location.accuracy)}m)`}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {currentSuburb || 'Unknown Suburb'}
                   </div>
-                )}
+                  <div className="text-xs text-gray-500">Current Location</div>
+                  {location && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                      {location.accuracy && ` (±${Math.round(location.accuracy)}m)`}
+                    </div>
+                  )}
+                </div>
               </div>
+              {isRecording && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-red-600 font-medium">Recording</span>
+                </div>
+              )}
             </div>
           </div>
 
