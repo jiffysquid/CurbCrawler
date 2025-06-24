@@ -677,30 +677,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public toilets using Overpass API (OpenStreetMap) - filtered to active suburbs
+  // Public toilets using Overpass API (OpenStreetMap) - filtered to active clearout suburbs
   app.get("/api/toilets", async (req, res) => {
     try {
       const { lat, lng, radius = 5 } = req.query;
       
-      // Define Sunnybank area coordinates for focused toilet search
-      const sunnybankCenter = { lat: -27.5906, lng: 153.0566 }; // Sunnybank center
-      const sunnybankHillsCenter = { lat: -27.6089, lng: 153.0644 }; // Sunnybank Hills center
+      // Get current clearout schedule to determine active suburbs
+      let activeSuburbs: string[] = [];
+      let suburbCenters: { lat: number; lng: number }[] = [];
       
-      // Use provided coordinates or default to Sunnybank area
-      const centerLat = lat ? parseFloat(lat as string) : sunnybankCenter.lat;
-      const centerLng = lng ? parseFloat(lng as string) : sunnybankCenter.lng;
+      try {
+        const clearoutResponse = await axios.get(`http://localhost:5000/api/clearout-schedule`);
+        const clearoutData = clearoutResponse.data;
+        
+        // Combine current and next week suburbs for toilet filtering
+        activeSuburbs = [
+          ...(clearoutData.current || []),
+          ...(clearoutData.next || [])
+        ];
+        
+        console.log(`Filtering toilets for active clearout suburbs: ${activeSuburbs.join(', ')}`);
+        
+        // Get suburb boundaries to determine search areas
+        const boundariesResponse = await axios.get(`http://localhost:5000/api/suburbs/boundaries`);
+        const boundaries = boundariesResponse.data;
+        
+        // Calculate center points for each active suburb
+        suburbCenters = boundaries.map((boundary: any) => {
+          if (boundary.coordinates && boundary.coordinates.length > 0) {
+            // Calculate centroid of polygon
+            const coords = boundary.coordinates;
+            const centerLat = coords.reduce((sum: number, coord: number[]) => sum + coord[0], 0) / coords.length;
+            const centerLng = coords.reduce((sum: number, coord: number[]) => sum + coord[1], 0) / coords.length;
+            return { lat: centerLat, lng: centerLng };
+          }
+          return null;
+        }).filter((center: any) => center !== null);
+        
+      } catch (clearoutError) {
+        console.log("Could not fetch clearout schedule, using default Brisbane area");
+        suburbCenters = [{ lat: -27.4705, lng: 153.0260 }]; // Brisbane city center
+      }
+      
+      // Use provided coordinates or first active suburb center
+      const centerLat = lat ? parseFloat(lat as string) : (suburbCenters[0]?.lat || -27.4705);
+      const centerLng = lng ? parseFloat(lng as string) : (suburbCenters[0]?.lng || 153.0260);
       const searchRadius = parseFloat(radius as string) * 1000; // Convert km to meters
 
-      // Use Overpass API to find public toilets in Sunnybank area
+      // Build Overpass query for toilets in all active clearout suburbs
+      let searchQueries: string[] = [];
+      
+      if (suburbCenters.length > 0) {
+        suburbCenters.forEach(center => {
+          searchQueries.push(`node["amenity"="toilets"](around:${searchRadius},${center.lat},${center.lng})`);
+        });
+      } else {
+        // Fallback to single search area
+        searchQueries.push(`node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng})`);
+      }
+
       const overpassQuery = `
         [out:json][timeout:25];
         (
-          node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng});
-          node["amenity"="toilets"](around:${searchRadius},${sunnybankCenter.lat},${sunnybankCenter.lng});
-          node["amenity"="toilets"](around:${searchRadius},${sunnybankHillsCenter.lat},${sunnybankHillsCenter.lng});
+          ${searchQueries.join(';\n          ')};
         );
         out geom;
       `;
+
+      console.log(`Searching for toilets in ${suburbCenters.length} active clearout suburb areas`);
 
       const response = await axios.post('https://overpass-api.de/api/interpreter', overpassQuery, {
         headers: {
@@ -709,32 +753,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Filter toilets to only include those in Sunnybank area
+      // Filter toilets to only include those within active clearout suburbs
       const toilets = response.data.elements?.filter((element: any) => {
-        const lat = element.lat;
-        const lng = element.lon;
+        const toiletLat = element.lat;
+        const toiletLng = element.lon;
         
-        // Check if toilet is within reasonable distance of Sunnybank centers
-        const distanceToSunnybank = Math.sqrt(
-          Math.pow(lat - sunnybankCenter.lat, 2) + Math.pow(lng - sunnybankCenter.lng, 2)
-        );
-        const distanceToSunnybankHills = Math.sqrt(
-          Math.pow(lat - sunnybankHillsCenter.lat, 2) + Math.pow(lng - sunnybankHillsCenter.lng, 2)
-        );
-        
-        // Include if within 0.02 degrees (~2km) of either suburb center
-        return distanceToSunnybank < 0.02 || distanceToSunnybankHills < 0.02;
+        // Check if toilet is within reasonable distance of any active suburb center
+        return suburbCenters.some(center => {
+          const distance = Math.sqrt(
+            Math.pow(toiletLat - center.lat, 2) + Math.pow(toiletLng - center.lng, 2)
+          );
+          // Include if within 0.02 degrees (~2km) of any active suburb center
+          return distance < 0.02;
+        });
       }).map((element: any) => ({
         id: element.id.toString(),
         name: element.tags?.name || 'Public Toilet',
         lat: element.lat,
         lng: element.lon,
-        address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || 'Sunnybank Area',
+        address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || `Active Clearout Area`,
         openHours: element.tags?.opening_hours || '24/7',
         accessible: element.tags?.wheelchair === 'yes',
         fee: element.tags?.fee === 'yes',
         properties: element.tags
       })) || [];
+
+      console.log(`Found ${toilets.length} toilets in active clearout suburbs: ${activeSuburbs.join(', ')}`);
 
       res.json(toilets);
     } catch (error) {
