@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Crosshair, Focus } from "lucide-react";
+import { Crosshair, Focus, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
@@ -36,6 +36,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
+  const [showInfo, setShowInfo] = useState(false);
+  const [currentSuburbName, setCurrentSuburbName] = useState<string>('Unknown');
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
@@ -65,6 +67,31 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Update current suburb when location changes
+  useEffect(() => {
+    const updateCurrentSuburb = async () => {
+      if (!currentLocation) {
+        setCurrentSuburbName('Unknown');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/suburbs/lookup?lat=${currentLocation.lat}&lng=${currentLocation.lng}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentSuburbName(data.suburb || 'Unknown');
+        } else {
+          setCurrentSuburbName('Unknown');
+        }
+      } catch (error) {
+        console.log('Could not determine current suburb:', error);
+        setCurrentSuburbName('Unknown');
+      }
+    };
+
+    updateCurrentSuburb();
+  }, [currentLocation]);
 
   // Automatic map rotation based on driving direction
   const updateMapRotation = useCallback((newLocation: { lat: number; lng: number }) => {
@@ -693,8 +720,17 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }} 
       />
       
+      {/* Current Suburb Display */}
+      {currentLocation && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border px-4 py-2">
+          <div className="text-sm font-medium text-gray-900 text-center">
+            Current Location: <span className="text-blue-600">{currentSuburbName}</span>
+          </div>
+        </div>
+      )}
+
       {/* Clearout Schedule Legend */}
-      {showSuburbs && (
+      {showSuburbs && showInfo && (
         <div className="absolute top-4 right-4 md:top-6 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-64">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Council Clearout Schedule</h3>
           
@@ -748,7 +784,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
       {/* Map controls */}
       <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
-
+        
+        {/* Info button */}
+        <Button
+          onClick={() => setShowInfo(!showInfo)}
+          size="sm"
+          className={`${showInfo ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'} text-white shadow-lg`}
+          title="Toggle clearout schedule info"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
         
         {/* Focus on Vehicle button */}
         <Button
