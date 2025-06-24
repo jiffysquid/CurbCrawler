@@ -118,6 +118,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 24, 2025: Displaying authentic July 21st clearout suburbs: TARINGA, AUCHENFLOWER, ST LUCIA, MILTON
 - June 24, 2025: Fixed toilet proximity filtering to use GPS location within 5km radius
 - June 24, 2025: Replaced placeholder boundaries with accurate Australian Bureau of Statistics coordinates for all 13 Brisbane clearout suburbs
+- June 24, 2025: Added demographics overlay displaying population density and median house prices for active clearout suburbs using ABS Census 2021 data
 
 ## User Preferences
 

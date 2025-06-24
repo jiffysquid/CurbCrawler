@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Crosshair, Focus, Info } from "lucide-react";
+import { Crosshair, Focus, Info, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
@@ -37,6 +37,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
+  const [showDemographics, setShowDemographics] = useState(false);
   const [currentSuburbName, setCurrentSuburbName] = useState<string>('Unknown');
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
@@ -193,6 +194,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     enabled: !!currentLocation && isMapReady,
     retry: 2,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Fetch demographics data for active clearout suburbs
+  const { data: suburbDemographics = [] } = useQuery<any[]>({
+    queryKey: ['/api/suburbs/demographics', clearoutSchedule?.current, clearoutSchedule?.next],
+    enabled: !!clearoutSchedule && isMapReady,
+    retry: 2,
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
 
   // Initialize map
@@ -784,6 +793,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
       {/* Map controls */}
       <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
+        
+        {/* Demographics button */}
+        <Button
+          onClick={() => setShowDemographics(!showDemographics)}
+          size="sm"
+          className={`${showDemographics ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'} text-white shadow-lg`}
+          title="Toggle suburb demographics"
+        >
+          <BarChart3 className="h-4 w-4" />
+        </Button>
         
         {/* Info button */}
         <Button
