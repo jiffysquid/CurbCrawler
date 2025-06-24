@@ -166,110 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Overpass API failed, using Nominatim fallback");
       }
 
-      // Get current clearout schedule to determine which suburbs to fetch
-      let suburbNames = [
-        "Sunnybank, Brisbane, Queensland, Australia",
-        "Sunnybank Hills, Brisbane, Queensland, Australia"
-      ];
-      
-      try {
-        const clearoutResponse = await axios.get(`http://localhost:5000/api/clearout-schedule`);
-        const clearoutData = clearoutResponse.data;
-        
-        // Combine current and next week suburbs for boundary display
-        const allClearoutSuburbs = [
-          ...(clearoutData.current || []),
-          ...(clearoutData.next || [])
-        ];
-        
-        if (allClearoutSuburbs.length > 0) {
-          suburbNames = allClearoutSuburbs.map(suburb => `${suburb}, Brisbane, Queensland, Australia`);
-          console.log(`Fetching boundaries for real clearout suburbs: ${allClearoutSuburbs.join(', ')}`);
-        }
-      } catch (clearoutError) {
-        console.log("Could not fetch clearout schedule, using default suburbs");
-      }
-
-      const suburbPromises = suburbNames.map(async (suburbName) => {
-        try {
-          // Try multiple search strategies for better boundary results
-          const searchStrategies = [
-            // Strategy 1: Specific administrative boundary search
-            {
-              q: suburbName,
-              format: 'geojson',
-              polygon_geojson: 1,
-              addressdetails: 1,
-              limit: 5,
-              featureType: 'boundary'
-            },
-            // Strategy 2: General place search
-            {
-              q: suburbName,
-              format: 'geojson',
-              polygon_geojson: 1,
-              addressdetails: 1,
-              limit: 3
-            }
-          ];
-
-          for (const params of searchStrategies) {
-            const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-              params,
-              headers: {
-                'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
-              },
-              timeout: 10000
-            });
-
-            if (response.data.features && response.data.features.length > 0) {
-              // Find the best feature with polygon geometry
-              const polygonFeature = response.data.features.find((feature: any) => 
-                feature.geometry && 
-                (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') &&
-                feature.properties.display_name.toLowerCase().includes(suburbName.split(',')[0].toLowerCase())
-              );
-
-              if (polygonFeature) {
-                let coordinates: number[][] = [];
-                
-                if (polygonFeature.geometry.type === 'Polygon') {
-                  coordinates = polygonFeature.geometry.coordinates[0].map((coord: number[]) => [coord[1], coord[0]]);
-                } else if (polygonFeature.geometry.type === 'MultiPolygon') {
-                  // Use the largest polygon from multipolygon
-                  const polygons = polygonFeature.geometry.coordinates;
-                  const largestPolygon = polygons.reduce((largest: any, current: any) => 
-                    current[0].length > largest[0].length ? current : largest
-                  );
-                  coordinates = largestPolygon[0].map((coord: number[]) => [coord[1], coord[0]]);
-                }
-
-                if (coordinates.length > 3) {
-                  return {
-                    name: suburbName.split(',')[0],
-                    coordinates,
-                    properties: polygonFeature.properties
-                  };
-                }
-              }
-            }
-          }
-          return null;
-        } catch (error) {
-          console.log(`Failed to fetch boundary for ${suburbName}:`, error);
-          return null;
-        }
-      });
-
-      const suburbResults = await Promise.all(suburbPromises);
-      const validSuburbs = suburbResults.filter(suburb => suburb !== null);
-
-      if (validSuburbs.length > 0) {
-        console.log(`Retrieved ${validSuburbs.length} suburb boundaries from Nominatim`);
-        res.json(validSuburbs);
-      } else {
-        console.log("All boundary APIs failed, using Australian Bureau of Statistics suburb boundaries");
-        // Use actual ABS suburb boundary coordinates for Brisbane clearout areas
+      // Use Australian Bureau of Statistics suburb boundary coordinates for Brisbane clearout areas
         const brisbaneSuburbBoundaries = [
           {
             name: "TARINGA",
@@ -390,9 +287,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ];
         
-        console.log(`Providing ${brisbaneSuburbBoundaries.length} authentic Brisbane suburb boundaries`);
-        res.json(brisbaneSuburbBoundaries);
-      }
+      console.log(`Providing ${brisbaneSuburbBoundaries.length} authentic Brisbane suburb boundaries`);
+      res.json(brisbaneSuburbBoundaries);
     } catch (error) {
       console.error("Error fetching suburb boundaries:", error);
       res.status(500).json({ message: "Failed to fetch suburb boundaries" });
