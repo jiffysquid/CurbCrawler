@@ -61,10 +61,8 @@ export function useGeolocation() {
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-    // Check if we're in development mode (localhost or replit.dev preview)
-    const isDevelopment = window.location.hostname === 'localhost' || 
-                         window.location.hostname.includes('replit.dev') ||
-                         window.location.hostname.includes('127.0.0.1');
+    // Only use test coordinates for localhost development
+    const isDevelopment = window.location.hostname === 'localhost';
     
     if (isDevelopment) {
       console.log("Development mode: Using St Lucia coordinates for testing");
@@ -108,10 +106,8 @@ export function useGeolocation() {
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-    // Check if we're in development mode
-    const isDevelopment = window.location.hostname === 'localhost' || 
-                         window.location.hostname.includes('replit.dev') ||
-                         window.location.hostname.includes('127.0.0.1');
+    // Only use test coordinates for localhost development  
+    const isDevelopment = window.location.hostname === 'localhost';
     
     if (isDevelopment) {
       console.log("Development mode: Using static St Lucia coordinates");

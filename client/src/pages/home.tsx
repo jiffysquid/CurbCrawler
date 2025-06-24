@@ -6,7 +6,7 @@ import SessionControls from "@/components/session-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
 import { useToast } from "@/hooks/use-toast";
-import { Menu, X } from "lucide-react";
+import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats } from "@shared/schema";
 
@@ -157,6 +157,9 @@ export default function Home() {
             onStartSession={handleStartSession}
             onStopSession={handleStopSession}
             isLoading={createSessionMutation.isPending || updateSessionMutation.isPending}
+            isRecording={false}
+            onStartRecording={() => console.log("Start recording path")}
+            onStopRecording={() => console.log("Stop recording path")}
           />
         </div>
 

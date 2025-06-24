@@ -14,6 +14,9 @@ interface SessionControlsProps {
   onStartSession: () => void;
   onStopSession: () => void;
   isLoading: boolean;
+  isRecording?: boolean;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
 }
 
 export default function SessionControls({
@@ -23,7 +26,10 @@ export default function SessionControls({
   location,
   onStartSession,
   onStopSession,
-  isLoading
+  isLoading,
+  isRecording = false,
+  onStartRecording,
+  onStopRecording
 }: SessionControlsProps) {
   return (
     <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-auto md:w-80 z-20">
@@ -60,24 +66,51 @@ export default function SessionControls({
 
           {/* Control Buttons */}
           <div className="flex space-x-2 mb-3">
-            <Button
-              onClick={onStartSession}
-              disabled={isLoading || isTracking || !location}
-              className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
-            >
-              <Circle className="h-4 w-4 fill-current" />
-              <span>Start Recording</span>
-            </Button>
-            
-            <Button
-              onClick={onStopSession}
-              disabled={isLoading || !isTracking}
-              className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400"
-            >
-              <Square className="h-4 w-4" />
-              <span>End Recording</span>
-            </Button>
+            {!isTracking ? (
+              <Button
+                onClick={onStartSession}
+                disabled={isLoading || !location}
+                className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
+              >
+                <Play className="h-4 w-4" />
+                <span>Start Session</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={onStopSession}
+                disabled={isLoading}
+                className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400"
+              >
+                <Square className="h-4 w-4" />
+                <span>Stop Session</span>
+              </Button>
+            )}
           </div>
+          
+          {/* Recording Controls - Only show when session is active */}
+          {isTracking && (
+            <div className="flex space-x-2 mb-3">
+              {!isRecording ? (
+                <Button
+                  onClick={onStartRecording}
+                  disabled={isLoading || !location}
+                  className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
+                >
+                  <Circle className="h-4 w-4 fill-current" />
+                  <span>Start Recording Path</span>
+                </Button>
+              ) : (
+                <Button
+                  onClick={onStopRecording}
+                  disabled={isLoading}
+                  className="flex-1 font-medium py-3 px-4 transition-all duration-200 flex items-center justify-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white disabled:bg-gray-400"
+                >
+                  <Square className="h-4 w-4" />
+                  <span>Stop Recording Path</span>
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Current Suburb Display */}
           <div className="p-3 bg-blue-50 rounded-lg">
