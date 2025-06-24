@@ -465,37 +465,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const datasetId = dataset.dataset_id;
               console.log(`- ${title} (ID: ${datasetId})`);
               
-              // Try to fetch records from this dataset for July 21st
+              // Fetch all records from this dataset first to understand the structure
               try {
-                const recordsUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?where=date%20%3E%3D%20%222025-07-21%22%20AND%20date%20%3C%20%222025-07-28%22&apikey=${apiKey}`;
-                console.log(`Fetching records from: ${recordsUrl}`);
+                const apiKeyParam = process.env.BRISBANE_COUNCIL_API_KEY;
                 
-                const recordsResponse = await axios.get(recordsUrl, {
+                // First, get some sample records to understand the data structure
+                const sampleUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?limit=10&apikey=${apiKeyParam}`;
+                console.log(`Fetching sample records to understand structure: ${sampleUrl}`);
+                
+                const sampleResponse = await axios.get(sampleUrl, {
                   headers: { 'Accept': 'application/json' },
                   timeout: 10000
                 });
                 
-                if (recordsResponse.status === 200 && recordsResponse.data.results) {
-                  console.log(`Found ${recordsResponse.data.results.length} records for July 21st week`);
+                if (sampleResponse.status === 200) {
+                  console.log(`Sample response has ${sampleResponse.data.total_count} total records`);
                   
-                  recordsResponse.data.results.forEach((record: any) => {
-                    const fields = record.record?.fields || record;
-                    const suburb = fields.suburb || fields.location || fields.area_name || fields.locality;
-                    const collectionDate = fields.collection_date || fields.date || fields.pickup_date;
+                  if (sampleResponse.data.results && sampleResponse.data.results.length > 0) {
+                    const sampleRecord = sampleResponse.data.results[0];
+                    console.log('Sample record structure:', JSON.stringify(sampleRecord, null, 2));
                     
-                    if (suburb) {
-                      console.log(`Found clearout record: ${suburb} on ${collectionDate}`);
-                      const recordDate = new Date(collectionDate);
-                      const july21 = new Date('2025-07-21');
-                      const july28 = new Date('2025-07-28');
-                      
-                      if (recordDate >= july21 && recordDate < july28) {
-                        if (!current.includes(suburb)) current.push(suburb);
-                      } else if (recordDate >= july28 && recordDate < new Date('2025-08-04')) {
-                        if (!next.includes(suburb)) next.push(suburb);
+                    // Look for date fields in the sample
+                    const fields = sampleRecord.record?.fields || sampleRecord;
+                    const fieldNames = Object.keys(fields);
+                    console.log('Available fields:', fieldNames);
+                    
+                    // Find date and location fields
+                    const dateFields = fieldNames.filter(field => 
+                      field.toLowerCase().includes('date') || 
+                      field.toLowerCase().includes('week') ||
+                      field.toLowerCase().includes('collection')
+                    );
+                    const locationFields = fieldNames.filter(field =>
+                      field.toLowerCase().includes('suburb') ||
+                      field.toLowerCase().includes('location') ||
+                      field.toLowerCase().includes('area') ||
+                      field.toLowerCase().includes('locality')
+                    );
+                    
+                    console.log('Date-related fields:', dateFields);
+                    console.log('Location-related fields:', locationFields);
+                    
+                    // Now fetch records for July 21st using the correct field names
+                    if (dateFields.length > 0) {
+                      for (const dateField of dateFields) {
+                        try {
+                          const recordsUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?where=${dateField}%20%3E%3D%20%222025-07-21%22%20AND%20${dateField}%20%3C%20%222025-07-28%22&apikey=${apiKeyParam}`;
+                          console.log(`Trying date field ${dateField}: ${recordsUrl}`);
+                          
+                          const recordsResponse = await axios.get(recordsUrl, {
+                            headers: { 'Accept': 'application/json' },
+                            timeout: 10000
+                          });
+                          
+                          if (recordsResponse.status === 200 && recordsResponse.data.results && recordsResponse.data.results.length > 0) {
+                            console.log(`Found ${recordsResponse.data.results.length} records for July 21st week using field ${dateField}`);
+                            
+                            recordsResponse.data.results.forEach((record: any) => {
+                              const recordFields = record.record?.fields || record;
+                              console.log('Record fields:', recordFields);
+                              
+                              // Try different location field names
+                              let suburb = null;
+                              for (const locField of locationFields) {
+                                if (recordFields[locField]) {
+                                  suburb = recordFields[locField];
+                                  break;
+                                }
+                              }
+                              
+                              const collectionDate = recordFields[dateField];
+                              
+                              if (suburb && collectionDate) {
+                                console.log(`Found clearout record: ${suburb} on ${collectionDate} (field: ${dateField})`);
+                                const recordDate = new Date(collectionDate);
+                                const july21 = new Date('2025-07-21');
+                                const july28 = new Date('2025-07-28');
+                                
+                                if (recordDate >= july21 && recordDate < july28) {
+                                  if (!current.includes(suburb)) current.push(suburb);
+                                } else if (recordDate >= july28 && recordDate < new Date('2025-08-04')) {
+                                  if (!next.includes(suburb)) next.push(suburb);
+                                }
+                              }
+                            });
+                            
+                            // If we found data with this field, no need to try others
+                            if (current.length > 0 || next.length > 0) break;
+                          }
+                        } catch (fieldError) {
+                          console.log(`Error with field ${dateField}:`, fieldError instanceof Error ? fieldError.message : String(fieldError));
+                        }
                       }
                     }
-                  });
+                  }
                 }
               } catch (recordError) {
                 console.log(`Could not fetch records from dataset ${datasetId}:`, recordError instanceof Error ? recordError.message : String(recordError));
