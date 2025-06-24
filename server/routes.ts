@@ -192,50 +192,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`Full API response status: ${response.status}`);
           console.log(`Number of records received: ${response.data?.results?.length || 0}`);
-
-        if (!response.data?.results) {
-          console.log("No boundary data received from Brisbane Council API");
-          res.json([]);
-          return;
-        }
-
-        const suburbBoundaries = [];
-        const processedSuburbs = new Set();
-
-        for (const record of response.data.results) {
-          const suburbName = record.suburb?.toUpperCase();
-          const geoShape = record.geo_shape;
           
-          if (!suburbName || !geoShape || processedSuburbs.has(suburbName)) {
-            continue;
+          // Debug first few records to see geo_shape structure
+          if (response.data?.results?.length > 0) {
+            const sample = response.data.results[0];
+            console.log("Sample record keys:", Object.keys(sample));
+            console.log("Sample suburb:", sample.suburb);
+            console.log("Sample geo_shape:", sample.geo_shape ? 'exists' : 'null/undefined');
+            if (sample.geo_shape) {
+              console.log("geo_shape type:", sample.geo_shape.type);
+              console.log("geo_shape has coordinates:", !!sample.geo_shape.coordinates);
+            }
           }
 
-          try {
-            let coordinates = [];
+          if (!response.data?.results) {
+            console.log("No boundary data received from Brisbane Council API");
+            res.json([]);
+            return;
+          }
+
+          console.log(`Processing ${response.data.results.length} records for boundary extraction`);
+          
+          const suburbBoundaries = [];
+          const processedSuburbs = new Set();
+
+          for (const record of response.data.results) {
+            const suburbName = record.suburb?.toUpperCase();
+            const geoShape = record.geo_shape;
             
-            if (geoShape.type === 'Polygon' && geoShape.coordinates && geoShape.coordinates[0]) {
-              // Convert [lng, lat] to [lat, lng] for Leaflet
-              coordinates = geoShape.coordinates[0].map(coord => [coord[1], coord[0]]);
-            } else if (geoShape.type === 'MultiPolygon' && geoShape.coordinates && geoShape.coordinates[0]) {
-              coordinates = geoShape.coordinates[0][0].map(coord => [coord[1], coord[0]]);
+            console.log(`Processing: ${suburbName}, geo_shape exists: ${!!geoShape}, type: ${geoShape?.type}`);
+            
+            if (!suburbName || !geoShape || processedSuburbs.has(suburbName)) {
+              console.log(`Skipping ${suburbName}: missing data or already processed`);
+              continue;
             }
 
-            if (coordinates.length > 3) {
-              suburbBoundaries.push({
-                name: suburbName,
-                coordinates: coordinates,
-                properties: {
-                  source: 'brisbane-council-authentic',
-                  type: geoShape.type
-                }
-              });
-              processedSuburbs.add(suburbName);
-              console.log(`Added authentic boundary for ${suburbName} with ${coordinates.length} coordinates`);
+            try {
+              let coordinates = [];
+              
+              // Handle Brisbane Council's nested geo_shape structure
+              const geometry = geoShape.geometry || geoShape;
+              const geomType = geometry.type;
+              const coords = geometry.coordinates;
+              
+              console.log(`Processing ${geomType} for ${suburbName}`);
+              
+              if (geomType === 'Polygon' && coords && coords[0]) {
+                console.log(`Polygon has ${coords[0].length} coordinate points`);
+                coordinates = coords[0].map(coord => [coord[1], coord[0]]); // [lng,lat] to [lat,lng]
+              } else if (geomType === 'MultiPolygon' && coords && coords[0] && coords[0][0]) {
+                console.log(`MultiPolygon has ${coords[0][0].length} coordinate points`);
+                coordinates = coords[0][0].map(coord => [coord[1], coord[0]]); // [lng,lat] to [lat,lng]
+              } else {
+                console.log(`Unsupported geometry type for ${suburbName}: ${geomType}`);
+                console.log(`Coords structure:`, coords ? 'exists' : 'missing');
+              }
+
+              if (coordinates.length > 3) {
+                suburbBoundaries.push({
+                  name: suburbName,
+                  coordinates: coordinates,
+                  properties: {
+                    source: 'brisbane-council-authentic',
+                    type: geoShape.type
+                  }
+                });
+                processedSuburbs.add(suburbName);
+                console.log(`Successfully added boundary for ${suburbName} with ${coordinates.length} coordinates`);
+              } else {
+                console.log(`Insufficient coordinates for ${suburbName}: ${coordinates.length} points`);
+              }
+            } catch (shapeError) {
+              console.log(`Failed to process boundary for ${suburbName}:`, shapeError);
             }
-          } catch (shapeError) {
-            console.log(`Failed to process boundary for ${suburbName}:`, shapeError);
           }
-        }
 
           console.log(`Providing ${suburbBoundaries.length} authentic Brisbane Council suburb boundaries`);
           res.json(suburbBoundaries);
