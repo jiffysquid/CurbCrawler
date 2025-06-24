@@ -117,7 +117,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 24, 2025: Successfully parsing live Brisbane Council "Kerbside large item collection schedule" dataset
 - June 24, 2025: Displaying authentic July 21st clearout suburbs: TARINGA, AUCHENFLOWER, ST LUCIA, MILTON
 - June 24, 2025: Fixed toilet proximity filtering to use GPS location within 5km radius
-- June 24, 2025: Added authentic Brisbane suburb boundary coordinates for all 13 clearout areas
+- June 24, 2025: Replaced placeholder boundaries with accurate Australian Bureau of Statistics coordinates for all 13 Brisbane clearout suburbs
 
 ## User Preferences
 
