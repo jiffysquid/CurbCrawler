@@ -336,67 +336,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // Try to fetch real Brisbane Council clearout data
+      // Try to fetch real Brisbane Council clearout data using API
       let councilDataAvailable = false;
       let councilData: any = null;
       
       try {
-        // Try multiple Brisbane Council data sources for authentic clearout data
-        const councilUrls = [
-          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-collection',
-          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-clearout',
-          'https://www.brisbane.qld.gov.au/about-council/news-and-media/council-news',
-          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling',
-          'https://mycouncil.brisbane.qld.gov.au/service/Waste%20and%20recycling',
-          'https://www.brisbane.qld.gov.au/about-council/contact-council/online-services'
-        ];
+        const apiKey = process.env.BRISBANE_COUNCIL_API_KEY;
+        if (!apiKey) {
+          console.log("Brisbane Council API key not available, using fallback data");
+        } else {
+          console.log("Fetching real Brisbane Council clearout data for July 21st");
+          
+          // Try Brisbane Council API endpoints
+          const councilApiUrls = [
+            `https://www.data.brisbane.qld.gov.au/api/3/action/datastore_search?resource_id=waste-collection&filters={"date":"2025-07-21"}`,
+            `https://www.data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/waste-collection-schedule/records?where=date='2025-07-21'`,
+            `https://api.brisbane.qld.gov.au/waste/clearout-schedule?date=2025-07-21&api_key=${apiKey}`,
+            `https://opendata.brisbane.qld.gov.au/api/records/1.0/search/?dataset=clearout-collection&q=date:2025-07-21`
+          ];
 
-        for (const url of councilUrls) {
-          try {
-            const councilResponse = await axios.get(url, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-              },
-              timeout: 10000
-            });
-            
-            if (councilResponse.status === 200) {
-              const responseText = councilResponse.data.toString();
-              console.log(`Successfully connected to ${url}`);
+          for (const apiUrl of councilApiUrls) {
+            try {
+              const councilResponse = await axios.get(apiUrl, {
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Accept': 'application/json',
+                  'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
+                },
+                timeout: 10000
+              });
               
-              // Look for clearout schedule patterns in the HTML
-              const clearoutPatterns = [
-                /clearout.*?week/gi,
-                /kerbside.*?collection/gi,
-                /bulky.*?goods/gi,
-                /collection.*?schedule/gi,
-                /pickup.*?dates/gi
-              ];
-              
-              let foundScheduleData = false;
-              for (const pattern of clearoutPatterns) {
-                if (pattern.test(responseText)) {
-                  foundScheduleData = true;
-                  console.log(`Found clearout data pattern: ${pattern}`);
+              if (councilResponse.status === 200) {
+                const responseData = councilResponse.data;
+                console.log(`Successfully fetched council data from API: ${apiUrl}`);
+                console.log('Raw API response:', JSON.stringify(responseData, null, 2));
+                
+                // Parse the API response for clearout schedule data
+                if (responseData && (responseData.records || responseData.result || responseData.data)) {
+                  councilDataAvailable = true;
+                  councilData = responseData;
+                  console.log("Real Brisbane Council clearout data retrieved from API");
                   break;
                 }
               }
-              
-              if (foundScheduleData) {
-                councilDataAvailable = true;
-                councilData = responseText;
-                console.log("Brisbane Council clearout data retrieved successfully");
-                break;
-              }
+            } catch (apiError) {
+              console.log(`Failed to access ${apiUrl}:`, apiError instanceof Error ? apiError.message : String(apiError));
+              continue;
             }
-          } catch (urlError) {
-            console.log(`Failed to access ${url}:`, urlError instanceof Error ? urlError.message : String(urlError));
-            continue;
           }
         }
         
@@ -437,70 +423,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // If we reach here, we have council data - parse it for real schedule information
+      // Parse real Brisbane Council API data for July 21st clearout schedule
       if (councilDataAvailable && councilData) {
-        console.log("Parsing real Brisbane Council clearout data");
+        console.log("Parsing real Brisbane Council API data for July 21st");
         
         try {
-          // Extract suburb names and schedule information from the HTML
-          const suburbMatches = councilData.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*(?:clearout|collection|pickup)/gi) || [];
-          const weekMatches = councilData.match(/(this\s+week|next\s+week|week\s+of|current\s+week)/gi) || [];
-          
-          // Look for specific suburb mentions in the content
-          const knownSuburbs = [
-            'Sunnybank', 'Sunnybank Hills', 'Brisbane City', 'Fortitude Valley', 
-            'South Brisbane', 'West End', 'New Farm', 'Kangaroo Point',
-            'Spring Hill', 'Paddington', 'Toowong', 'Indooroopilly'
-          ];
-          
           let current: string[] = [];
           let next: string[] = [];
           
-          // Parse the content for current and next week schedules
-          const lines = councilData.split('\n');
-          let inCurrentWeek = false;
-          let inNextWeek = false;
+          // Parse different API response formats
+          const records = councilData.records || councilData.result?.records || councilData.data || [];
           
-          for (const line of lines) {
-            const lowerLine = line.toLowerCase();
+          if (Array.isArray(records) && records.length > 0) {
+            console.log(`Found ${records.length} clearout records from Brisbane Council API`);
             
-            // Check for week indicators
-            if (lowerLine.includes('current week') || lowerLine.includes('this week')) {
-              inCurrentWeek = true;
-              inNextWeek = false;
-            } else if (lowerLine.includes('next week') || lowerLine.includes('following week')) {
-              inCurrentWeek = false;
-              inNextWeek = true;
-            }
-            
-            // Extract suburb names from the current context
-            for (const suburb of knownSuburbs) {
-              if (lowerLine.includes(suburb.toLowerCase())) {
-                if (inCurrentWeek && !current.includes(suburb)) {
-                  current.push(suburb);
-                } else if (inNextWeek && !next.includes(suburb)) {
-                  next.push(suburb);
+            records.forEach((record: any) => {
+              const fields = record.fields || record;
+              const suburb = fields.suburb || fields.location || fields.area;
+              const collectionDate = fields.collection_date || fields.date || fields.pickup_date;
+              const collectionWeek = fields.collection_week || fields.week;
+              
+              if (suburb) {
+                // Parse collection date to determine if it's current week (July 21-27) or next week
+                const recordDate = new Date(collectionDate);
+                const july21 = new Date('2025-07-21');
+                const july28 = new Date('2025-07-28');
+                
+                if (recordDate >= july21 && recordDate < july28) {
+                  if (!current.includes(suburb)) {
+                    current.push(suburb);
+                    console.log(`Added ${suburb} to current week clearout (July 21-27)`);
+                  }
+                } else if (recordDate >= july28 && recordDate < new Date('2025-08-04')) {
+                  if (!next.includes(suburb)) {
+                    next.push(suburb);
+                    console.log(`Added ${suburb} to next week clearout (July 28-Aug 3)`);
+                  }
                 }
               }
-            }
+            });
           }
           
-          // If we found real data, use it
+          // If we found real API data, return it
           if (current.length > 0 || next.length > 0) {
+            console.log(`Real Brisbane Council data for July 21st: Current=${current.join(', ')}, Next=${next.join(', ')}`);
+            
             res.json({
               current,
               next,
-              dataSource: "council-website",
+              dataSource: "brisbane-council-api",
               brisbaneDate: brisbaneTime.toISOString(),
               month: month + 1,
               date: date,
               lastUpdated: brisbaneTime.toISOString(),
-              message: "Schedule retrieved from Brisbane Council website"
+              message: "Real clearout schedule retrieved from Brisbane Council API for July 21st"
             });
             return;
           }
         } catch (parseError) {
-          console.log("Error parsing council data, falling back to pattern-based schedule");
+          console.log("Error parsing Brisbane Council API data:", parseError);
         }
       }
       
