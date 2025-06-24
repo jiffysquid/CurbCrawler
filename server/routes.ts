@@ -363,8 +363,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: "62298059", name: "Botanic Gardens", lat: -27.4747, lng: 153.0294, address: "City Botanic Gardens", accessible: true, fee: false }
       ];
 
+      // Calculate distance using Haversine formula for accuracy
       const nearbyToilets = toilets.filter(toilet => {
-        const distance = Math.sqrt(Math.pow(toilet.lat - userLat, 2) + Math.pow(toilet.lng - userLng, 2)) * 111; // Rough km conversion
+        const R = 6371; // Earth's radius in km
+        const dLat = (toilet.lat - userLat) * Math.PI / 180;
+        const dLng = (toilet.lng - userLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(userLat * Math.PI / 180) * Math.cos(toilet.lat * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        console.log(`Toilet ${toilet.name}: ${distance.toFixed(2)}km from user location`);
         return distance <= 5;
       });
 
