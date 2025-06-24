@@ -199,6 +199,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   // Fetch demographics data for active clearout suburbs
   const { data: suburbDemographics = [] } = useQuery<any[]>({
     queryKey: ['/api/suburbs/demographics', clearoutSchedule?.current, clearoutSchedule?.next],
+    queryFn: async () => {
+      if (!clearoutSchedule) return [];
+      const params = new URLSearchParams();
+      if (clearoutSchedule.current) {
+        clearoutSchedule.current.forEach(suburb => params.append('current', suburb));
+      }
+      if (clearoutSchedule.next) {
+        clearoutSchedule.next.forEach(suburb => params.append('next', suburb));
+      }
+      const response = await fetch(`/api/suburbs/demographics?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch demographics');
+      return response.json();
+    },
     enabled: !!clearoutSchedule && isMapReady,
     retry: 2,
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes

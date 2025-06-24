@@ -405,8 +405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { current, next } = req.query;
       
       // Parse current and next suburb arrays from query parameters
-      const currentSuburbs = current ? (Array.isArray(current) ? current : [current]) : [];
-      const nextSuburbs = next ? (Array.isArray(next) ? next : [next]) : [];
+      const currentSuburbs = current ? (Array.isArray(current) ? current : current.split(',').map(s => s.trim())) : [];
+      const nextSuburbs = next ? (Array.isArray(next) ? next : next.split(',').map(s => s.trim())) : [];
       const allSuburbs = [...currentSuburbs, ...nextSuburbs];
       
       console.log(`Fetching demographics for suburbs: ${allSuburbs.join(', ')}`);
