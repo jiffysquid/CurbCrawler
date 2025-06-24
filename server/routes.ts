@@ -524,26 +524,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.log('Date-related fields:', dateFields);
                     console.log('Location-related fields:', locationFields);
                     
-                    // Now fetch records for July 21st using the correct field names
+                    // Fetch records for both current week (July 21st) and next week (July 28th)
                     if (dateFields.length > 0) {
                       for (const dateField of dateFields) {
                         try {
-                          const recordsUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?where=${dateField}%20%3E%3D%20%222025-07-21%22%20AND%20${dateField}%20%3C%20%222025-07-28%22&apikey=${apiKeyParam}`;
-                          console.log(`Trying date field ${dateField}: ${recordsUrl}`);
+                          // Fetch current week (July 21-27)
+                          const currentWeekUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?where=${dateField}%20%3E%3D%20%222025-07-21%22%20AND%20${dateField}%20%3C%20%222025-07-28%22&apikey=${apiKeyParam}`;
+                          console.log(`Fetching current week (July 21-27) using field ${dateField}`);
                           
-                          const recordsResponse = await axios.get(recordsUrl, {
+                          const currentResponse = await axios.get(currentWeekUrl, {
                             headers: { 'Accept': 'application/json' },
                             timeout: 10000
                           });
                           
-                          if (recordsResponse.status === 200 && recordsResponse.data.results && recordsResponse.data.results.length > 0) {
-                            console.log(`Found ${recordsResponse.data.results.length} records for July 21st week using field ${dateField}`);
+                          if (currentResponse.status === 200 && currentResponse.data.results) {
+                            console.log(`Found ${currentResponse.data.results.length} records for current week (July 21-27)`);
                             
-                            recordsResponse.data.results.forEach((record: any) => {
+                            currentResponse.data.results.forEach((record: any) => {
                               const recordFields = record.record?.fields || record;
-                              console.log('Record fields:', recordFields);
-                              
-                              // Try different location field names
                               let suburb = null;
                               for (const locField of locationFields) {
                                 if (recordFields[locField]) {
@@ -552,25 +550,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                 }
                               }
                               
-                              const collectionDate = recordFields[dateField];
-                              
-                              if (suburb && collectionDate) {
-                                console.log(`Found clearout record: ${suburb} on ${collectionDate} (field: ${dateField})`);
-                                const recordDate = new Date(collectionDate);
-                                const july21 = new Date('2025-07-21');
-                                const july28 = new Date('2025-07-28');
-                                
-                                if (recordDate >= july21 && recordDate < july28) {
-                                  if (!current.includes(suburb)) current.push(suburb);
-                                } else if (recordDate >= july28 && recordDate < new Date('2025-08-04')) {
-                                  if (!next.includes(suburb)) next.push(suburb);
-                                }
+                              if (suburb && !current.includes(suburb)) {
+                                current.push(suburb);
+                                console.log(`Added ${suburb} to current week clearout (July 21-27)`);
                               }
                             });
-                            
-                            // If we found data with this field, no need to try others
-                            if (current.length > 0 || next.length > 0) break;
                           }
+                          
+                          // Fetch next week (July 28 - Aug 3)
+                          const nextWeekUrl = `https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/${datasetId}/records?where=${dateField}%20%3E%3D%20%222025-07-28%22%20AND%20${dateField}%20%3C%20%222025-08-04%22&apikey=${apiKeyParam}`;
+                          console.log(`Fetching next week (July 28 - Aug 3) using field ${dateField}`);
+                          
+                          const nextResponse = await axios.get(nextWeekUrl, {
+                            headers: { 'Accept': 'application/json' },
+                            timeout: 10000
+                          });
+                          
+                          if (nextResponse.status === 200 && nextResponse.data.results) {
+                            console.log(`Found ${nextResponse.data.results.length} records for next week (July 28 - Aug 3)`);
+                            
+                            nextResponse.data.results.forEach((record: any) => {
+                              const recordFields = record.record?.fields || record;
+                              let suburb = null;
+                              for (const locField of locationFields) {
+                                if (recordFields[locField]) {
+                                  suburb = recordFields[locField];
+                                  break;
+                                }
+                              }
+                              
+                              if (suburb && !next.includes(suburb)) {
+                                next.push(suburb);
+                                console.log(`Added ${suburb} to next week clearout (July 28 - Aug 3)`);
+                              }
+                            });
+                          }
+                          
+                          // If we found data with this field, no need to try others
+                          if (current.length > 0 || next.length > 0) break;
                         } catch (fieldError) {
                           console.log(`Error with field ${dateField}:`, fieldError instanceof Error ? fieldError.message : String(fieldError));
                         }
