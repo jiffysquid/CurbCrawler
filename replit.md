@@ -112,6 +112,10 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 23, 2025: Added separate Start Recording and End Recording buttons to session controls
 - June 23, 2025: Enhanced vehicle marker scaling with zoom level and rotation compensation
 - June 23, 2025: Removed manual rotation controls in favor of automatic rotation during tracking sessions
+- June 24, 2025: Integrated real Brisbane Council API v2.1 for authentic clearout data
+- June 24, 2025: Implemented dynamic suburb boundary fetching based on actual clearout schedules
+- June 24, 2025: Successfully parsing live Brisbane Council "Kerbside large item collection schedule" dataset
+- June 24, 2025: Displaying authentic July 21st clearout suburbs: TARINGA, AUCHENFLOWER, ST LUCIA, MILTON
 
 ## User Preferences
 

@@ -166,11 +166,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Overpass API failed, using Nominatim fallback");
       }
 
-      // Fallback to Nominatim API for individual suburb boundaries
-      const suburbNames = [
+      // Get current clearout schedule to determine which suburbs to fetch
+      let suburbNames = [
         "Sunnybank, Brisbane, Queensland, Australia",
         "Sunnybank Hills, Brisbane, Queensland, Australia"
       ];
+      
+      try {
+        const clearoutResponse = await axios.get(`http://localhost:5000/api/clearout-schedule`);
+        const clearoutData = clearoutResponse.data;
+        
+        // Combine current and next week suburbs for boundary display
+        const allClearoutSuburbs = [
+          ...(clearoutData.current || []),
+          ...(clearoutData.next || [])
+        ];
+        
+        if (allClearoutSuburbs.length > 0) {
+          suburbNames = allClearoutSuburbs.map(suburb => `${suburb}, Brisbane, Queensland, Australia`);
+          console.log(`Fetching boundaries for real clearout suburbs: ${allClearoutSuburbs.join(', ')}`);
+        }
+      } catch (clearoutError) {
+        console.log("Could not fetch clearout schedule, using default suburbs");
+      }
 
       const suburbPromises = suburbNames.map(async (suburbName) => {
         try {
