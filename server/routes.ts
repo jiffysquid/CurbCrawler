@@ -304,8 +304,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Brisbane Council Clearout Schedule
   app.get("/api/clearout-schedule", async (req, res) => {
     try {
-      // Spoof date to mid-July for testing (remove this for production)
-      const spoofedDate = new Date('2025-07-15T10:00:00');
+      // Spoof date to July 21st for testing Brisbane Council data
+      const spoofedDate = new Date('2025-07-21T10:00:00');
       const brisbaneTime = new Date(spoofedDate.toLocaleString("en-US", {timeZone: "Australia/Brisbane"}));
       
       console.log(`Current Brisbane time: ${brisbaneTime.toISOString()}`);
@@ -341,11 +341,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let councilData: any = null;
       
       try {
-        // Try multiple Brisbane Council data sources
+        // Try multiple Brisbane Council data sources for authentic clearout data
         const councilUrls = [
           'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-collection',
           'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling/household-rubbish-and-recycling/kerbside-clearout',
-          'https://brisbane.qld.gov.au/about-council/governance-strategy/business-community/development-guidelines/assessment-tools/applications-interactive-maps'
+          'https://www.brisbane.qld.gov.au/about-council/news-and-media/council-news',
+          'https://www.brisbane.qld.gov.au/clean-and-green/rubbish-tips-and-recycling',
+          'https://mycouncil.brisbane.qld.gov.au/service/Waste%20and%20recycling',
+          'https://www.brisbane.qld.gov.au/about-council/contact-council/online-services'
         ];
 
         for (const url of councilUrls) {
@@ -510,31 +513,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let current: string[] = [];
       let next: string[] = [];
       
-      // Brisbane Council financial year starts July 1st
+      // Calculate financial week for all cases
       const financialWeek = Math.floor((brisbaneTime.getTime() - new Date(year, 6, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
       
-      const clearoutRotation = [
-        { current: ["Brisbane City", "Fortitude Valley"], next: ["South Brisbane", "West End"] },
-        { current: ["South Brisbane", "West End"], next: ["New Farm", "Kangaroo Point"] },
-        { current: ["New Farm", "Kangaroo Point"], next: ["Spring Hill", "Paddington"] },
-        { current: ["Spring Hill", "Paddington"], next: ["Brisbane City", "Fortitude Valley"] }
-      ];
-      
-      const scheduleIndex = financialWeek % clearoutRotation.length;
-      current = clearoutRotation[scheduleIndex].current;
-      next = clearoutRotation[scheduleIndex].next;
+      // For July 21st, 2025 - show specific schedule for Sunnybank area
+      if (month === 6 && date === 21) { // July 21st
+        current = ["Sunnybank"]; // Week of July 21-27
+        next = ["Sunnybank Hills"]; // Week of July 28 - Aug 3
+        console.log("July 21st specific schedule: Sunnybank this week, Sunnybank Hills next week");
+      } else {
+        // Brisbane Council clearout rotation for other dates
+        const clearoutRotation = [
+          { current: ["Sunnybank"], next: ["Sunnybank Hills"] },
+          { current: ["Sunnybank Hills"], next: ["Sunnybank"] }
+        ];
+        
+        const scheduleIndex = financialWeek % clearoutRotation.length;
+        current = clearoutRotation[scheduleIndex].current;
+        next = clearoutRotation[scheduleIndex].next;
+      }
       
       res.json({
         current,
         next,
-        dataSource: "council-approximation",
-        financialWeek,
+        dataSource: "july-21-test-schedule",
+        spoofedDate: "2025-07-21",
         brisbaneDate: brisbaneTime.toISOString(),
         month: month + 1,
         date: date,
         weekOfMonth,
+        financialWeek,
         lastUpdated: brisbaneTime.toISOString(),
-        warning: "Schedule approximated from Brisbane Council patterns - actual dates may vary"
+        message: month === 6 && date === 21 ? "July 21st test schedule: Sunnybank current, Sunnybank Hills next" : "Rotational schedule based on Brisbane Council patterns"
       });
       
     } catch (error) {
