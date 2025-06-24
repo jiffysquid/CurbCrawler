@@ -138,9 +138,9 @@ export default function Settings() {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="text-xs font-medium">Show Public Toilets</Label>
+              <Label className="text-xs font-medium">Show Public Toilets (within 5km)</Label>
               <CardDescription className="text-xs">
-                Display public toilet locations on the map
+                Display public toilets within 5km of current location
               </CardDescription>
             </div>
             <Switch

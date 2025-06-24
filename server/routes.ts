@@ -677,74 +677,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public toilets using Overpass API (OpenStreetMap) - filtered to active clearout suburbs
+  // Public toilets using Overpass API (OpenStreetMap) - filtered by current location proximity
   app.get("/api/toilets", async (req, res) => {
     try {
       const { lat, lng, radius = 5 } = req.query;
       
-      // Get current clearout schedule to determine active suburbs
-      let activeSuburbs: string[] = [];
-      let suburbCenters: { lat: number; lng: number }[] = [];
-      
-      try {
-        const clearoutResponse = await axios.get(`http://localhost:5000/api/clearout-schedule`);
-        const clearoutData = clearoutResponse.data;
-        
-        // Combine current and next week suburbs for toilet filtering
-        activeSuburbs = [
-          ...(clearoutData.current || []),
-          ...(clearoutData.next || [])
-        ];
-        
-        console.log(`Filtering toilets for active clearout suburbs: ${activeSuburbs.join(', ')}`);
-        
-        // Get suburb boundaries to determine search areas
-        const boundariesResponse = await axios.get(`http://localhost:5000/api/suburbs/boundaries`);
-        const boundaries = boundariesResponse.data;
-        
-        // Calculate center points for each active suburb
-        suburbCenters = boundaries.map((boundary: any) => {
-          if (boundary.coordinates && boundary.coordinates.length > 0) {
-            // Calculate centroid of polygon
-            const coords = boundary.coordinates;
-            const centerLat = coords.reduce((sum: number, coord: number[]) => sum + coord[0], 0) / coords.length;
-            const centerLng = coords.reduce((sum: number, coord: number[]) => sum + coord[1], 0) / coords.length;
-            return { lat: centerLat, lng: centerLng };
-          }
-          return null;
-        }).filter((center: any) => center !== null);
-        
-      } catch (clearoutError) {
-        console.log("Could not fetch clearout schedule, using default Brisbane area");
-        suburbCenters = [{ lat: -27.4705, lng: 153.0260 }]; // Brisbane city center
-      }
-      
-      // Use provided coordinates or first active suburb center
-      const centerLat = lat ? parseFloat(lat as string) : (suburbCenters[0]?.lat || -27.4705);
-      const centerLng = lng ? parseFloat(lng as string) : (suburbCenters[0]?.lng || 153.0260);
-      const searchRadius = parseFloat(radius as string) * 1000; // Convert km to meters
+      // Use provided coordinates or default to Brisbane city center
+      const centerLat = lat ? parseFloat(lat as string) : -27.4705;
+      const centerLng = lng ? parseFloat(lng as string) : 153.0260;
+      const searchRadius = parseFloat(radius as string) * 1000; // Convert km to meters (5km default)
 
-      // Build Overpass query for toilets in all active clearout suburbs
-      let searchQueries: string[] = [];
-      
-      if (suburbCenters.length > 0) {
-        suburbCenters.forEach(center => {
-          searchQueries.push(`node["amenity"="toilets"](around:${searchRadius},${center.lat},${center.lng})`);
-        });
-      } else {
-        // Fallback to single search area
-        searchQueries.push(`node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng})`);
-      }
+      console.log(`Searching for toilets within ${radius}km of current location: ${centerLat}, ${centerLng}`);
 
+      // Use Overpass API to find public toilets within radius of current location
       const overpassQuery = `
         [out:json][timeout:25];
         (
-          ${searchQueries.join(';\n          ')};
+          node["amenity"="toilets"](around:${searchRadius},${centerLat},${centerLng});
         );
         out geom;
       `;
-
-      console.log(`Searching for toilets in ${suburbCenters.length} active clearout suburb areas`);
 
       const response = await axios.post('https://overpass-api.de/api/interpreter', overpassQuery, {
         headers: {
@@ -753,32 +705,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Filter toilets to only include those within active clearout suburbs
-      const toilets = response.data.elements?.filter((element: any) => {
+      // Map toilet data with distance from current location
+      const toilets = response.data.elements?.map((element: any) => {
         const toiletLat = element.lat;
         const toiletLng = element.lon;
         
-        // Check if toilet is within reasonable distance of any active suburb center
-        return suburbCenters.some(center => {
-          const distance = Math.sqrt(
-            Math.pow(toiletLat - center.lat, 2) + Math.pow(toiletLng - center.lng, 2)
-          );
-          // Include if within 0.02 degrees (~2km) of any active suburb center
-          return distance < 0.02;
-        });
-      }).map((element: any) => ({
-        id: element.id.toString(),
-        name: element.tags?.name || 'Public Toilet',
-        lat: element.lat,
-        lng: element.lon,
-        address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || `Active Clearout Area`,
-        openHours: element.tags?.opening_hours || '24/7',
-        accessible: element.tags?.wheelchair === 'yes',
-        fee: element.tags?.fee === 'yes',
-        properties: element.tags
-      })) || [];
+        // Calculate distance from current location in kilometers
+        const R = 6371; // Earth's radius in km
+        const dLat = (toiletLat - centerLat) * Math.PI / 180;
+        const dLng = (toiletLng - centerLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(centerLat * Math.PI / 180) * Math.cos(toiletLat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c; // Distance in km
+        
+        return {
+          id: element.id.toString(),
+          name: element.tags?.name || 'Public Toilet',
+          lat: element.lat,
+          lng: element.lon,
+          address: element.tags?.["addr:full"] || element.tags?.["addr:street"] || `${distance.toFixed(1)}km from location`,
+          openHours: element.tags?.opening_hours || '24/7',
+          accessible: element.tags?.wheelchair === 'yes',
+          fee: element.tags?.fee === 'yes',
+          distance: distance,
+          properties: element.tags
+        };
+      }).filter((toilet: any) => toilet.distance <= parseFloat(radius as string)) || [];
 
-      console.log(`Found ${toilets.length} toilets in active clearout suburbs: ${activeSuburbs.join(', ')}`);
+      console.log(`Found ${toilets.length} toilets within ${radius}km of current location`);
 
       res.json(toilets);
     } catch (error) {
