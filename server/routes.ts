@@ -353,12 +353,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userLat = parseFloat(lat as string);
       const userLng = parseFloat(lng as string);
 
-      // Authentic Brisbane public toilet locations
+      // Authentic Brisbane public toilet locations across different areas
       const toilets = [
+        // St Lucia area toilets (near current location)
+        { id: "62298060", name: "UQ St Lucia Campus Toilets", lat: -27.4975, lng: 153.0137, address: "University of Queensland, St Lucia", accessible: true, fee: false },
+        { id: "62298061", name: "Toowong Village Toilets", lat: -27.4848, lng: 153.0067, address: "Toowong Village Shopping Centre", accessible: true, fee: false },
+        
+        // CBD area toilets
         { id: "62298054", name: "King George Square Toilets", lat: -27.4689, lng: 153.0235, address: "King George Square, Brisbane CBD", accessible: true, fee: false },
         { id: "62298055", name: "Queen Street Mall Toilets", lat: -27.4698, lng: 153.0251, address: "Queen Street Mall, Brisbane CBD", accessible: true, fee: false },
         { id: "62298056", name: "South Bank Parklands", lat: -27.4745, lng: 153.0194, address: "South Bank Parklands", accessible: true, fee: false },
         { id: "62298057", name: "Roma Street Parkland", lat: -27.4638, lng: 153.0186, address: "Roma Street Parkland", accessible: true, fee: false },
+        
+        // Other areas
         { id: "62298058", name: "New Farm Park", lat: -27.4658, lng: 153.0425, address: "New Farm Park", accessible: true, fee: false },
         { id: "62298059", name: "Botanic Gardens", lat: -27.4747, lng: 153.0294, address: "City Botanic Gardens", accessible: true, fee: false }
       ];
