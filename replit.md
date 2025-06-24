@@ -121,6 +121,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 24, 2025: Added demographics overlay displaying population density and median house prices for active clearout suburbs using ABS Census 2021 data
 - June 24, 2025: Fixed suburb boundary coordinate accuracy issues - replaced inaccurate boundary data with properly positioned Brisbane suburb boundaries
 - June 24, 2025: Temporarily disabled suburb boundary display due to coordinate positioning issues - boundaries were overlaying incorrect geographic areas
+- June 24, 2025: Implemented authentic Brisbane City Council suburb boundaries using geo_shape data from clearout schedule API - ensures accurate geographic positioning
 
 ## User Preferences
 
