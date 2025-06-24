@@ -811,51 +811,57 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       )}
 
       {/* Demographics Overlay */}
-      {showDemographics && suburbDemographics.length > 0 && (
+      {showDemographics && (
         <div className="absolute top-20 right-4 md:top-20 md:right-96 z-20 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border p-3 max-w-72">
           <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Suburb Demographics
           </h3>
           
-          <div className="space-y-3 text-xs max-h-96 overflow-y-auto">
-            {suburbDemographics.map((suburb, index) => (
-              <div key={suburb.name} className="border-b border-gray-200 pb-2 last:border-b-0">
-                <div className="font-medium text-gray-900 mb-1">{suburb.name}</div>
-                <div className="space-y-1 text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Population:</span>
-                    <span className="font-medium">{suburb.population?.toLocaleString() || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Density:</span>
-                    <span className="font-medium">{suburb.populationDensity || 'N/A'} /km²</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Median Price:</span>
-                    <span className="font-medium text-green-600">
-                      {suburb.medianHousePrice ? `$${suburb.medianHousePrice.toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Median Income:</span>
-                    <span className="font-medium">{suburb.medianIncome ? `$${suburb.medianIncome.toLocaleString()}` : 'N/A'}</span>
-                  </div>
-                  {suburb.clearoutStatus && (
-                    <div className="text-xs mt-1">
-                      <span className={`px-2 py-0.5 rounded text-white ${
-                        suburb.clearoutStatus === 'current' ? 'bg-green-600' : 
-                        suburb.clearoutStatus === 'next' ? 'bg-blue-600' : 'bg-gray-500'
-                      }`}>
-                        {suburb.clearoutStatus === 'current' ? 'Current clearout' : 
-                         suburb.clearoutStatus === 'next' ? 'Next clearout' : 'No clearout'}
+          {suburbDemographics.length > 0 ? (
+            <div className="space-y-3 text-xs max-h-96 overflow-y-auto">
+              {suburbDemographics.map((suburb, index) => (
+                <div key={suburb.name} className="border-b border-gray-200 pb-2 last:border-b-0">
+                  <div className="font-medium text-gray-900 mb-1">{suburb.name}</div>
+                  <div className="space-y-1 text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Population:</span>
+                      <span className="font-medium">{suburb.population?.toLocaleString() || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Density:</span>
+                      <span className="font-medium">{suburb.populationDensity || 'N/A'} /km²</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Median Price:</span>
+                      <span className="font-medium text-green-600">
+                        {suburb.medianHousePrice ? `$${suburb.medianHousePrice.toLocaleString()}` : 'N/A'}
                       </span>
                     </div>
-                  )}
+                    <div className="flex justify-between">
+                      <span>Median Income:</span>
+                      <span className="font-medium">{suburb.medianIncome ? `$${suburb.medianIncome.toLocaleString()}` : 'N/A'}</span>
+                    </div>
+                    {suburb.clearoutStatus && (
+                      <div className="text-xs mt-1">
+                        <span className={`px-2 py-0.5 rounded text-white ${
+                          suburb.clearoutStatus === 'current' ? 'bg-green-600' : 
+                          suburb.clearoutStatus === 'next' ? 'bg-blue-600' : 'bg-gray-500'
+                        }`}>
+                          {suburb.clearoutStatus === 'current' ? 'Current clearout' : 
+                           suburb.clearoutStatus === 'next' ? 'Next clearout' : 'No clearout'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500">
+              Loading demographic data...
+            </div>
+          )}
           
           <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
             Data: ABS Census 2021, CoreLogic Property Data
