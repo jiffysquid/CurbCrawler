@@ -49,7 +49,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     const savedShowToilets = localStorage.getItem('showToilets');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
-    if (savedShowSuburbs) setShowSuburbs(savedShowSuburbs === 'true');
+    if (savedShowSuburbs !== null) {
+      setShowSuburbs(savedShowSuburbs === 'true');
+    } else {
+      setShowSuburbs(true); // Default to showing suburbs
+    }
     if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
 
     // Listen for storage changes from settings panel

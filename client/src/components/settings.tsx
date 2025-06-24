@@ -27,7 +27,11 @@ export default function Settings() {
     if (savedFocusArea) setFocusArea(savedFocusArea);
     if (savedMapStyle) setMapStyle(savedMapStyle);
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
-    if (savedShowSuburbs) setShowSuburbBoundaries(savedShowSuburbs === 'true');
+    if (savedShowSuburbs !== null) {
+      setShowSuburbBoundaries(savedShowSuburbs === 'true');
+    } else {
+      setShowSuburbBoundaries(true); // Default to showing suburbs
+    }
     if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
   }, []);
 
