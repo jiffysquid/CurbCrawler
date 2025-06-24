@@ -295,15 +295,17 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Filter boundaries to show only current and next week clearouts
       const relevantBoundaries = suburbBoundaries.filter(suburb => {
         if (clearoutSchedule) {
-          const suburbBaseName = suburb.name.split(',')[0].trim();
+          const suburbBaseName = suburb.name.split(',')[0].trim().toUpperCase();
+          
+          // Use exact matching for more precise filtering
           const isCurrentClearout = clearoutSchedule.current.some(name => 
-            suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
-            name.toLowerCase().includes(suburbBaseName.toLowerCase())
+            suburbBaseName === name.toUpperCase()
           );
           const isNextClearout = clearoutSchedule.next.some(name => 
-            suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
-            name.toLowerCase().includes(suburbBaseName.toLowerCase())
+            suburbBaseName === name.toUpperCase()
           );
+          
+          console.log(`Filtering ${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
           return isCurrentClearout || isNextClearout;
         }
         return false;
@@ -319,16 +321,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           let status = 'Current week clearout';
           
           if (clearoutSchedule) {
-            console.log(`Checking suburb ${suburb.name} against clearout schedule:`, clearoutSchedule);
-            
-            const suburbBaseName = suburb.name.split(',')[0].trim();
+            const suburbBaseName = suburb.name.split(',')[0].trim().toUpperCase();
             const isCurrentClearout = clearoutSchedule.current.some(name => 
-              suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
-              name.toLowerCase().includes(suburbBaseName.toLowerCase())
+              suburbBaseName === name.toUpperCase()
             );
             const isNextClearout = clearoutSchedule.next.some(name => 
-              suburbBaseName.toLowerCase().includes(name.toLowerCase()) || 
-              name.toLowerCase().includes(suburbBaseName.toLowerCase())
+              suburbBaseName === name.toUpperCase()
             );
             
             console.log(`${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
