@@ -137,3 +137,4 @@ The application is configured for deployment on Replit's autoscale platform:
 
 Preferred communication style: Simple, everyday language.
 UI Preference: Clean, minimal interface - prefers simple start/stop button over large control panels for mobile van use.
+Mobile Requirements: Needs phone screen to stay on during recording sessions for van field work.

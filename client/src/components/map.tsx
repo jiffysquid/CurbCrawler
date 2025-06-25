@@ -932,17 +932,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           <Focus className="h-4 w-4" />
         </Button>
         
-        {/* Center on current location button */}
-        {currentLocation && (
-          <Button
-            onClick={centerOnCurrentLocation}
-            size="sm"
-            className="bg-gray-600 hover:bg-gray-700 text-white shadow-lg"
-            title="Center on current location"
-          >
-            <Crosshair className="h-4 w-4" />
-          </Button>
-        )}
+
       </div>
 
       {/* Loading indicator */}
