@@ -5,6 +5,7 @@ import Map from "@/components/map";
 import SimpleControls from "@/components/simple-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
+import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { Menu, X, MapPin } from "lucide-react";
@@ -216,6 +217,28 @@ export default function Home() {
     console.log("Stopped recording clearout search path");
   };
 
+  const handleTestGPS = () => {
+    console.log("Manual GPS test triggered");
+    if (!isWatching) {
+      startWatching();
+    } else {
+      // Force a fresh GPS reading
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log("Manual GPS test result:", position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error("Manual GPS test failed:", error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    }
+  };
+
   const stats = {
     duration: '0m',
     distance: '0m',
@@ -240,6 +263,13 @@ export default function Home() {
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
           location={location}
+        />
+        
+        <GPSDebug
+          location={location}
+          error={gpsError}
+          isWatching={isWatching}
+          onTestGPS={handleTestGPS}
         />
 
         {/* Mobile Menu Button */}

@@ -21,11 +21,12 @@ export default function SimpleControls({
           {!isRecording ? (
             <Button
               onClick={onStartRecording}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 py-2 flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 py-2 flex items-center gap-2 disabled:bg-gray-400"
               disabled={!location}
+              title={!location ? "Waiting for GPS location..." : "Start recording your route"}
             >
               <Play size={16} />
-              Start
+              {!location ? "Getting GPS..." : "Start"}
             </Button>
           ) : (
             <Button
@@ -39,8 +40,14 @@ export default function SimpleControls({
           
           {location && (
             <div className="text-xs text-gray-500 hidden sm:block">
-              GPS: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+              GPS: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
               {location.accuracy && ` (±${Math.round(location.accuracy)}m)`}
+            </div>
+          )}
+          
+          {!location && (
+            <div className="text-xs text-red-500 hidden sm:block">
+              Waiting for GPS...
             </div>
           )}
         </div>
