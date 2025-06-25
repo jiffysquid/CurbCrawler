@@ -133,20 +133,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (distance > 5) {
       const mapContainer = mapInstanceRef.current.getContainer();
       if (mapContainer) {
-        // Calculate rotation angle and set transform origin to vehicle marker position
-        const rotationAngle = -(bearing - 90);
+        // Fix rotation - correct the bearing calculation
+        const rotationAngle = bearing;
         setMapRotation(rotationAngle);
         
-        // Get vehicle marker position on screen
-        const point = mapInstanceRef.current.latLngToContainerPoint([newLocation.lat, newLocation.lng]);
-        const containerRect = mapContainer.getBoundingClientRect();
+        // Center map on vehicle location before rotation
+        mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], mapInstanceRef.current.getZoom(), { animate: false });
         
-        // Set transform origin to vehicle marker position
-        const originX = (point.x / containerRect.width) * 100;
-        const originY = (point.y / containerRect.height) * 100;
-        
+        // Apply rotation with center origin
         mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-        mapContainer.style.transformOrigin = `${originX}% ${originY}%`;
+        mapContainer.style.transformOrigin = '50% 50%';
         mapContainer.style.transition = 'transform 0.5s ease-out';
       }
       
@@ -625,7 +621,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Use divIcon for better rotation control with IMAX van image
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker-image',
-        html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+        html: `<div style="transform: rotate(${-mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
           <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>`,
         iconSize: [scaledSize, scaledSize],
@@ -664,6 +660,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       `);
 
+      // Keep map centered on vehicle location
+      if (isTracking) {
+        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { animate: true });
+      }
+      
       // Update map rotation based on driving direction
       updateMapRotation(currentLocation);
       
@@ -698,7 +699,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         if (focusArea === 'imax-van') {
           vehicleIcon = L.divIcon({
             className: 'vehicle-marker-image',
-            html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+            html: `<div style="transform: rotate(${-mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
               <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
             </div>`,
             iconSize: [scaledSize, scaledSize],
