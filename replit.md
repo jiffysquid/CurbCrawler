@@ -129,3 +129,4 @@ The application is configured for deployment on Replit's autoscale platform:
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+UI Preference: Clean, minimal interface - prefers simple start/stop button over large control panels for mobile van use.

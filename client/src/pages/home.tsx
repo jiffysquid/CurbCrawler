@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
-import SessionControls from "@/components/session-controls";
+import SimpleControls from "@/components/simple-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
 import { useToast } from "@/hooks/use-toast";
@@ -138,15 +138,80 @@ export default function Home() {
   const isTracking = Boolean(activeSession);
 
   const handleStartRecording = () => {
+    if (!location) {
+      if (!isWatching) {
+        startWatching();
+      }
+      toast({
+        title: "Getting Location",
+        description: "Please wait while we get your GPS location.",
+      });
+      return;
+    }
+
     setIsRecording(true);
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
       startWatching();
     }
+    
+    // Create a new session when starting recording
+    const sessionData = {
+      startTime: new Date().toISOString(),
+      isActive: true,
+      route: [{ lat: location.lat, lng: location.lng, timestamp: new Date().toISOString() }],
+    };
+
+    createSessionMutation.mutate(sessionData, {
+      onSuccess: () => {
+        toast({
+          title: "Recording Started",
+          description: "GPS tracking active - your route is being recorded.",
+        });
+      },
+      onError: (error) => {
+        console.error('Error creating session:', error);
+        setIsRecording(false);
+        toast({
+          title: "Error",
+          description: "Failed to start recording session.",
+          variant: "destructive",
+        });
+      },
+    });
+    
     console.log("Started recording clearout search path - GPS tracking active");
   };
 
   const handleStopRecording = () => {
+    const activeSession = sessions.find(s => s.isActive);
+    if (activeSession) {
+      const updates = {
+        endTime: new Date().toISOString(),
+        isActive: false,
+      };
+
+      updateSessionMutation.mutate(
+        { id: activeSession.id, updates },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Recording Stopped",
+              description: "Your clearout search session has been saved.",
+            });
+          },
+          onError: (error) => {
+            console.error('Error updating session:', error);
+            toast({
+              title: "Error",
+              description: "Failed to stop recording session.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    }
+    
     setIsRecording(false);
     console.log("Stopped recording clearout search path");
   };
@@ -169,21 +234,13 @@ export default function Home() {
           allSessions={sessions}
         />
         
-        {/* Session Controls Overlay */}
-        <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-auto md:w-80 z-20">
-          <SessionControls
-            isTracking={isTracking}
-            currentSuburb="Unknown"
-            stats={stats}
-            location={location}
-            onStartSession={handleStartSession}
-            onStopSession={handleStopSession}
-            isLoading={createSessionMutation.isPending || updateSessionMutation.isPending}
-            isRecording={isRecording}
-            onStartRecording={handleStartRecording}
-            onStopRecording={handleStopRecording}
-          />
-        </div>
+        {/* Simple Controls */}
+        <SimpleControls
+          isRecording={isRecording}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+          location={location}
+        />
 
         {/* Mobile Menu Button */}
         <div className="absolute top-20 right-4 z-20 md:hidden">
