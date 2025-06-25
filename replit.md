@@ -125,6 +125,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 24, 2025: Suburb boundaries now display 100 authentic Brisbane suburbs with proper coordinate conversion and clearout schedule color coding
 - June 24, 2025: Filtered suburb display to show only current and next week clearout areas, removed redundant info button
 - June 24, 2025: Configured geolocation for production deployment - uses real GPS on deployed app, test coordinates in development
+- June 25, 2025: Implemented continuous GPS tracking with watchPosition API for real-time location updates
+- June 25, 2025: Simplified UI to clean start/stop button interface for mobile van use
+- June 25, 2025: Fixed session creation validation - recordings now store in memory (temporary until server restart)
 
 ## User Preferences
 

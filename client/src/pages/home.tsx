@@ -159,7 +159,7 @@ export default function Home() {
     const sessionData = {
       startTime: new Date().toISOString(),
       isActive: true,
-      route: [{ lat: location.lat, lng: location.lng, timestamp: new Date().toISOString() }],
+      routeCoordinates: [{ lat: location.lat, lng: location.lng, timestamp: new Date().toISOString() }],
     };
 
     createSessionMutation.mutate(sessionData, {

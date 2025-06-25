@@ -27,6 +27,9 @@ export const locations = pgTable("locations", {
 
 export const insertSessionSchema = createInsertSchema(sessions).omit({
   id: true,
+}).extend({
+  startTime: z.string().transform((str) => new Date(str)),
+  endTime: z.string().transform((str) => new Date(str)).optional(),
 });
 
 export const insertLocationSchema = createInsertSchema(locations).omit({
