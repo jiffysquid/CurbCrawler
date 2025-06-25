@@ -132,15 +132,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     
     if (distance > 5) {
       const mapContainer = mapInstanceRef.current.getContainer();
-      if (mapContainer) {
+      if (mapContainer && isTracking) {
         // Fix rotation - correct the bearing calculation
         const rotationAngle = bearing;
         setMapRotation(rotationAngle);
         
-        // Center map on vehicle location before rotation
-        mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], mapInstanceRef.current.getZoom(), { animate: false });
-        
-        // Apply rotation with center origin
+        // Apply rotation around center for smooth movement
         mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
         mapContainer.style.transformOrigin = '50% 50%';
         mapContainer.style.transition = 'transform 0.5s ease-out';
@@ -264,6 +261,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           touchZoom: true,
           tap: true,
           tapTolerance: 15,
+          wheelPxPerZoomLevel: 60,
         });
 
         // Add OpenStreetMap tiles
@@ -660,9 +658,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       `);
 
-      // Keep map centered on vehicle location
+      // Keep map centered on vehicle location during tracking
       if (isTracking) {
-        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { animate: true });
+        const currentZoom = mapInstanceRef.current.getZoom();
+        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], currentZoom, { 
+          animate: true,
+          duration: 0.5
+        });
       }
       
       // Update map rotation based on driving direction

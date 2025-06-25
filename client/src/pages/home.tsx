@@ -108,7 +108,23 @@ export default function Home() {
     if (isRecording && location) {
       const activeSession = sessions.find(s => s.isActive);
       if (activeSession) {
-        // Record location every 5 seconds during recording
+        // Get GPS accuracy setting to determine recording interval
+        const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+        let recordingInterval = 5000; // Default 5 seconds
+        
+        switch (gpsAccuracy) {
+          case 'high':
+            recordingInterval = 2000; // 2 seconds for high accuracy
+            break;
+          case 'medium':
+            recordingInterval = 5000; // 5 seconds for medium
+            break;
+          case 'low':
+            recordingInterval = 10000; // 10 seconds for low accuracy
+            break;
+        }
+        
+        // Record location at intervals based on GPS accuracy setting
         intervalId = setInterval(() => {
           addLocationMutation.mutate({
             sessionId: activeSession.id,
@@ -117,7 +133,7 @@ export default function Home() {
             timestamp: new Date().toISOString(),
             accuracy: location.accuracy || undefined
           });
-        }, 5000);
+        }, recordingInterval);
       }
     }
 

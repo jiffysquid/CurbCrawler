@@ -52,7 +52,18 @@ export default function Settings() {
 
   useEffect(() => {
     localStorage.setItem('gpsAccuracy', gpsAccuracy);
-  }, [gpsAccuracy]);
+    // Trigger storage event for geolocation hook to pick up changes
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'gpsAccuracy',
+      newValue: gpsAccuracy,
+      storageArea: localStorage
+    }));
+    
+    toast({
+      title: "GPS Settings Updated",
+      description: `GPS accuracy set to ${gpsAccuracy.charAt(0).toUpperCase() + gpsAccuracy.slice(1)}. Restart recording to apply changes.`,
+    });
+  }, [gpsAccuracy, toast]);
 
   useEffect(() => {
     localStorage.setItem('showSuburbBoundaries', String(showSuburbBoundaries));
@@ -171,9 +182,9 @@ export default function Settings() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="high">High (Battery intensive)</SelectItem>
-                <SelectItem value="medium">Medium (Recommended)</SelectItem>
-                <SelectItem value="low">Low (Battery saving)</SelectItem>
+                <SelectItem value="high">High (0.5s updates, Battery intensive)</SelectItem>
+                <SelectItem value="medium">Medium (1s updates, Recommended)</SelectItem>
+                <SelectItem value="low">Low (2.5s updates, Battery saving)</SelectItem>
               </SelectContent>
             </Select>
             <CardDescription className="text-xs">
