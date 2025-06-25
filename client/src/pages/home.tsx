@@ -93,6 +93,41 @@ export default function Home() {
     },
   });
 
+  // Add location mutation for continuous tracking
+  const addLocationMutation = useMutation({
+    mutationFn: async (locationData: any) => {
+      const response = await apiRequest('POST', '/api/locations', locationData);
+      return response.json();
+    },
+  });
+
+  // Continuous location recording during active recording
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (isRecording && location) {
+      const activeSession = sessions.find(s => s.isActive);
+      if (activeSession) {
+        // Record location every 5 seconds during recording
+        intervalId = setInterval(() => {
+          addLocationMutation.mutate({
+            sessionId: activeSession.id,
+            latitude: location.lat,
+            longitude: location.lng,
+            timestamp: new Date().toISOString(),
+            accuracy: location.accuracy || undefined
+          });
+        }, 5000);
+      }
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRecording, location, sessions, addLocationMutation]);
+
   const handleStartSession = () => {
     if (!location) {
       if (!isWatching) {
@@ -165,10 +200,7 @@ export default function Home() {
 
     createSessionMutation.mutate(sessionData, {
       onSuccess: () => {
-        toast({
-          title: "Recording Started",
-          description: "GPS tracking active - your route is being recorded.",
-        });
+        console.log("Started recording clearout search path - GPS tracking active");
       },
       onError: (error) => {
         console.error('Error creating session:', error);
@@ -180,8 +212,6 @@ export default function Home() {
         });
       },
     });
-    
-    console.log("Started recording clearout search path - GPS tracking active");
   };
 
   const handleStopRecording = () => {
