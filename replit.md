@@ -130,6 +130,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 25, 2025: Fixed session creation validation - recordings now store in memory (temporary until server restart)
 - June 25, 2025: Diagnosed GPS polling issue - Replit environment returns cached coordinates instead of real device GPS
 - June 25, 2025: Added GPS Debug panel with manual testing and enhanced mobile GPS settings for field testing
+- June 25, 2025: Fixed map zoom preservation during GPS updates, improved rotation around vehicle marker, added live route tracking display
 
 ## User Preferences
 

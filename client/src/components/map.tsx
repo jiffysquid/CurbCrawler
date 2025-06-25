@@ -38,6 +38,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [mapRotation, setMapRotation] = useState(0);
 
   const [showDemographics, setShowDemographics] = useState(false);
+  
+  // Additional refs for new functionality
+  const currentRoutePolylineRef = useRef<any>(null);
+  const hasInitialLocationRef = useRef<boolean>(false);
+  const currentRoutePointsRef = useRef<{ lat: number; lng: number }[]>([]);
   const [currentSuburbName, setCurrentSuburbName] = useState<string>('Unknown');
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
@@ -128,11 +133,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (distance > 5) {
       const mapContainer = mapInstanceRef.current.getContainer();
       if (mapContainer) {
-        // Convert bearing to rotation angle (bearing is from north, we want map rotation)
-        const rotationAngle = -(bearing - 90); // Adjust for map orientation
+        // Calculate rotation angle and set transform origin to vehicle marker position
+        const rotationAngle = -(bearing - 90);
         setMapRotation(rotationAngle);
+        
+        // Get vehicle marker position on screen
+        const point = mapInstanceRef.current.latLngToContainerPoint([newLocation.lat, newLocation.lng]);
+        const containerRect = mapContainer.getBoundingClientRect();
+        
+        // Set transform origin to vehicle marker position
+        const originX = (point.x / containerRect.width) * 100;
+        const originY = (point.y / containerRect.height) * 100;
+        
         mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-        mapContainer.style.transformOrigin = 'center';
+        mapContainer.style.transformOrigin = `${originX}% ${originY}%`;
         mapContainer.style.transition = 'transform 0.5s ease-out';
       }
       
@@ -568,9 +582,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       `);
 
-    // Auto-center on first location
-    if (markersRef.current.length === 0) {
+    // Auto-center only on very first location, preserve zoom level
+    if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
+      hasInitialLocationRef.current = true;
+    } else if (isTracking) {
+      // During tracking, just pan to location without changing zoom
+      mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
     }
   }, [currentLocation, currentSuburb, isTracking]);
 
@@ -648,6 +666,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
       // Update map rotation based on driving direction
       updateMapRotation(currentLocation);
+      
+      // Add current location to route if tracking
+      if (isTracking) {
+        currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
+        updateCurrentRoute();
+      }
     } catch (error) {
       console.error('Failed to create vehicle marker:', error);
     }
@@ -757,6 +781,38 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       });
     }
   }, [sessionLocations]);
+
+  // Update current recording route
+  const updateCurrentRoute = useCallback(() => {
+    if (!mapInstanceRef.current || !L || currentRoutePointsRef.current.length < 2) return;
+
+    // Remove existing current route
+    if (currentRoutePolylineRef.current) {
+      mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
+    }
+
+    // Add current route polyline
+    const routeCoords = currentRoutePointsRef.current.map(point => [point.lat, point.lng]);
+    
+    currentRoutePolylineRef.current = L.polyline(routeCoords, {
+      color: '#EF4444', // Red for current recording
+      weight: 4,
+      opacity: 0.9,
+      smoothFactor: 1,
+      dashArray: '10, 5' // Dashed line to show it's recording
+    }).addTo(mapInstanceRef.current);
+  }, []);
+
+  // Reset current route when tracking stops
+  useEffect(() => {
+    if (!isTracking) {
+      currentRoutePointsRef.current = [];
+      if (currentRoutePolylineRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
+        currentRoutePolylineRef.current = null;
+      }
+    }
+  }, [isTracking]);
 
   const centerOnCurrentLocation = () => {
     if (mapInstanceRef.current && currentLocation) {
