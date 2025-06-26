@@ -271,6 +271,9 @@ export default function Home() {
   };
 
   const handleStopRecording = () => {
+    // Immediately stop recording in UI
+    setIsRecording(false);
+    
     const activeSession = sessions.find(s => s.isActive);
     if (activeSession) {
       const updates = {
@@ -282,7 +285,6 @@ export default function Home() {
         { id: activeSession.id, updates },
         {
           onSuccess: () => {
-            setIsRecording(false);
             console.log("Stopped recording clearout search path");
           },
           onError: (error) => {
@@ -292,9 +294,13 @@ export default function Home() {
               description: "Failed to stop recording session.",
               variant: "destructive",
             });
+            // Even if server update fails, keep recording stopped in UI
           },
         }
       );
+    } else {
+      // No active session found, but user clicked stop - just reset UI state
+      console.log("No active session found when stopping recording");
     }
   };
 

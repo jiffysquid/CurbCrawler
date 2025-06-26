@@ -133,6 +133,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 25, 2025: Fixed map zoom preservation during GPS updates, improved rotation around vehicle marker, added live route tracking display
 - June 25, 2025: Added Screen Wake Lock API to keep phone screen on during recording sessions
 - June 26, 2025: Doubled vehicle marker size from 30px to 60px base size for better visibility during field work
+- June 26, 2025: Fixed stop button to immediately switch back to "Start Recording" when pressed and properly stop recording
+- June 26, 2025: Moved GPS debug panel down to avoid clashing with mobile menu button
 
 ## User Preferences
 
