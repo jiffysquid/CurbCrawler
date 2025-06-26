@@ -14,7 +14,7 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS }: GPS
 
   if (!isVisible) {
     return (
-      <div className="fixed top-4 right-4 z-[1001]">
+      <div className="fixed top-20 right-4 z-[1001]">
         <Button
           onClick={() => setIsVisible(true)}
           size="sm"
@@ -28,7 +28,7 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS }: GPS
   }
 
   return (
-    <div className="fixed top-4 right-4 z-[1001] bg-white/95 backdrop-blur-sm shadow-lg rounded-lg border border-gray-200 p-4 max-w-sm">
+    <div className="fixed top-20 right-4 z-[1001] bg-white/95 backdrop-blur-sm shadow-lg rounded-lg border border-gray-200 p-4 max-w-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-sm">GPS Status</h3>
         <Button
