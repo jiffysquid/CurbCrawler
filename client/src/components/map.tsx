@@ -580,8 +580,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
       hasInitialLocationRef.current = true;
-    } else if (isTracking) {
-      // During tracking, just pan to location without changing zoom
+    } else {
+      // Always pan to current location to keep vehicle marker centered
       mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
     }
   }, [currentLocation, currentSuburb, isTracking]);

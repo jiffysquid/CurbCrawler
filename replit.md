@@ -135,6 +135,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 26, 2025: Doubled vehicle marker size from 30px to 60px base size for better visibility during field work
 - June 26, 2025: Fixed stop button to immediately switch back to "Start Recording" when pressed and properly stop recording
 - June 26, 2025: Moved GPS debug panel down to avoid clashing with mobile menu button
+- June 26, 2025: Fixed map centering to always follow vehicle marker, not just during tracking sessions
 
 ## User Preferences
 
