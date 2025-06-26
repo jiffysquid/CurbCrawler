@@ -612,7 +612,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (focusArea === 'imax-van') {
       // Calculate size based on zoom level for map scaling
       const currentZoom = mapInstanceRef.current.getZoom();
-      const baseSize = 30;
+      const baseSize = 60; // Doubled from 30 to make marker 100% bigger
       const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
       const scaledSize = Math.round(baseSize * scaleFactor);
       
@@ -693,7 +693,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
         
         const currentZoom = mapInstanceRef.current.getZoom();
-        const baseSize = 30;
+        const baseSize = 60; // Doubled from 30 to make marker 100% bigger
         const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
         const scaledSize = Math.round(baseSize * scaleFactor);
         
