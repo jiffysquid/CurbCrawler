@@ -8,13 +8,15 @@ interface SimpleControlsProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   location: { lat: number; lng: number; accuracy?: number } | null;
+  currentSuburb?: string;
 }
 
 export default function SimpleControls({
   isRecording,
   onStartRecording,
   onStopRecording,
-  location
+  location,
+  currentSuburb = 'Unknown'
 }: SimpleControlsProps) {
   const { toast } = useToast();
   const { isSupported: wakeLockSupported, isActive: wakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();

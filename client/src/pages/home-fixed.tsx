@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
-import SimpleControls from "@/components/simple-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
+import SimpleControls from "@/components/simple-controls";
 import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -30,6 +30,9 @@ export default function Home() {
   const { data: sessions = [] } = useQuery<SessionWithStats[]>({
     queryKey: ['/api/sessions'],
   });
+
+  const activeSession = sessions.find(s => s.isActive);
+  const isTracking = Boolean(activeSession);
 
   // Initialize GPS tracking on page load
   useEffect(() => {
@@ -164,9 +167,6 @@ export default function Home() {
     };
   }, [isRecording, location, sessions, addLocationMutation]);
 
-  const activeSession = sessions.find(s => s.isActive);
-  const isTracking = Boolean(activeSession);
-
   // Get session locations for the map
   const { data: sessionLocations = [] } = useQuery<LocationPoint[]>({
     queryKey: ['/api/sessions', activeSession?.id, 'locations'],
@@ -205,7 +205,7 @@ export default function Home() {
       startLocation: {
         lat: location.lat,
         lng: location.lng,
-        suburb: 'Unknown'
+        suburb: currentSuburb
       }
     };
 
@@ -222,7 +222,7 @@ export default function Home() {
       endLocation: {
         lat: location.lat,
         lng: location.lng,
-        suburb: 'Unknown'
+        suburb: currentSuburb
       }
     };
 
@@ -282,15 +282,13 @@ export default function Home() {
         { id: activeSession.id, updates },
         {
           onSuccess: () => {
-            toast({
-              title: "Recording Stopped",
-              description: "Your clearout search session has been saved.",
-            });
+            setIsRecording(false);
+            console.log("Stopped recording clearout search path");
           },
           onError: (error) => {
-            console.error('Error updating session:', error);
+            console.error('Error stopping session:', error);
             toast({
-              title: "Error",
+              title: "Error", 
               description: "Failed to stop recording session.",
               variant: "destructive",
             });
@@ -298,9 +296,6 @@ export default function Home() {
         }
       );
     }
-    
-    setIsRecording(false);
-    console.log("Stopped recording clearout search path");
   };
 
   const handleTestGPS = () => {
@@ -358,113 +353,63 @@ export default function Home() {
           isWatching={isWatching}
           onTestGPS={handleTestGPS}
         />
-
-        {/* Mobile Menu Button */}
-        <div className="absolute top-20 right-4 z-20 md:hidden">
-          <Button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            size="sm"
-            variant="outline"
-            className="bg-white/90 backdrop-blur-sm"
-          >
-            {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </Button>
-        </div>
       </div>
 
-      {/* Sidebar - Desktop */}
-      <div className="hidden md:flex md:w-80 md:flex-col md:border-l md:bg-muted/30">
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-semibold">Clearout Tracker</h1>
-        </div>
-        
-        <div className="flex-1 flex flex-col">
-          {/* Tab Navigation */}
-          <div className="flex border-b">
-            <button
-              onClick={() => setActiveTab('sessions')}
-              className={`flex-1 px-4 py-2 text-sm font-medium ${
-                activeTab === 'sessions'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Sessions
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex-1 px-4 py-2 text-sm font-medium ${
-                activeTab === 'settings'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Settings
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'sessions' && (
-              <SessionHistory sessions={sessions} isLoading={false} />
-            )}
-            {activeTab === 'settings' && <Settings />}
-          </div>
-        </div>
-      </div>
+      {/* Mobile Menu Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className="fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm border-gray-200 shadow-lg md:hidden"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </Button>
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-30 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-background border-l shadow-lg">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h1 className="text-xl font-semibold">Clearout Tracker</h1>
-              <Button
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="ghost"
-                size="sm"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 flex flex-col">
-              {/* Tab Navigation */}
-              <div className="flex border-b">
-                <button
-                  onClick={() => setActiveTab('sessions')}
-                  className={`flex-1 px-4 py-2 text-sm font-medium ${
-                    activeTab === 'sessions'
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Sessions
-                </button>
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`flex-1 px-4 py-2 text-sm font-medium ${
-                    activeTab === 'settings'
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Settings
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
 
-              {/* Tab Content */}
-              <div className="flex-1 overflow-hidden">
-                {activeTab === 'sessions' && (
-                  <SessionHistory sessions={sessions} isLoading={false} isMobile />
-                )}
-                {activeTab === 'settings' && <Settings />}
-              </div>
+      {/* Sidebar */}
+      <div className={`
+        fixed right-0 top-0 h-full w-80 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:shadow-none
+        ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+      `}>
+        <div className="flex flex-col h-full">
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200 p-4">
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('sessions')}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'sessions'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Sessions
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'settings'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Settings
+              </button>
             </div>
           </div>
+
+          {/* Tab Content */}
+          {activeTab === 'sessions' && (
+            <SessionHistory sessions={sessions} isLoading={false} isMobile={true} />
+          )}
+          {activeTab === 'settings' && <Settings />}
         </div>
-      )}
+      </div>
     </div>
   );
 }
