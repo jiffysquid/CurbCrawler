@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Suburb lookup
+  // Suburb lookup using reverse geocoding
   app.get("/api/suburbs/lookup", async (req, res) => {
     try {
       const { lat, lng } = req.query;
@@ -403,8 +403,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Simple suburb lookup for Brisbane area
-      res.json({ suburb: "Brisbane CBD" });
+      // Use Nominatim reverse geocoding for authentic suburb detection
+      const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+        params: {
+          lat: lat,
+          lon: lng,
+          format: 'json',
+          addressdetails: 1
+        },
+        headers: {
+          'User-Agent': 'Brisbane-Clearout-Tracker/1.0'
+        }
+      });
+
+      const suburb = response.data.address?.suburb || 
+                    response.data.address?.neighbourhood ||
+                    response.data.address?.city_district ||
+                    response.data.address?.city ||
+                    "Unknown";
+
+      res.json({ suburb });
     } catch (error) {
       console.error("Error looking up suburb:", error);
       res.status(500).json({ message: "Failed to lookup suburb" });
