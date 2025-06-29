@@ -131,22 +131,52 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     ) * 1000; // Convert to meters
     
     if (distance > 5) {
+      // Update rotation angle for vehicle marker orientation
+      const rotationAngle = bearing;
+      setMapRotation(rotationAngle);
+      
+      // Rotate the entire map container around the vehicle marker position
       const mapContainer = mapInstanceRef.current.getContainer();
-      if (mapContainer && isTracking) {
-        // Fix rotation - correct the bearing calculation
-        const rotationAngle = bearing;
-        setMapRotation(rotationAngle);
-        
-        // Apply rotation around center for smooth movement
+      if (mapContainer) {
+        // Apply CSS transform to rotate map around center point
         mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
         mapContainer.style.transformOrigin = '50% 50%';
-        mapContainer.style.transition = 'transform 0.5s ease-out';
+        mapContainer.style.transition = 'transform 0.8s ease-out';
+        
+        // Ensure vehicle marker stays centered during rotation
+        const currentZoom = mapInstanceRef.current.getZoom();
+        setTimeout(() => {
+          mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, {
+            animate: false
+          });
+        }, 50);
       }
       
       // Update previous location
       previousLocationRef.current = newLocation;
     }
   }, [isTracking]);
+
+  // Update current route during tracking
+  const updateCurrentRoute = useCallback(() => {
+    if (!mapInstanceRef.current || !L || currentRoutePointsRef.current.length < 2) return;
+
+    // Remove existing current route
+    if (currentRoutePolylineRef.current) {
+      mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
+    }
+
+    // Add new current route polyline
+    const routeCoords = currentRoutePointsRef.current.map(point => [point.lat, point.lng]);
+    
+    currentRoutePolylineRef.current = L.polyline(routeCoords, {
+      color: '#EF4444',  // Red color for current session
+      weight: 5,
+      opacity: 0.9,
+      smoothFactor: 1,
+      dashArray: '10, 5'  // Dashed line to distinguish from historical routes
+    }).addTo(mapInstanceRef.current);
+  }, []);
 
   // Session colors for different paths
   const sessionColors = [
@@ -673,12 +703,30 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Add current location to route if tracking
       if (isTracking) {
         currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
-        updateCurrentRoute();
+        
+        // Update current route display
+        if (currentRoutePointsRef.current.length >= 2) {
+          // Remove existing current route
+          if (currentRoutePolylineRef.current) {
+            mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
+          }
+
+          // Add new current route polyline
+          const routeCoords = currentRoutePointsRef.current.map(point => [point.lat, point.lng]);
+          
+          currentRoutePolylineRef.current = L.polyline(routeCoords, {
+            color: '#EF4444',  // Red color for current session
+            weight: 5,
+            opacity: 0.9,
+            smoothFactor: 1,
+            dashArray: '10, 5'  // Dashed line to distinguish from historical routes
+          }).addTo(mapInstanceRef.current);
+        }
       }
     } catch (error) {
       console.error('Failed to create vehicle marker:', error);
     }
-  }, [currentLocation, focusArea, updateMapRotation]);
+  }, [currentLocation, focusArea, updateMapRotation, isTracking]);
 
   // Add zoom event listener for vehicle marker scaling
   useEffect(() => {
@@ -785,35 +833,31 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   }, [sessionLocations]);
 
-  // Update current recording route
-  const updateCurrentRoute = useCallback(() => {
-    if (!mapInstanceRef.current || !L || currentRoutePointsRef.current.length < 2) return;
 
-    // Remove existing current route
-    if (currentRoutePolylineRef.current) {
-      mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
-    }
-
-    // Add current route polyline
-    const routeCoords = currentRoutePointsRef.current.map(point => [point.lat, point.lng]);
-    
-    currentRoutePolylineRef.current = L.polyline(routeCoords, {
-      color: '#EF4444', // Red for current recording
-      weight: 4,
-      opacity: 0.9,
-      smoothFactor: 1,
-      dashArray: '10, 5' // Dashed line to show it's recording
-    }).addTo(mapInstanceRef.current);
-  }, []);
 
   // Reset current route when tracking stops
   useEffect(() => {
-    if (!isTracking) {
+    if (!isTracking && mapInstanceRef.current) {
+      // Clear current route points
       currentRoutePointsRef.current = [];
-      if (currentRoutePolylineRef.current && mapInstanceRef.current) {
+      
+      // Remove current route polyline from map
+      if (currentRoutePolylineRef.current) {
         mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
         currentRoutePolylineRef.current = null;
       }
+      
+      // Reset map rotation when not tracking
+      const mapContainer = mapInstanceRef.current.getContainer();
+      if (mapContainer) {
+        mapContainer.style.transform = '';
+        mapContainer.style.transformOrigin = '';
+        mapContainer.style.transition = '';
+      }
+      setMapRotation(0);
+      
+      // Reset previous location for fresh bearing calculation
+      previousLocationRef.current = null;
     }
   }, [isTracking]);
 
