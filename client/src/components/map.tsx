@@ -131,8 +131,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     ) * 1000; // Convert to meters
     
     if (distance > 5) {
-      // Update rotation angle for vehicle marker orientation
-      const rotationAngle = bearing;
+      // Invert the bearing so map rotates opposite to direction of travel
+      // This keeps the vehicle marker pointing forward while map rotates around it
+      const rotationAngle = -bearing; // Negative bearing for opposite rotation
       setMapRotation(rotationAngle);
       
       // Rotate the entire map container around the vehicle marker position
@@ -646,17 +647,17 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
       const scaledSize = Math.round(baseSize * scaleFactor);
       
-      // Use divIcon for better rotation control with IMAX van image
+      // Use divIcon for IMAX van image - keep pointing forward (no counter-rotation)
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker-image',
-        html: `<div style="transform: rotate(${-mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+        html: `<div style="width: ${scaledSize}px; height: ${scaledSize}px;">
           <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>`,
         iconSize: [scaledSize, scaledSize],
         iconAnchor: [scaledSize / 2, scaledSize / 2]
       });
     } else {
-      // Use emoji icons for other vehicle types
+      // Use emoji icons for other vehicle types - keep pointing forward (no counter-rotation)
       const vehicleEmoji = getVehicleIcon(focusArea);
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker',
@@ -759,7 +760,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           const vehicleEmoji = getVehicleIcon(focusArea);
           vehicleIcon = L.divIcon({
             className: 'vehicle-marker',
-            html: `<div style="transform: rotate(-${mapRotation}deg); transform-origin: center;" class="text-2xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">${vehicleEmoji}</div>`,
+            html: `<div class="text-2xl filter drop-shadow-lg bg-white/80 rounded-full p-1 border border-gray-300">${vehicleEmoji}</div>`,
             iconSize: [scaledSize, scaledSize],
             iconAnchor: [scaledSize / 2, scaledSize / 2]
           });
