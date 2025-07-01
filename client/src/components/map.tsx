@@ -704,9 +704,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Add current location to route if tracking
       if (isTracking) {
         currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
+        console.log('Added point to current route. Total points:', currentRoutePointsRef.current.length);
         
         // Update current route display
         if (currentRoutePointsRef.current.length >= 2) {
+          console.log('Drawing current route polyline with', currentRoutePointsRef.current.length, 'points');
           // Remove existing current route
           if (currentRoutePolylineRef.current) {
             mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
@@ -839,11 +841,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   // Reset current route when tracking stops
   useEffect(() => {
     if (!isTracking && mapInstanceRef.current) {
+      console.log('Tracking stopped - cleaning up current route');
       // Clear current route points
       currentRoutePointsRef.current = [];
       
       // Remove current route polyline from map
       if (currentRoutePolylineRef.current) {
+        console.log('Removing current route polyline from map');
         mapInstanceRef.current.removeLayer(currentRoutePolylineRef.current);
         currentRoutePolylineRef.current = null;
       }
