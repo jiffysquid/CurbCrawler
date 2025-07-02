@@ -340,6 +340,7 @@ export default function Home() {
           sessionLocations={sessionLocations}
           currentSuburb={currentSuburb}
           isTracking={isTracking}
+          isRecording={isRecording}
           allSessions={sessions}
         />
         

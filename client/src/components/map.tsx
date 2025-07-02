@@ -18,10 +18,11 @@ interface MapProps {
   sessionLocations: LocationPoint[];
   currentSuburb: string;
   isTracking: boolean;
+  isRecording: boolean;
   allSessions?: SessionWithStats[];
 }
 
-export default function Map({ currentLocation, sessionLocations, currentSuburb, isTracking, allSessions = [] }: MapProps) {
+export default function Map({ currentLocation, sessionLocations, currentSuburb, isTracking, isRecording, allSessions = [] }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -105,7 +106,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Automatic map rotation based on driving direction
   const updateMapRotation = useCallback((newLocation: { lat: number; lng: number }) => {
-    if (!mapInstanceRef.current || !isTracking) return;
+    if (!mapInstanceRef.current || !isRecording) return;
     
     const prevLocation = previousLocationRef.current;
     if (!prevLocation) {
@@ -156,7 +157,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Update previous location
       previousLocationRef.current = newLocation;
     }
-  }, [isTracking]);
+  }, [isRecording]);
 
   // Update current route during tracking
   const updateCurrentRoute = useCallback(() => {
@@ -701,8 +702,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Update map rotation based on driving direction
       updateMapRotation(currentLocation);
       
-      // Add current location to route if tracking
-      if (isTracking) {
+      // Add current location to route if recording
+      if (isRecording) {
         currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
         console.log('Added point to current route. Total points:', currentRoutePointsRef.current.length);
         
@@ -729,7 +730,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } catch (error) {
       console.error('Failed to create vehicle marker:', error);
     }
-  }, [currentLocation, focusArea, updateMapRotation, isTracking]);
+  }, [currentLocation, focusArea, updateMapRotation, isRecording]);
 
   // Add zoom event listener for vehicle marker scaling
   useEffect(() => {
@@ -838,10 +839,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
 
 
-  // Reset current route when tracking stops
+  // Reset current route when recording stops
   useEffect(() => {
-    if (!isTracking && mapInstanceRef.current) {
-      console.log('Tracking stopped - cleaning up current route');
+    if (!isRecording && mapInstanceRef.current) {
+      console.log('Recording stopped - cleaning up current route');
       // Clear current route points
       currentRoutePointsRef.current = [];
       
@@ -864,7 +865,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Reset previous location for fresh bearing calculation
       previousLocationRef.current = null;
     }
-  }, [isTracking]);
+  }, [isRecording]);
 
   const centerOnCurrentLocation = () => {
     if (mapInstanceRef.current && currentLocation) {
