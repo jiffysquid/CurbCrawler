@@ -106,7 +106,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Automatic map rotation based on driving direction
   const updateMapRotation = useCallback((newLocation: { lat: number; lng: number }) => {
-    if (!mapInstanceRef.current || !isRecording) return;
+    if (!mapInstanceRef.current) return;
     
     const prevLocation = previousLocationRef.current;
     if (!prevLocation) {
@@ -131,11 +131,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       newLocation.lng
     ) * 1000; // Convert to meters
     
-    if (distance > 5) {
+    if (distance > 5 && isRecording) {
       // Invert the bearing so map rotates opposite to direction of travel
       // This keeps the vehicle marker pointing forward while map rotates around it
       const rotationAngle = -bearing; // Negative bearing for opposite rotation
       setMapRotation(rotationAngle);
+      
+      console.log('Applying map rotation:', rotationAngle, 'degrees based on bearing:', bearing);
       
       // Rotate the entire map container around the vehicle marker position
       const mapContainer = mapInstanceRef.current.getContainer();
@@ -153,8 +155,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           });
         }, 50);
       }
-      
-      // Update previous location
+    }
+    
+    // Always update previous location for bearing calculation when there's movement
+    if (distance > 5) {
       previousLocationRef.current = newLocation;
     }
   }, [isRecording]);
@@ -633,10 +637,24 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       return;
     }
 
-    // Remove existing vehicle marker
-    if (vehicleMarkerRef.current) {
-      mapInstanceRef.current.removeLayer(vehicleMarkerRef.current);
-      console.log('Removed existing vehicle marker');
+    // Only remove existing vehicle marker if location changed significantly or it doesn't exist
+    const existingMarker = vehicleMarkerRef.current;
+    let needsRecreation = !existingMarker;
+    
+    if (existingMarker) {
+      const currentPos = existingMarker.getLatLng();
+      const distance = calculateDistance(currentPos.lat, currentPos.lng, currentLocation.lat, currentLocation.lng) * 1000;
+      needsRecreation = distance > 1; // Only recreate if moved more than 1 meter
+    }
+    
+    if (needsRecreation && existingMarker) {
+      console.log('Removed existing vehicle marker for position update');
+      mapInstanceRef.current.removeLayer(existingMarker);
+      vehicleMarkerRef.current = null;
+    } else if (!needsRecreation && existingMarker) {
+      // Just update position without recreating
+      existingMarker.setLatLng([currentLocation.lat, currentLocation.lng]);
+      return; // Skip recreation
     }
 
     // Create vehicle icon based on selected vehicle type
@@ -704,8 +722,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       // Add current location to route if recording
       if (isRecording) {
-        currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
-        console.log('Added point to current route. Total points:', currentRoutePointsRef.current.length);
+        // Only add point if it's significantly different from the last point
+        const lastPoint = currentRoutePointsRef.current[currentRoutePointsRef.current.length - 1];
+        let shouldAddPoint = true;
+        
+        if (lastPoint) {
+          const distance = calculateDistance(lastPoint.lat, lastPoint.lng, currentLocation.lat, currentLocation.lng) * 1000;
+          shouldAddPoint = distance > 1; // Only add if moved more than 1 meter
+        }
+        
+        if (shouldAddPoint) {
+          currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
+          console.log('Added point to current route. Total points:', currentRoutePointsRef.current.length);
+          console.log('Recording state:', isRecording, 'Location:', currentLocation.lat, currentLocation.lng);
+        }
         
         // Update current route display
         if (currentRoutePointsRef.current.length >= 2) {
