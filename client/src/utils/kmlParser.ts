@@ -83,6 +83,8 @@ export class KMLSimulator {
         } catch (error) {
           console.error(`❌ KML: Location callback failed:`, error);
         }
+      } else {
+        console.warn(`⚠️ KML: No location callback set during simulation`);
       }
       
       // Also emit window event as backup/alternative

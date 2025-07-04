@@ -113,6 +113,16 @@ export default function Home() {
     console.log('🎯 Home: Registering KML event listener');
     window.addEventListener('kml-location-update', handleKMLEvent as EventListener);
     
+    // Test event listener registration
+    const testEvent = new CustomEvent('kml-location-update', {
+      detail: { lat: -27.4700, lng: 153.0200, accuracy: 10 }
+    });
+    
+    setTimeout(() => {
+      console.log('🎯 Home: Testing event listener with test event');
+      window.dispatchEvent(testEvent);
+    }, 1000);
+    
     return () => {
       console.log('🎯 Home: Unregistering KML event listener');
       window.removeEventListener('kml-location-update', handleKMLEvent as EventListener);
