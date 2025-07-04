@@ -245,29 +245,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         console.log('Setting map bearing for rotation');
         mapInstanceRef.current.setBearing(rotationAngle);
       } else {
-        // Fallback to CSS rotation with enhanced tile management
+        // Fallback to CSS rotation - simple and direct
         const mapContainer = mapInstanceRef.current.getContainer();
         if (mapContainer) {
           console.log('Rotating map container with CSS transform');
-          
-          // Pre-load more tiles by temporarily reducing zoom
-          const currentZoom = mapInstanceRef.current.getZoom();
-          mapInstanceRef.current.setZoom(Math.max(currentZoom - 1, 10), { animate: false });
-          
-          setTimeout(() => {
-            // Apply CSS transform to rotate map around center point
-            mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-            mapContainer.style.transformOrigin = '50% 50%';
-            mapContainer.style.transition = 'transform 0.3s ease-out';
-            
-            // Restore original zoom after rotation starts
-            setTimeout(() => {
-              mapInstanceRef.current.setZoom(currentZoom, { animate: false });
-              mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, {
-                animate: false
-              });
-            }, 100);
-          }, 100);
+          // Apply CSS transform to rotate map around center point
+          mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
+          mapContainer.style.transformOrigin = '50% 50%';
+          mapContainer.style.transition = 'transform 0.5s ease-out';
         }
       }
     } else {
@@ -426,8 +411,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           tileSize: 256,
           updateWhenIdle: false,
           updateWhenZooming: false,
-          keepBuffer: 12,  // Keep 12 rows/columns of tiles outside viewport
-          padding: 3.0,    // Load tiles 3x the viewport size in all directions
+          keepBuffer: 16,  // Increased from 12 to 16 for better rotation coverage
+          padding: 4.0,    // Increased from 3.0 to 4.0 for wider tile loading
           bounds: null,    // No bounds restriction
           continuousWorld: true,  // Allows seamless world wrapping
           noWrap: false,   // Allow world wrapping
