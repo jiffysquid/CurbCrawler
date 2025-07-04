@@ -230,7 +230,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     
     console.log('Movement detected:', { distance, isRecording, bearing });
     
-    if (distance > 5 && isRecording) {
+    if (distance > 5) {
       // Invert the bearing so map rotates opposite to direction of travel
       // This keeps the vehicle marker pointing forward while map rotates around it
       const rotationAngle = -bearing; // Negative bearing for opposite rotation
@@ -255,8 +255,6 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           });
         }, 50);
       }
-    } else if (distance > 5) {
-      console.log('Movement detected but not recording - no rotation applied');
     } else {
       console.log('No significant movement detected - no rotation applied');
     }
