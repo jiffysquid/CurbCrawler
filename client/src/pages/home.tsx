@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import Map from "@/components/map";
@@ -85,6 +85,13 @@ export default function Home() {
       setCurrentSuburb('Unknown');
     }
   };
+
+  // Handle KML simulation location updates
+  const handleKMLLocationUpdate = useCallback((newLocation: { lat: number; lng: number; accuracy?: number }) => {
+    console.log('🎯 KML Location Update received:', newLocation.lat, newLocation.lng);
+    setLocation(newLocation);
+    updateCurrentSuburb(newLocation);
+  }, []);
 
   // Handle GPS errors
   useEffect(() => {
@@ -358,7 +365,7 @@ export default function Home() {
           error={gpsError}
           isWatching={isWatching}
           onTestGPS={handleTestGPS}
-          onLocationUpdate={setLocation}
+          onLocationUpdate={handleKMLLocationUpdate}
         />
 
         {/* Mobile Menu Button */}
