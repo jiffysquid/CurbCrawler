@@ -238,22 +238,30 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       console.log('APPLYING MAP ROTATION:', rotationAngle, 'degrees based on bearing:', bearing);
       
-      // Rotate the entire map container around the vehicle marker position
-      const mapContainer = mapInstanceRef.current.getContainer();
-      if (mapContainer) {
-        console.log('Rotating map container with CSS transform');
-        // Apply CSS transform to rotate map around center point
-        mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-        mapContainer.style.transformOrigin = '50% 50%';
-        mapContainer.style.transition = 'transform 0.8s ease-out';
-        
-        // Ensure vehicle marker stays centered during rotation
-        const currentZoom = mapInstanceRef.current.getZoom();
-        setTimeout(() => {
-          mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, {
-            animate: false
-          });
-        }, 50);
+      // Apply rotation to the map's bearing instead of CSS rotation
+      // This rotates the content while keeping tiles properly loaded
+      if (mapInstanceRef.current.setBearing) {
+        // Use native map bearing rotation if available
+        console.log('Setting map bearing for rotation');
+        mapInstanceRef.current.setBearing(rotationAngle);
+      } else {
+        // Fallback to CSS rotation with enhanced tile management
+        const mapContainer = mapInstanceRef.current.getContainer();
+        if (mapContainer) {
+          console.log('Rotating map container with CSS transform');
+          // Apply CSS transform to rotate map around center point
+          mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
+          mapContainer.style.transformOrigin = '50% 50%';
+          mapContainer.style.transition = 'transform 0.8s ease-out';
+          
+          // Ensure vehicle marker stays centered during rotation
+          const zoom = mapInstanceRef.current.getZoom();
+          setTimeout(() => {
+            mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], zoom, {
+              animate: false
+            });
+          }, 50);
+        }
       }
     } else {
       console.log('No significant movement detected - no rotation applied');
@@ -404,17 +412,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           wheelPxPerZoomLevel: 60,
         });
 
-        // Add OpenStreetMap tiles with extra buffering for rotation
+        // Add OpenStreetMap tiles with maximum buffering for rotation
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
           tileSize: 256,
           updateWhenIdle: false,
-          updateWhenZooming: true,
-          keepBuffer: 8,  // Keep 8 rows/columns of tiles outside viewport
-          padding: 2.0,   // Load tiles 2x the viewport size in all directions
-          bounds: null,   // No bounds restriction
-          continuousWorld: true  // Allows seamless world wrapping
+          updateWhenZooming: false,
+          keepBuffer: 12,  // Keep 12 rows/columns of tiles outside viewport
+          padding: 3.0,    // Load tiles 3x the viewport size in all directions
+          bounds: null,    // No bounds restriction
+          continuousWorld: true,  // Allows seamless world wrapping
+          noWrap: false,   // Allow world wrapping
+          detectRetina: true,
+          crossOrigin: false
         }).addTo(map);
 
         mapInstanceRef.current = map;
