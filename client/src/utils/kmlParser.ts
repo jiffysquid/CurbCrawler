@@ -87,7 +87,24 @@ export class KMLSimulator {
         console.warn(`⚠️ KML: No location callback set during simulation`);
       }
       
-      // Also emit window event as backup/alternative
+      // Direct window callback approach
+      if ((window as any).kmlLocationCallback) {
+        try {
+          console.log(`📞 KML: Calling global window callback:`, point.lat, point.lng);
+          (window as any).kmlLocationCallback({
+            lat: point.lat,
+            lng: point.lng,
+            accuracy: 5
+          });
+          console.log(`✅ KML: Global callback completed successfully`);
+        } catch (error) {
+          console.error(`❌ KML: Global callback failed:`, error);
+        }
+      } else {
+        console.warn(`⚠️ KML: No global callback available on window`);
+      }
+      
+      // Also emit window event as backup
       const locationEvent = new CustomEvent('kml-location-update', {
         detail: {
           lat: point.lat,

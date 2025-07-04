@@ -102,29 +102,19 @@ export default function Home() {
   console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
   console.log('🏠 Home: About to render GPSDebug with callback:', !!handleKMLLocationUpdate);
 
-  // Simple window event listener for KML simulation
+  // Set up global KML callback
   useEffect(() => {
-    const handleKMLEvent = (event: any) => {
-      if (event.detail && event.detail.lat && event.detail.lng) {
-        console.log('🎯 Home: KML Event received:', event.detail.lat, event.detail.lng);
-        setLocation({ 
-          lat: event.detail.lat, 
-          lng: event.detail.lng, 
-          accuracy: event.detail.accuracy || 5 
-        });
-        updateCurrentSuburb({ 
-          lat: event.detail.lat, 
-          lng: event.detail.lng 
-        });
-      }
+    console.log('🎯 Home: Setting up global KML callback');
+    
+    (window as any).kmlLocationCallback = (newLocation: { lat: number; lng: number; accuracy?: number }) => {
+      console.log('🎯 Home: Global KML callback received:', newLocation.lat, newLocation.lng);
+      setLocation(newLocation);
+      updateCurrentSuburb(newLocation);
     };
-
-    console.log('🎯 Home: Setting up KML event listener');
-    window.addEventListener('kml-location-update', handleKMLEvent);
     
     return () => {
-      console.log('🎯 Home: Removing KML event listener');
-      window.removeEventListener('kml-location-update', handleKMLEvent);
+      console.log('🎯 Home: Removing global KML callback');
+      delete (window as any).kmlLocationCallback;
     };
   }, []);
 
