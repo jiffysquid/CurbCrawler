@@ -249,18 +249,25 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         const mapContainer = mapInstanceRef.current.getContainer();
         if (mapContainer) {
           console.log('Rotating map container with CSS transform');
-          // Apply CSS transform to rotate map around center point
-          mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-          mapContainer.style.transformOrigin = '50% 50%';
-          mapContainer.style.transition = 'transform 0.8s ease-out';
           
-          // Ensure vehicle marker stays centered during rotation
-          const zoom = mapInstanceRef.current.getZoom();
+          // Pre-load more tiles by temporarily reducing zoom
+          const currentZoom = mapInstanceRef.current.getZoom();
+          mapInstanceRef.current.setZoom(Math.max(currentZoom - 1, 10), { animate: false });
+          
           setTimeout(() => {
-            mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], zoom, {
-              animate: false
-            });
-          }, 50);
+            // Apply CSS transform to rotate map around center point
+            mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
+            mapContainer.style.transformOrigin = '50% 50%';
+            mapContainer.style.transition = 'transform 0.3s ease-out';
+            
+            // Restore original zoom after rotation starts
+            setTimeout(() => {
+              mapInstanceRef.current.setZoom(currentZoom, { animate: false });
+              mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, {
+                animate: false
+              });
+            }, 100);
+          }, 100);
         }
       }
     } else {
@@ -788,10 +795,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
       const scaledSize = Math.round(baseSize * scaleFactor);
       
-      // Use divIcon for IMAX van image - keep pointing forward (no counter-rotation)
+      // Use divIcon for IMAX van image - apply counter-rotation to stay upright
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker-image',
-        html: `<div style="width: ${scaledSize}px; height: ${scaledSize}px;">
+        html: `<div style="transform: rotate(${-mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
           <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>`,
         iconSize: [scaledSize, scaledSize],
