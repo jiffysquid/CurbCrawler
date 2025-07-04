@@ -86,7 +86,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     const handleShowKMLRoute = (event: CustomEvent) => {
       const { show } = event.detail;
       
-      if (!mapInstanceRef.current) return;
+      if (!mapInstanceRef.current) {
+        console.log('🗺️ Map not ready, cannot display route');
+        return;
+      }
+      
+      const L = (window as any).L;
+      if (!L) {
+        console.log('🗺️ Leaflet not loaded, cannot display route');
+        return;
+      }
       
       if (show) {
         console.log('🗺️ Displaying KML route on map');
@@ -103,27 +112,50 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           [-27.470000, 153.01610]   // Sample points
         ];
         
-        // Create polyline for KML route
-        const L = (window as any).L;
+        // Remove existing route if any
         if (kmlRoutePolylineRef.current) {
-          kmlRoutePolylineRef.current.remove();
+          try {
+            kmlRoutePolylineRef.current.remove();
+          } catch (e) {
+            console.log('🗺️ Error removing existing route:', e);
+          }
         }
         
-        kmlRoutePolylineRef.current = L.polyline(testRoute, {
-          color: '#FF6B35',
-          weight: 4,
-          opacity: 0.8,
-          dashArray: '5, 10'
-        }).addTo(mapInstanceRef.current);
-        
-        console.log('🗺️ KML test route displayed');
+        try {
+          // Create polyline for KML route
+          kmlRoutePolylineRef.current = L.polyline(testRoute, {
+            color: '#FF6B35',
+            weight: 6,
+            opacity: 1.0,
+            dashArray: '10, 5'
+          }).addTo(mapInstanceRef.current);
+          
+          console.log('🗺️ KML test route displayed successfully');
+          
+          // Zoom to show the route
+          setTimeout(() => {
+            if (kmlRoutePolylineRef.current && mapInstanceRef.current) {
+              mapInstanceRef.current.fitBounds(kmlRoutePolylineRef.current.getBounds(), {
+                padding: [50, 50]
+              });
+              console.log('🗺️ Map zoomed to show route');
+            }
+          }, 100);
+          
+        } catch (error) {
+          console.error('🗺️ Error creating route polyline:', error);
+        }
         
       } else {
         // Hide the route
         if (kmlRoutePolylineRef.current) {
-          kmlRoutePolylineRef.current.remove();
-          kmlRoutePolylineRef.current = null;
-          console.log('🗺️ KML route hidden');
+          try {
+            kmlRoutePolylineRef.current.remove();
+            kmlRoutePolylineRef.current = null;
+            console.log('🗺️ KML route hidden successfully');
+          } catch (error) {
+            console.error('🗺️ Error hiding route:', error);
+          }
         }
       }
     };
