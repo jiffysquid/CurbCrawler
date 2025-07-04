@@ -88,9 +88,14 @@ export default function Home() {
 
   // Handle KML simulation location updates
   const handleKMLLocationUpdate = useCallback((newLocation: { lat: number; lng: number; accuracy?: number }) => {
-    console.log('🎯 KML Location Update received:', newLocation.lat, newLocation.lng);
-    setLocation(newLocation);
-    updateCurrentSuburb(newLocation);
+    console.log('🎯 Home: KML Location Update received:', newLocation.lat, newLocation.lng);
+    try {
+      setLocation(newLocation);
+      updateCurrentSuburb(newLocation);
+      console.log('🎯 Home: Location state updated successfully');
+    } catch (error) {
+      console.error('🎯 Home: Error updating location state:', error);
+    }
   }, []);
 
   // Handle GPS errors

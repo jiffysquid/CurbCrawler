@@ -67,11 +67,21 @@ export class KMLSimulator {
       const point = this.points[this.currentIndex];
       
       if (this.onLocationUpdate) {
-        this.onLocationUpdate({
-          lat: point.lat,
-          lng: point.lng,
-          accuracy: 5 // Simulate good GPS accuracy
-        });
+        try {
+          console.log(`🔄 KML: Calling location callback with:`, point.lat, point.lng);
+          this.onLocationUpdate({
+            lat: point.lat,
+            lng: point.lng,
+            accuracy: 5 // Simulate good GPS accuracy
+          });
+          console.log(`✅ KML: Location callback completed successfully`);
+        } catch (error) {
+          console.error(`❌ KML: Location callback failed:`, error);
+          this.stopSimulation();
+          return;
+        }
+      } else {
+        console.warn(`⚠️ KML: No location callback registered`);
       }
       
       console.log(`📍 KML simulation: Point ${this.currentIndex + 1}/${this.points.length} - ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`);

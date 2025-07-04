@@ -23,11 +23,6 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
       try {
         await kmlSimulator.loadKMLFile(debugRouteKML);
         setKmlLoaded(true);
-        
-        // Set up callback for location updates
-        if (onLocationUpdate) {
-          kmlSimulator.setLocationCallback(onLocationUpdate);
-        }
       } catch (error) {
         console.error('Failed to load KML file:', error);
       }
@@ -43,6 +38,16 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
     return () => {
       clearInterval(progressInterval);
     };
+  }, []);
+
+  // Set up callback whenever onLocationUpdate changes
+  useEffect(() => {
+    if (onLocationUpdate) {
+      console.log('🔗 GPS Debug: Setting up KML location callback');
+      kmlSimulator.setLocationCallback(onLocationUpdate);
+    } else {
+      console.warn('⚠️ GPS Debug: No onLocationUpdate callback provided');
+    }
   }, [onLocationUpdate]);
 
   if (!isVisible) {
@@ -123,7 +128,14 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
               
               <div className="flex gap-1">
                 <Button
-                  onClick={() => kmlSimulator.startSimulation(2)}
+                  onClick={() => {
+                    // Ensure callback is set before starting
+                    if (onLocationUpdate) {
+                      console.log('🔗 GPS Debug: Re-setting KML location callback before start');
+                      kmlSimulator.setLocationCallback(onLocationUpdate);
+                    }
+                    kmlSimulator.startSimulation(2);
+                  }}
                   size="sm"
                   className="flex-1 flex items-center gap-1 h-8"
                   disabled={kmlSimulator.isSimulationRunning()}
