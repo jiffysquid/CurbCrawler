@@ -102,15 +102,17 @@ export default function Home() {
   console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
   console.log('🏠 Home: About to render GPSDebug with callback:', !!handleKMLLocationUpdate);
 
-  // Set up global KML callback
+  // Set up global KML callback - FORCE REFRESH
   useEffect(() => {
-    console.log('🎯 Home: Setting up global KML callback');
+    console.log('🎯 Home: Setting up global KML callback [REFRESH]');
     
     (window as any).kmlLocationCallback = (newLocation: { lat: number; lng: number; accuracy?: number }) => {
       console.log('🎯 Home: Global KML callback received:', newLocation.lat, newLocation.lng);
       setLocation(newLocation);
       updateCurrentSuburb(newLocation);
     };
+    
+    console.log('🎯 Home: Global callback registered on window');
     
     return () => {
       console.log('🎯 Home: Removing global KML callback');
