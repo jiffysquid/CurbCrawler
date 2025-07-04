@@ -404,10 +404,17 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           wheelPxPerZoomLevel: 60,
         });
 
-        // Add OpenStreetMap tiles
+        // Add OpenStreetMap tiles with extra buffering for rotation
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
-          maxZoom: 19
+          maxZoom: 19,
+          tileSize: 256,
+          updateWhenIdle: false,
+          updateWhenZooming: true,
+          keepBuffer: 8,  // Keep 8 rows/columns of tiles outside viewport
+          padding: 2.0,   // Load tiles 2x the viewport size in all directions
+          bounds: null,   // No bounds restriction
+          continuousWorld: true  // Allows seamless world wrapping
         }).addTo(map);
 
         mapInstanceRef.current = map;

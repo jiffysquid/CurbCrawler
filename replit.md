@@ -144,7 +144,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 3, 2025: Added detailed console logging for debugging rotation and recording functionality
 - July 4, 2025: Successfully implemented KML route visualization system displaying authentic 2253-point Brisbane GPS route
 - July 4, 2025: Connected actual user KML data to map display - shows real Brisbane streets through Paddington, Milton, Auchenflower
-- July 4, 2025: Identified KML simulation event system issue - events dispatched but Home component not receiving location updates
+- July 4, 2025: Fixed KML simulation connection using global window callbacks - vehicle marker now follows route correctly
+- July 4, 2025: Fixed map rotation system - removed recording requirement, rotation now works during KML simulation
+- July 4, 2025: Enhanced tile loading with keepBuffer=8 and padding=2.0 to prevent missing tiles during map rotation
 
 ## User Preferences
 
