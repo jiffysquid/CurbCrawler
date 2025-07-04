@@ -110,9 +110,11 @@ export default function Home() {
       updateCurrentSuburb({ lat, lng });
     };
 
+    console.log('🎯 Home: Registering KML event listener');
     window.addEventListener('kml-location-update', handleKMLEvent as EventListener);
     
     return () => {
+      console.log('🎯 Home: Unregistering KML event listener');
       window.removeEventListener('kml-location-update', handleKMLEvent as EventListener);
     };
   }, []);
