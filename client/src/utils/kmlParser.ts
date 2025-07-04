@@ -136,6 +136,10 @@ export class KMLSimulator {
     };
   }
 
+  getAllPoints(): KMLPoint[] {
+    return this.points;
+  }
+
   isSimulationRunning(): boolean {
     return this.isRunning;
   }

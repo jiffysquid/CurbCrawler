@@ -98,19 +98,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       }
       
       if (show) {
-        console.log('🗺️ Displaying KML route on map');
+        console.log('🗺️ Displaying actual KML route on map');
         
-        // Create a simple test route to verify the display works
-        const testRoute = [
-          [-27.463335, 153.01544],  // Start point from KML
-          [-27.464000, 153.01550],
-          [-27.465000, 153.01560],
-          [-27.466000, 153.01570],
-          [-27.467000, 153.01580],
-          [-27.468000, 153.01590],
-          [-27.469000, 153.01600],
-          [-27.470000, 153.01610]   // Sample points
-        ];
+        // Get the actual KML route data
+        const kmlPoints = kmlSimulator.getAllPoints();
+        if (kmlPoints.length === 0) {
+          console.log('🗺️ No KML data available');
+          return;
+        }
+        
+        // Convert KML points to Leaflet format [lat, lng]
+        const routeCoordinates = kmlPoints.map(point => [point.lat, point.lng]);
+        console.log(`🗺️ Displaying route with ${routeCoordinates.length} actual GPS points`);
         
         // Remove existing route if any
         if (kmlRoutePolylineRef.current) {
@@ -122,8 +121,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
         
         try {
-          // Create polyline for KML route
-          kmlRoutePolylineRef.current = L.polyline(testRoute, {
+          // Create polyline for actual KML route
+          kmlRoutePolylineRef.current = L.polyline(routeCoordinates, {
             color: '#FF6B35',
             weight: 6,
             opacity: 1.0,
