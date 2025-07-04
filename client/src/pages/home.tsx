@@ -358,6 +358,7 @@ export default function Home() {
           error={gpsError}
           isWatching={isWatching}
           onTestGPS={handleTestGPS}
+          onLocationUpdate={setLocation}
         />
 
         {/* Mobile Menu Button */}
