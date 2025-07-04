@@ -42,10 +42,11 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
 
   // Set up callback whenever onLocationUpdate changes
   useEffect(() => {
-    console.log('🔗 GPS Debug: useEffect triggered, onLocationUpdate type:', typeof onLocationUpdate);
+    console.log('🔗 GPS Debug: useEffect triggered, onLocationUpdate available:', !!onLocationUpdate);
     if (onLocationUpdate) {
       console.log('🔗 GPS Debug: Setting up KML location callback');
       kmlSimulator.setLocationCallback(onLocationUpdate);
+      console.log('🔗 GPS Debug: Callback set successfully');
     } else {
       console.warn('⚠️ GPS Debug: No onLocationUpdate callback provided');
     }

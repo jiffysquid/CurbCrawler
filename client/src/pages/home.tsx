@@ -100,32 +100,31 @@ export default function Home() {
 
   // Debug: Log when handleKMLLocationUpdate is created
   console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
+  console.log('🏠 Home: About to render GPSDebug with callback:', !!handleKMLLocationUpdate);
 
-  // Listen for KML simulation events as backup
+  // Simple window event listener for KML simulation
   useEffect(() => {
-    const handleKMLEvent = (event: CustomEvent) => {
-      const { lat, lng, accuracy } = event.detail;
-      console.log('🎯 Home: KML Window Event received:', lat, lng);
-      setLocation({ lat, lng, accuracy });
-      updateCurrentSuburb({ lat, lng });
+    const handleKMLEvent = (event: any) => {
+      if (event.detail && event.detail.lat && event.detail.lng) {
+        console.log('🎯 Home: KML Event received:', event.detail.lat, event.detail.lng);
+        setLocation({ 
+          lat: event.detail.lat, 
+          lng: event.detail.lng, 
+          accuracy: event.detail.accuracy || 5 
+        });
+        updateCurrentSuburb({ 
+          lat: event.detail.lat, 
+          lng: event.detail.lng 
+        });
+      }
     };
 
-    console.log('🎯 Home: Registering KML event listener');
-    window.addEventListener('kml-location-update', handleKMLEvent as EventListener);
-    
-    // Test event listener registration
-    const testEvent = new CustomEvent('kml-location-update', {
-      detail: { lat: -27.4700, lng: 153.0200, accuracy: 10 }
-    });
-    
-    setTimeout(() => {
-      console.log('🎯 Home: Testing event listener with test event');
-      window.dispatchEvent(testEvent);
-    }, 1000);
+    console.log('🎯 Home: Setting up KML event listener');
+    window.addEventListener('kml-location-update', handleKMLEvent);
     
     return () => {
-      console.log('🎯 Home: Unregistering KML event listener');
-      window.removeEventListener('kml-location-update', handleKMLEvent as EventListener);
+      console.log('🎯 Home: Removing KML event listener');
+      window.removeEventListener('kml-location-update', handleKMLEvent);
     };
   }, []);
 
