@@ -6,6 +6,7 @@ import { Crosshair, Focus, Info, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
+import { kmlSimulator } from "../utils/kmlParser";
 
 // Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
@@ -45,6 +46,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const hasInitialLocationRef = useRef<boolean>(false);
   const currentRoutePointsRef = useRef<{ lat: number; lng: number }[]>([]);
   const [currentSuburbName, setCurrentSuburbName] = useState<string>('Unknown');
+  const kmlRoutePolylineRef = useRef<any>(null);
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
@@ -77,6 +79,60 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Listen for KML route display events
+  useEffect(() => {
+    const handleShowKMLRoute = (event: CustomEvent) => {
+      const { show } = event.detail;
+      
+      if (!mapInstanceRef.current) return;
+      
+      if (show) {
+        console.log('🗺️ Displaying KML route on map');
+        
+        // Create a simple test route to verify the display works
+        const testRoute = [
+          [-27.463335, 153.01544],  // Start point from KML
+          [-27.464000, 153.01550],
+          [-27.465000, 153.01560],
+          [-27.466000, 153.01570],
+          [-27.467000, 153.01580],
+          [-27.468000, 153.01590],
+          [-27.469000, 153.01600],
+          [-27.470000, 153.01610]   // Sample points
+        ];
+        
+        // Create polyline for KML route
+        const L = (window as any).L;
+        if (kmlRoutePolylineRef.current) {
+          kmlRoutePolylineRef.current.remove();
+        }
+        
+        kmlRoutePolylineRef.current = L.polyline(testRoute, {
+          color: '#FF6B35',
+          weight: 4,
+          opacity: 0.8,
+          dashArray: '5, 10'
+        }).addTo(mapInstanceRef.current);
+        
+        console.log('🗺️ KML test route displayed');
+        
+      } else {
+        // Hide the route
+        if (kmlRoutePolylineRef.current) {
+          kmlRoutePolylineRef.current.remove();
+          kmlRoutePolylineRef.current = null;
+          console.log('🗺️ KML route hidden');
+        }
+      }
+    };
+
+    window.addEventListener('show-kml-route', handleShowKMLRoute as EventListener);
+    
+    return () => {
+      window.removeEventListener('show-kml-route', handleShowKMLRoute as EventListener);
+    };
   }, []);
 
   // Update current suburb when location changes

@@ -107,7 +107,7 @@ export default function Home() {
       const { lat, lng, accuracy } = event.detail;
       console.log('🎯 Home: KML Window Event received:', lat, lng);
       setLocation({ lat, lng, accuracy });
-      updateCurrentSuburb({ lat, lng, accuracy });
+      updateCurrentSuburb({ lat, lng });
     };
 
     window.addEventListener('kml-location-update', handleKMLEvent as EventListener);

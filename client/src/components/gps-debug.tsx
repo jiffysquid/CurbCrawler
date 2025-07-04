@@ -156,6 +156,39 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
                 </Button>
               </div>
               
+              <div className="flex gap-1 mt-2">
+                <Button
+                  onClick={() => {
+                    // Emit event to show KML route on map
+                    const showRouteEvent = new CustomEvent('show-kml-route', {
+                      detail: { show: true }
+                    });
+                    window.dispatchEvent(showRouteEvent);
+                    console.log('🗺️ Requested to show KML route on map');
+                  }}
+                  size="sm"
+                  variant="secondary"
+                  className="flex-1 flex items-center gap-1 h-8"
+                >
+                  Show Route
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Emit event to hide KML route on map
+                    const hideRouteEvent = new CustomEvent('show-kml-route', {
+                      detail: { show: false }
+                    });
+                    window.dispatchEvent(hideRouteEvent);
+                    console.log('🗺️ Requested to hide KML route on map');
+                  }}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 flex items-center gap-1 h-8"
+                >
+                  Hide Route
+                </Button>
+              </div>
+              
               <div className="text-xs text-gray-500">
                 Simulates real GPS movement from Brisbane route data for testing map rotation
               </div>
