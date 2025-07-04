@@ -98,6 +98,25 @@ export default function Home() {
     }
   }, []);
 
+  // Debug: Log when handleKMLLocationUpdate is created
+  console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
+
+  // Listen for KML simulation events as backup
+  useEffect(() => {
+    const handleKMLEvent = (event: CustomEvent) => {
+      const { lat, lng, accuracy } = event.detail;
+      console.log('🎯 Home: KML Window Event received:', lat, lng);
+      setLocation({ lat, lng, accuracy });
+      updateCurrentSuburb({ lat, lng, accuracy });
+    };
+
+    window.addEventListener('kml-location-update', handleKMLEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('kml-location-update', handleKMLEvent as EventListener);
+    };
+  }, []);
+
   // Handle GPS errors
   useEffect(() => {
     if (gpsError) {

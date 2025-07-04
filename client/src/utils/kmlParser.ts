@@ -44,11 +44,15 @@ export class KMLSimulator {
   }
 
   setLocationCallback(callback: (location: { lat: number; lng: number; accuracy?: number }) => void) {
+    console.log('🔗 KML: Setting location callback, callback provided:', typeof callback);
     this.onLocationUpdate = callback;
+    console.log('🔗 KML: Callback stored, onLocationUpdate is now:', typeof this.onLocationUpdate);
   }
 
   startSimulation(speedMultiplier: number = 1) {
     if (this.isRunning || this.points.length === 0) return;
+    
+    console.log('🔗 KML: Starting simulation, callback available:', typeof this.onLocationUpdate);
     
     this.isRunning = true;
     this.currentIndex = 0;
@@ -66,6 +70,7 @@ export class KMLSimulator {
       
       const point = this.points[this.currentIndex];
       
+      // Try callback first (for compatibility)
       if (this.onLocationUpdate) {
         try {
           console.log(`🔄 KML: Calling location callback with:`, point.lat, point.lng);
@@ -77,12 +82,19 @@ export class KMLSimulator {
           console.log(`✅ KML: Location callback completed successfully`);
         } catch (error) {
           console.error(`❌ KML: Location callback failed:`, error);
-          this.stopSimulation();
-          return;
         }
-      } else {
-        console.warn(`⚠️ KML: No location callback registered`);
       }
+      
+      // Also emit window event as backup/alternative
+      const locationEvent = new CustomEvent('kml-location-update', {
+        detail: {
+          lat: point.lat,
+          lng: point.lng,
+          accuracy: 5
+        }
+      });
+      window.dispatchEvent(locationEvent);
+      console.log(`📡 KML: Dispatched window event for:`, point.lat, point.lng);
       
       console.log(`📍 KML simulation: Point ${this.currentIndex + 1}/${this.points.length} - ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`);
       
