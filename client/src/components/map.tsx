@@ -106,11 +106,21 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Automatic map rotation based on driving direction
   const updateMapRotation = useCallback((newLocation: { lat: number; lng: number }) => {
-    if (!mapInstanceRef.current) return;
+    console.log('🔄 updateMapRotation called with:', { 
+      hasMap: !!mapInstanceRef.current, 
+      isRecording, 
+      newLocation,
+      prevLocation: previousLocationRef.current 
+    });
+    
+    if (!mapInstanceRef.current) {
+      console.log('❌ No map instance, cannot rotate');
+      return;
+    }
     
     const prevLocation = previousLocationRef.current;
     if (!prevLocation) {
-      // Store first location
+      console.log('📍 Setting initial location for rotation tracking');
       previousLocationRef.current = newLocation;
       return;
     }
@@ -131,17 +141,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       newLocation.lng
     ) * 1000; // Convert to meters
     
+    console.log('Movement detected:', { distance, isRecording, bearing });
+    
     if (distance > 5 && isRecording) {
       // Invert the bearing so map rotates opposite to direction of travel
       // This keeps the vehicle marker pointing forward while map rotates around it
       const rotationAngle = -bearing; // Negative bearing for opposite rotation
       setMapRotation(rotationAngle);
       
-      console.log('Applying map rotation:', rotationAngle, 'degrees based on bearing:', bearing);
+      console.log('APPLYING MAP ROTATION:', rotationAngle, 'degrees based on bearing:', bearing);
       
       // Rotate the entire map container around the vehicle marker position
       const mapContainer = mapInstanceRef.current.getContainer();
       if (mapContainer) {
+        console.log('Rotating map container with CSS transform');
         // Apply CSS transform to rotate map around center point
         mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
         mapContainer.style.transformOrigin = '50% 50%';
@@ -155,7 +168,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           });
         }, 50);
       }
+    } else if (distance > 5) {
+      console.log('Movement detected but not recording - no rotation applied');
+    } else {
+      console.log('No significant movement detected - no rotation applied');
     }
+    
+
     
     // Always update previous location for bearing calculation when there's movement
     if (distance > 5) {
@@ -733,8 +752,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         
         if (shouldAddPoint) {
           currentRoutePointsRef.current.push({ lat: currentLocation.lat, lng: currentLocation.lng });
-          console.log('Added point to current route. Total points:', currentRoutePointsRef.current.length);
-          console.log('Recording state:', isRecording, 'Location:', currentLocation.lat, currentLocation.lng);
+          console.log('🔴 RECORDING: Added point to current route. Total points:', currentRoutePointsRef.current.length);
+          console.log('🔴 RECORDING: State:', isRecording, 'Location:', currentLocation.lat, currentLocation.lng);
         }
         
         // Update current route display

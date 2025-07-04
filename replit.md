@@ -138,6 +138,10 @@ The application is configured for deployment on Replit's autoscale platform:
 - June 26, 2025: Fixed map centering to always follow vehicle marker, not just during tracking sessions
 - June 29, 2025: Reduced vehicle marker size by 50% from 60px to 30px base size for better map visibility
 - June 29, 2025: Fixed map rotation logic - vehicle marker now always points forward while map rotates around it based on direction of travel
+- July 3, 2025: Diagnosed map rotation issue - added comprehensive debugging and movement-based rotation logic
+- July 3, 2025: Fixed marker flashing by only updating when position changes significantly (>1m)
+- July 3, 2025: Enhanced path recording with movement detection and proper GPS coordinate filtering
+- July 3, 2025: Added detailed console logging for debugging rotation and recording functionality
 
 ## User Preferences
 
