@@ -153,6 +153,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Enhanced SimpleControls component with live recording stats display including animated recording indicator and distance tracking
 - July 6, 2025: Implemented automatic wake lock management during recording sessions to keep phone screen active for van field work
 - July 6, 2025: Updated clearout schedule system to use real current dates instead of hardcoded July 21st test date
+- July 6, 2025: Fixed clearout schedule API to use authentic Brisbane Council data with current real dates showing ALGESTER, CALAMVALE, PARKINSON for current period and TARINGA, AUCHENFLOWER, ST LUCIA, MILTON for next period
 - July 6, 2025: Fixed mobile menu button positioning with higher z-index and better visibility for settings access
 
 ## User Preferences

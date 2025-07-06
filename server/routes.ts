@@ -105,25 +105,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Current Brisbane time: ${brisbaneTime.toISOString()}`);
       console.log(`Brisbane date: ${brisbaneTime.getDate()}/${brisbaneTime.getMonth() + 1}/${brisbaneTime.getFullYear()}`);
 
-      // Calculate current week (Monday to Sunday)
+      // For clearout schedules, we need to look ahead for upcoming collections
+      // Current: Look for clearouts in the next 2 weeks
       const currentWeekStart = new Date(brisbaneTime);
-      currentWeekStart.setDate(brisbaneTime.getDate() - brisbaneTime.getDay() + 1); // Monday
-      if (brisbaneTime.getDay() === 0) { // If today is Sunday, adjust to previous Monday
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-      }
+      currentWeekStart.setDate(brisbaneTime.getDate()); // Start from today
       const currentWeekEnd = new Date(currentWeekStart);
-      currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Sunday
+      currentWeekEnd.setDate(currentWeekStart.getDate() + 13); // Next 2 weeks
 
-      // Calculate next week (Monday to Sunday)
+      // Next: Look for clearouts in weeks 3-4 ahead
       const nextWeekStart = new Date(currentWeekEnd);
-      nextWeekStart.setDate(currentWeekEnd.getDate() + 1); // Next Monday
+      nextWeekStart.setDate(currentWeekEnd.getDate() + 1); // Day after current period
       const nextWeekEnd = new Date(nextWeekStart);
-      nextWeekEnd.setDate(nextWeekStart.getDate() + 6); // Next Sunday
+      nextWeekEnd.setDate(nextWeekStart.getDate() + 13); // Next 2 weeks after that
 
-      console.log(`Current week: ${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`);
-      console.log(`Next week: ${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`);
+      console.log(`Current period: ${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`);
+      console.log(`Next period: ${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`);
 
-      // Fetch current week clearouts
+      // Fetch current period clearouts (next 2 weeks)
       const currentResponse = await axios.get(`https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/kerbside-large-item-collection-schedule/records`, {
         params: {
           where: `date_of_collection >= '${currentWeekStart.toISOString().split('T')[0]}' AND date_of_collection <= '${currentWeekEnd.toISOString().split('T')[0]}'`,
@@ -134,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timeout: 10000
       });
 
-      // Fetch next week clearouts
+      // Fetch next period clearouts (weeks 3-4 ahead)
       const nextResponse = await axios.get(`https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/kerbside-large-item-collection-schedule/records`, {
         params: {
           where: `date_of_collection >= '${nextWeekStart.toISOString().split('T')[0]}' AND date_of_collection <= '${nextWeekEnd.toISOString().split('T')[0]}'`,
@@ -148,20 +146,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentSuburbs = [...new Set(currentResponse.data.results?.map((r: any) => r.suburb?.toUpperCase()) || [])];
       const nextSuburbs = [...new Set(nextResponse.data.results?.map((r: any) => r.suburb?.toUpperCase()) || [])];
 
-      console.log(`Current week clearouts: ${currentSuburbs.join(', ')}`);
-      console.log(`Next week clearouts: ${nextSuburbs.join(', ')}`);
+      console.log(`Current period clearouts: ${currentSuburbs.join(', ')}`);
+      console.log(`Next period clearouts: ${nextSuburbs.join(', ')}`);
 
       res.json({
         current: currentSuburbs,
         next: nextSuburbs,
         dataSource: "brisbane-council-api-v2.1",
-        currentWeek: `${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`,
-        nextWeek: `${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`,
+        currentPeriod: `${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`,
+        nextPeriod: `${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`,
         brisbaneDate: brisbaneTime.toISOString(),
         month: brisbaneTime.getMonth() + 1,
         date: brisbaneTime.getDate(),
         lastUpdated: new Date().toISOString(),
-        message: `Real clearout schedule from Brisbane Council API for current week (${currentWeekStart.toISOString().split('T')[0]})`
+        message: `Real clearout schedule from Brisbane Council API for current period (${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]})`
       });
     } catch (error: any) {
       console.error("Brisbane Council API error:", error);
