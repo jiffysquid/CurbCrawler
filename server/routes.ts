@@ -27,6 +27,41 @@ async function checkForMissingSuburbs(existingBoundaries: any[]): Promise<string
   }
 }
 
+// Helper function to parse KML data into boundary coordinates
+function parseKMLToBoundaryCoordinates(kmlData: string, suburbName: string): [number, number][] | null {
+  try {
+    // Extract coordinates from KML LinearRing or Polygon
+    const coordinatesMatch = kmlData.match(/<coordinates[^>]*>([\s\S]*?)<\/coordinates>/i);
+    if (!coordinatesMatch) {
+      console.log(`No coordinates found in KML for ${suburbName}`);
+      return null;
+    }
+
+    const coordinatesText = coordinatesMatch[1].trim();
+    const coordinates: [number, number][] = [];
+
+    // Parse coordinate triplets (lon,lat,alt or lon,lat)
+    const coordPairs = coordinatesText.split(/\s+/).filter(pair => pair.trim().length > 0);
+    
+    for (const pair of coordPairs) {
+      const parts = pair.split(',');
+      if (parts.length >= 2) {
+        const lon = parseFloat(parts[0]);
+        const lat = parseFloat(parts[1]);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          coordinates.push([lat, lon]); // Note: [lat, lon] for Leaflet format
+        }
+      }
+    }
+
+    console.log(`Parsed ${coordinates.length} coordinates from KML for ${suburbName}`);
+    return coordinates.length > 0 ? coordinates : null;
+  } catch (error) {
+    console.log(`Error parsing KML for ${suburbName}:`, error);
+    return null;
+  }
+}
+
 // Helper function to fetch suburb boundaries from Cloudflare R2 backup
 async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
   const boundaries = [];
@@ -46,14 +81,21 @@ async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
     try {
       console.log(`Fetching ${suburbName} from Cloudflare R2 backup...`);
       
-      // Try different possible filenames and paths
+      // Try different possible filenames and paths for KML files
+      // Also try direct bucket access patterns and URL-encoded suburb names
+      const suburbFileName = suburbName.toLowerCase().replace(/\s+/g, '_');
+      const suburbFileNameDash = suburbName.toLowerCase().replace(/\s+/g, '-');
+      
       const possiblePaths = [
-        `${endpoint}/curbside/${suburbName.toLowerCase()}.json`,
-        `${endpoint}/curbside/${suburbName.toUpperCase()}.json`,
-        `${endpoint}/${suburbName.toLowerCase()}.json`,
-        `${endpoint}/${suburbName.toUpperCase()}.json`,
-        `${endpoint}/suburb_boundaries/${suburbName.toLowerCase()}.json`,
-        `${endpoint}/boundaries/${suburbName.toLowerCase()}.json`
+        `${endpoint}/${suburbFileName}.kml`,
+        `${endpoint}/${suburbFileNameDash}.kml`,
+        `${endpoint}/${suburbName.toLowerCase()}.kml`,
+        `${endpoint}/${suburbName.toUpperCase()}.kml`,
+        `${endpoint}/curbside/${suburbFileName}.kml`,
+        `${endpoint}/curbside/${suburbFileNameDash}.kml`,
+        `${endpoint}/suburb_boundaries/${suburbFileName}.kml`,
+        `${endpoint}/boundaries/${suburbFileName}.kml`,
+        `${endpoint}/suburbs/${suburbFileName}.kml`
       ];
       
       let success = false;
@@ -65,22 +107,25 @@ async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
           const response = await axios.get(url, {
             timeout: 10000,
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/xml'
             }
           });
           
-          if (response.data && response.data.coordinates) {
-            boundaries.push({
-              name: suburbName.toUpperCase(),
-              coordinates: response.data.coordinates,
-              properties: {
-                source: 'cloudflare-r2-backup',
-                ...response.data.properties
-              }
-            });
-            console.log(`Successfully loaded ${suburbName} from R2 backup: ${url}`);
-            success = true;
-            break;
+          // Parse KML data to extract coordinates
+          if (response.data) {
+            const coordinates = parseKMLToBoundaryCoordinates(response.data, suburbName);
+            if (coordinates && coordinates.length > 0) {
+              boundaries.push({
+                name: suburbName.toUpperCase(),
+                coordinates: coordinates,
+                properties: {
+                  source: 'cloudflare-r2-backup'
+                }
+              });
+              console.log(`Successfully loaded ${suburbName} from R2 backup: ${url} (${coordinates.length} coordinates)`);
+              success = true;
+              break;
+            }
           }
         } catch (pathError: any) {
           console.log(`Path failed for ${suburbName}: ${url} - Status: ${pathError.response?.status}, Message: ${pathError.message}`);

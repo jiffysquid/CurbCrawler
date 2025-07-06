@@ -156,6 +156,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Fixed clearout schedule API to use authentic Brisbane Council data with current real dates showing ALGESTER, CALAMVALE, PARKINSON for current period and TARINGA, AUCHENFLOWER, ST LUCIA, MILTON for next period
 - July 6, 2025: Fixed mobile menu button positioning with higher z-index and better visibility for settings access
 - July 6, 2025: Added Cloudflare R2 backup system for missing suburb boundaries - detects CALAMVALE, PARKINSON and other missing areas from Brisbane Council data
+- July 6, 2025: Implemented comprehensive KML backup system with multiple filename patterns (underscores, dashes, folders) and KML-to-coordinate parsing for suburb boundaries
 
 ## User Preferences
 
