@@ -30,31 +30,72 @@ async function checkForMissingSuburbs(existingBoundaries: any[]): Promise<string
 // Helper function to fetch suburb boundaries from Cloudflare R2 backup
 async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
   const boundaries = [];
-  const baseUrl = 'https://63f373c6c8bec8bc1893b65c6f4d46ba.r2.cloudflarestorage.com/curbside';
+  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+  const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT || 'https://63f373c6c8bec8bc1893b65c6f4d46ba.r2.cloudflarestorage.com';
+  
+  if (!accessKeyId || !secretAccessKey) {
+    console.log('Cloudflare R2 credentials not available, skipping backup source');
+    return boundaries;
+  }
+  
+  console.log(`Using R2 endpoint: ${endpoint}`);
+  console.log(`Using Access Key ID: ${accessKeyId.substring(0, 8)}...`);
   
   for (const suburbName of suburbNames) {
     try {
-      console.log(`Fetching ${suburbName} from backup source...`);
-      const response = await axios.get(`${baseUrl}/${suburbName.toLowerCase()}.json`, {
-        timeout: 10000
-      });
+      console.log(`Fetching ${suburbName} from Cloudflare R2 backup...`);
       
-      if (response.data && response.data.coordinates) {
-        boundaries.push({
-          name: suburbName.toUpperCase(),
-          coordinates: response.data.coordinates,
-          properties: {
-            source: 'cloudflare-r2-backup',
-            ...response.data.properties
+      // Try different possible filenames and paths
+      const possiblePaths = [
+        `${endpoint}/curbside/${suburbName.toLowerCase()}.json`,
+        `${endpoint}/curbside/${suburbName.toUpperCase()}.json`,
+        `${endpoint}/${suburbName.toLowerCase()}.json`,
+        `${endpoint}/${suburbName.toUpperCase()}.json`,
+        `${endpoint}/suburb_boundaries/${suburbName.toLowerCase()}.json`,
+        `${endpoint}/boundaries/${suburbName.toLowerCase()}.json`
+      ];
+      
+      let success = false;
+      for (const url of possiblePaths) {
+        try {
+          console.log(`Trying URL: ${url}`);
+          
+          // Try simple request first (for public buckets)
+          const response = await axios.get(url, {
+            timeout: 10000,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.data && response.data.coordinates) {
+            boundaries.push({
+              name: suburbName.toUpperCase(),
+              coordinates: response.data.coordinates,
+              properties: {
+                source: 'cloudflare-r2-backup',
+                ...response.data.properties
+              }
+            });
+            console.log(`Successfully loaded ${suburbName} from R2 backup: ${url}`);
+            success = true;
+            break;
           }
-        });
-        console.log(`Successfully loaded ${suburbName} from backup source`);
+        } catch (pathError: any) {
+          console.log(`Path failed for ${suburbName}: ${url} - Status: ${pathError.response?.status}, Message: ${pathError.message}`);
+        }
+      }
+      
+      if (!success) {
+        console.log(`No valid data found for ${suburbName} in any R2 path`);
       }
     } catch (error: any) {
-      console.log(`Failed to fetch ${suburbName} from backup source:`, error.message);
+      console.log(`Failed to fetch ${suburbName} from R2 backup:`, error.message);
     }
   }
   
+  console.log(`Added ${boundaries.length} suburbs from backup source`);
   return boundaries;
 }
 
