@@ -148,6 +148,10 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 4, 2025: Fixed map rotation system - removed recording requirement, rotation now works during KML simulation
 - July 4, 2025: Enhanced tile loading with keepBuffer=8 and padding=2.0 to prevent missing tiles during map rotation
 - July 4, 2025: Temporarily disabled map rotation due to tile loading issues and scroll bar problems - focusing on core functionality first
+- July 6, 2025: Restored settings menu functionality with proper tab navigation for both desktop and mobile
+- July 6, 2025: Added real-time recording metrics - timer shows elapsed time (seconds and minutes) and distance counter displays traveled distance in meters/kilometers
+- July 6, 2025: Enhanced SimpleControls component with live recording stats display including animated recording indicator and distance tracking
+- July 6, 2025: Implemented automatic wake lock management during recording sessions to keep phone screen active for van field work
 
 ## User Preferences
 

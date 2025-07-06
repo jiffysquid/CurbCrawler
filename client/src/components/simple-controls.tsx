@@ -9,6 +9,7 @@ interface SimpleControlsProps {
   onStopRecording: () => void;
   location: { lat: number; lng: number; accuracy?: number } | null;
   currentSuburb?: string;
+  recordingStats?: { duration: string; distance: string };
 }
 
 export default function SimpleControls({
@@ -16,7 +17,8 @@ export default function SimpleControls({
   onStartRecording,
   onStopRecording,
   location,
-  currentSuburb = 'Unknown'
+  currentSuburb = 'Unknown',
+  recordingStats
 }: SimpleControlsProps) {
   const { toast } = useToast();
   const { isSupported: wakeLockSupported, isActive: wakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -98,17 +100,31 @@ export default function SimpleControls({
               {!location ? "Getting GPS..." : "Start"}
             </Button>
           ) : (
-            <Button
-              onClick={handleStopRecording}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-full px-6 py-2 flex items-center gap-2"
-            >
-              <Square size={16} />
-              Stop
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleStopRecording}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-full px-6 py-2 flex items-center gap-2"
+              >
+                <Square size={16} />
+                Stop
+              </Button>
+              
+              {/* Recording Stats */}
+              {recordingStats && (
+                <div className="flex items-center gap-3 text-sm font-medium">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span>{recordingStats.duration}</span>
+                  </div>
+                  <div className="text-gray-500">|</div>
+                  <div className="text-blue-600">{recordingStats.distance}</div>
+                </div>
+              )}
+            </div>
           )}
           
-          {/* Wake Lock Toggle - only show when supported */}
-          {wakeLockSupported && (
+          {/* Wake Lock Toggle - only show when supported and not recording */}
+          {wakeLockSupported && !isRecording && (
             <Button
               onClick={toggleWakeLock}
               variant={wakeLockActive ? "default" : "outline"}
@@ -119,14 +135,15 @@ export default function SimpleControls({
             </Button>
           )}
           
-          {location && (
+          {/* GPS Info - only show when not recording */}
+          {!isRecording && location && (
             <div className="text-xs text-gray-500 hidden sm:block">
               GPS: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
               {location.accuracy && ` (±${Math.round(location.accuracy)}m)`}
             </div>
           )}
           
-          {!location && (
+          {!isRecording && !location && (
             <div className="text-xs text-red-500 hidden sm:block">
               Waiting for GPS...
             </div>

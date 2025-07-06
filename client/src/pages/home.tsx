@@ -8,6 +8,7 @@ import Settings from "@/components/settings";
 import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { calculateDistance } from "@/lib/utils";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats, LocationPoint } from "@shared/schema";
@@ -20,6 +21,8 @@ export default function Home() {
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [currentSuburb, setCurrentSuburb] = useState<string>('Unknown');
+  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
+  const [recordingStats, setRecordingStats] = useState({ duration: '0m', distance: '0.0km' });
   
   const { toast } = useToast();
   
@@ -155,6 +158,8 @@ export default function Home() {
     },
   });
 
+
+
   // Continuous location recording during active recording
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
@@ -221,6 +226,48 @@ export default function Home() {
     refetchInterval: isRecording ? 3000 : false, // Refresh every 3 seconds during recording
   });
 
+  // Timer effect for recording stats - placed after sessionLocations declaration
+  useEffect(() => {
+    let timerInterval: NodeJS.Timeout;
+    
+    if (isRecording && recordingStartTime) {
+      timerInterval = setInterval(() => {
+        const now = new Date();
+        const elapsed = now.getTime() - recordingStartTime.getTime();
+        const minutes = Math.floor(elapsed / 60000);
+        const seconds = Math.floor((elapsed % 60000) / 1000);
+        
+        let duration = '';
+        if (minutes > 0) {
+          duration = `${minutes}m ${seconds}s`;
+        } else {
+          duration = `${seconds}s`;
+        }
+        
+        // Calculate distance from session locations
+        let distance = 0;
+        if (sessionLocations.length > 1) {
+          for (let i = 1; i < sessionLocations.length; i++) {
+            const prev = sessionLocations[i - 1];
+            const current = sessionLocations[i];
+            const segmentDistance = calculateDistance(prev.lat, prev.lng, current.lat, current.lng);
+            distance += segmentDistance;
+          }
+        }
+        
+        const distanceStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance.toFixed(0)}m`;
+        
+        setRecordingStats({ duration, distance: distanceStr });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [isRecording, recordingStartTime, sessionLocations]);
+
   const handleStartSession = () => {
     if (!location) {
       if (!isWatching) {
@@ -275,7 +322,11 @@ export default function Home() {
       return;
     }
 
+    const startTime = new Date();
     setIsRecording(true);
+    setRecordingStartTime(startTime);
+    setRecordingStats({ duration: '0s', distance: '0m' });
+    
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
       startWatching();
@@ -283,9 +334,9 @@ export default function Home() {
     
     // Create a new session when starting recording
     const sessionData = {
-      startTime: new Date().toISOString(),
+      startTime: startTime.toISOString(),
       isActive: true,
-      routeCoordinates: [{ lat: location.lat, lng: location.lng, timestamp: new Date().toISOString() }],
+      routeCoordinates: [{ lat: location.lat, lng: location.lng, timestamp: startTime.toISOString() }],
     };
 
     createSessionMutation.mutate(sessionData, {
@@ -295,6 +346,7 @@ export default function Home() {
       onError: (error) => {
         console.error('Error creating session:', error);
         setIsRecording(false);
+        setRecordingStartTime(null);
         toast({
           title: "Error",
           description: "Failed to start recording session.",
@@ -318,7 +370,7 @@ export default function Home() {
           onSuccess: () => {
             toast({
               title: "Recording Stopped",
-              description: "Your clearout search session has been saved.",
+              description: `Recording saved: ${recordingStats.duration}, ${recordingStats.distance}`,
             });
           },
           onError: (error) => {
@@ -334,6 +386,8 @@ export default function Home() {
     }
     
     setIsRecording(false);
+    setRecordingStartTime(null);
+    setRecordingStats({ duration: '0m', distance: '0.0km' });
     console.log("Stopped recording clearout search path");
   };
 
@@ -385,6 +439,7 @@ export default function Home() {
           onStopRecording={handleStopRecording}
           location={location}
           currentSuburb={currentSuburb}
+          recordingStats={recordingStats}
         />
         
         <GPSDebug
