@@ -485,10 +485,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       relevantBoundaries.forEach(suburb => {
         if (suburb.coordinates && suburb.coordinates.length > 0) {
           // Determine color based on clearout schedule
-          let color = '#059669';        // Default green for current
-          let fillColor = '#10B981';    // Green fill
+          let color = '#6B7280';        // Default gray
+          let fillColor = '#E5E7EB';    // Gray fill
           let borderStyle = '';         // Solid line
-          let status = 'Current week clearout';
+          let status = 'Clearout area';
           
           if (clearoutSchedule) {
             const suburbBaseName = suburb.name.split(',')[0].trim().toUpperCase();
@@ -501,16 +501,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             
             console.log(`${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
             
-            if (isNextClearout && !isCurrentClearout) {
-              color = '#2563EB';        // Blue border for next clearout
-              fillColor = '#10B981';    // Light green fill
+            if (isCurrentClearout) {
+              color = '#059669';        // Green border for current period
+              fillColor = '#10B981';    // Green fill
               borderStyle = '';         // Solid border
-              status = 'Current clearout area (July 21-27)';
+              status = 'Current clearout period';
             } else if (isNextClearout) {
-              color = '#2563EB';        // Blue border for next clearout
-              fillColor = '#3B82F6';    // Light blue fill  
-              borderStyle = '10, 5';    // Longer dashes
-              status = 'Next clearout area (July 28-Aug 3)';
+              color = '#2563EB';        // Blue border for next period
+              fillColor = '#3B82F6';    // Blue fill  
+              borderStyle = '10, 5';    // Dashed border
+              status = 'Next clearout period';
             }
           }
 
