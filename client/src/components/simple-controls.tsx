@@ -9,7 +9,7 @@ interface SimpleControlsProps {
   onStopRecording: () => void;
   location: { lat: number; lng: number; accuracy?: number } | null;
   currentSuburb?: string;
-  recordingStats?: { duration: string; distance: string };
+  recordingStats?: { duration: string; distance: string; cost: string };
 }
 
 export default function SimpleControls({
@@ -118,6 +118,12 @@ export default function SimpleControls({
                   </div>
                   <div className="text-gray-500">|</div>
                   <div className="text-blue-600">{recordingStats.distance}</div>
+                  {recordingStats.cost && (
+                    <>
+                      <div className="text-gray-500">|</div>
+                      <div className="text-green-600">${recordingStats.cost}</div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

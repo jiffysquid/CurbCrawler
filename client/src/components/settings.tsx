@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Battery, Database, AlertTriangle, Focus } from "lucide-react";
+import { Map, Battery, Database, AlertTriangle, Focus, DollarSign } from "lucide-react";
 
 export default function Settings() {
   const [mapStyle, setMapStyle] = useState<string>("street");
@@ -14,6 +15,7 @@ export default function Settings() {
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
   const [showToilets, setShowToilets] = useState<boolean>(true);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
+  const [fuelPrice, setFuelPrice] = useState<string>("2.00");
   const { toast } = useToast();
 
   // Load settings from localStorage on mount
@@ -23,6 +25,7 @@ export default function Settings() {
     const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
+    const savedFuelPrice = localStorage.getItem('fuelPrice');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
     if (savedMapStyle) setMapStyle(savedMapStyle);
@@ -33,6 +36,7 @@ export default function Settings() {
       setShowSuburbBoundaries(true); // Default to showing suburbs
     }
     if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
+    if (savedFuelPrice) setFuelPrice(savedFuelPrice);
   }, []);
 
   // Save settings to localStorage when they change
@@ -84,6 +88,23 @@ export default function Settings() {
       storageArea: localStorage
     }));
   }, [showToilets]);
+
+  useEffect(() => {
+    localStorage.setItem('fuelPrice', fuelPrice);
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'fuelPrice',
+      newValue: fuelPrice,
+      storageArea: localStorage
+    }));
+  }, [fuelPrice]);
+
+  const handleFuelPriceChange = (value: string) => {
+    // Only allow valid decimal numbers
+    if (/^\d*\.?\d{0,2}$/.test(value)) {
+      setFuelPrice(value);
+    }
+  };
 
   const handleClearData = () => {
     // In a real app, this would clear session data from storage
@@ -189,6 +210,35 @@ export default function Settings() {
             </Select>
             <CardDescription className="text-xs">
               Higher accuracy uses more battery but provides better tracking
+            </CardDescription>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cost Tracking */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center space-x-2">
+            <DollarSign className="h-4 w-4" />
+            <span>Cost Tracking</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fuel-price" className="text-xs font-medium">Fuel Price per Liter</Label>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm">$</span>
+              <Input
+                id="fuel-price"
+                type="text"
+                value={fuelPrice}
+                onChange={(e) => handleFuelPriceChange(e.target.value)}
+                placeholder="2.00"
+                className="h-9 flex-1"
+              />
+            </div>
+            <CardDescription className="text-xs">
+              Used to calculate fuel costs during recording sessions. Average car fuel consumption assumed at 8L/100km.
             </CardDescription>
           </div>
         </CardContent>

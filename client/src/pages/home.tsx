@@ -22,7 +22,7 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const [currentSuburb, setCurrentSuburb] = useState<string>('Unknown');
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
-  const [recordingStats, setRecordingStats] = useState({ duration: '0m', distance: '0.0km' });
+  const [recordingStats, setRecordingStats] = useState<{ duration: string; distance: string; cost: string }>({ duration: '0m', distance: '0.0km', cost: '0.00' });
   
   const { toast } = useToast();
   
@@ -257,7 +257,14 @@ export default function Home() {
         
         const distanceStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance.toFixed(0)}m`;
         
-        setRecordingStats({ duration, distance: distanceStr });
+        // Calculate fuel cost based on distance and fuel price setting
+        const fuelPrice = parseFloat(localStorage.getItem('fuelPrice') || '2.00');
+        const fuelConsumption = 8; // L/100km average car consumption
+        const distanceKm = distance / 1000; // Convert to km
+        const fuelCost = (distanceKm * fuelConsumption / 100) * fuelPrice;
+        const costStr = fuelCost.toFixed(2);
+        
+        setRecordingStats({ duration, distance: distanceStr, cost: costStr });
       }, 1000);
     }
     
@@ -325,7 +332,7 @@ export default function Home() {
     const startTime = new Date();
     setIsRecording(true);
     setRecordingStartTime(startTime);
-    setRecordingStats({ duration: '0s', distance: '0m' });
+    setRecordingStats({ duration: '0s', distance: '0m', cost: '0.00' });
     
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
@@ -387,7 +394,7 @@ export default function Home() {
     
     setIsRecording(false);
     setRecordingStartTime(null);
-    setRecordingStats({ duration: '0m', distance: '0.0km' });
+    setRecordingStats({ duration: '0m', distance: '0.0km', cost: '0.00' });
     console.log("Stopped recording clearout search path");
   };
 
