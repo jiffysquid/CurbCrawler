@@ -157,6 +157,10 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Fixed mobile menu button positioning with higher z-index and better visibility for settings access
 - July 6, 2025: Added Cloudflare R2 backup system for missing suburb boundaries - detects CALAMVALE, PARKINSON and other missing areas from Brisbane Council data
 - July 6, 2025: Implemented comprehensive KML backup system with multiple filename patterns (underscores, dashes, folders) and KML-to-coordinate parsing for suburb boundaries
+- July 6, 2025: Updated R2 backup system with correct public URL https://pub-ed1d9de860694e218d1e938020acddf9.r2.dev for accessing user's KML files
+- July 6, 2025: Fixed clearout schedule to display only current week (7 days) and next week (7 days) instead of 2-week periods
+- July 6, 2025: Enhanced demographics endpoint with comprehensive data for all Brisbane clearout suburbs including ALGESTER, CALAMVALE, PARKINSON and all next week suburbs
+- July 6, 2025: R2 backup system successfully loading missing suburb boundaries - CALAMVALE (147 coordinates) and PARKINSON (138 coordinates) from user's KML files
 
 ## User Preferences
 
