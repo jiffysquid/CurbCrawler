@@ -64,7 +64,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } else {
       setShowSuburbs(true); // Default to showing suburbs
     }
-    if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
+    if (savedShowToilets !== null) {
+      setShowToilets(savedShowToilets === 'true');
+    } else {
+      setShowToilets(true); // Default to showing toilets
+    }
 
     // Listen for storage changes from settings panel
     const handleStorageChange = (e: StorageEvent) => {
@@ -627,7 +631,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         toiletMarkersRef.current.push(marker);
       });
     }
-  }, [publicToilets, showToilets]);
+  }, [publicToilets, showToilets, isMapReady, L]);
 
   // Handle historical session routes with different colors
   useEffect(() => {
