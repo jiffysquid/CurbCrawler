@@ -38,6 +38,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showToilets, setShowToilets] = useState(true);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
+  const [isLoadingTiles, setIsLoadingTiles] = useState(false);
+  const [pendingRotation, setPendingRotation] = useState<number | null>(null);
 
   const [showDemographics, setShowDemographics] = useState(false);
   
@@ -245,14 +247,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         console.log('Setting map bearing for rotation');
         mapInstanceRef.current.setBearing(rotationAngle);
       } else {
-        // Fallback to CSS rotation - simple and direct
+        // Fallback to CSS rotation - only if not loading tiles
         const mapContainer = mapInstanceRef.current.getContainer();
-        if (mapContainer) {
+        if (mapContainer && !isLoadingTiles) {
           console.log('Rotating map container with CSS transform');
           // Apply CSS transform to rotate map around center point
           mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
           mapContainer.style.transformOrigin = '50% 50%';
           mapContainer.style.transition = 'transform 0.5s ease-out';
+          setPendingRotation(null); // Clear any pending rotation
+        } else if (isLoadingTiles) {
+          console.log('⏳ Delaying rotation - tiles are loading');
+          setPendingRotation(rotationAngle); // Store for later application
         }
       }
     } else {
@@ -265,7 +271,21 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (distance > 5) {
       previousLocationRef.current = newLocation;
     }
-  }, [isRecording]);
+  }, [isRecording, isLoadingTiles]);
+
+  // Apply pending rotation when tiles finish loading
+  useEffect(() => {
+    if (!isLoadingTiles && pendingRotation !== null && mapInstanceRef.current) {
+      console.log('✅ Applying pending rotation:', pendingRotation, 'degrees');
+      const mapContainer = mapInstanceRef.current.getContainer();
+      if (mapContainer) {
+        mapContainer.style.transform = `rotate(${pendingRotation}deg)`;
+        mapContainer.style.transformOrigin = '50% 50%';
+        mapContainer.style.transition = 'transform 0.5s ease-out';
+        setPendingRotation(null);
+      }
+    }
+  }, [isLoadingTiles, pendingRotation]);
 
   // Update current route during tracking
   const updateCurrentRoute = useCallback(() => {
@@ -404,8 +424,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           wheelPxPerZoomLevel: 60,
         });
 
-        // Add OpenStreetMap tiles with maximum buffering for rotation
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Add OpenStreetMap tiles with tile loading events
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
           tileSize: 256,
@@ -418,7 +438,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           noWrap: false,   // Allow world wrapping
           detectRetina: true,
           crossOrigin: false
-        }).addTo(map);
+        });
+
+        // Listen for tile loading events
+        tileLayer.on('loading', () => {
+          setIsLoadingTiles(true);
+          console.log('🔄 Tiles loading started');
+        });
+
+        tileLayer.on('load', () => {
+          setIsLoadingTiles(false);
+          console.log('✅ Tiles loading completed');
+        });
+
+        tileLayer.addTo(map);
 
         mapInstanceRef.current = map;
         setIsMapReady(true);
