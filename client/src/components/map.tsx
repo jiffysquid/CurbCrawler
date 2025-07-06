@@ -1071,7 +1071,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             <div className="space-y-3 text-xs max-h-96 overflow-y-auto">
               {suburbDemographics.map((suburb, index) => (
                 <div key={suburb.name} className="border-b border-gray-200 pb-2 last:border-b-0">
-                  <div className="font-medium text-gray-900 mb-1">{suburb.name}</div>
+                  <div className="font-medium text-gray-900 mb-1 flex items-center justify-between">
+                    <span>{suburb.name}</span>
+                    {suburb.starRating && (
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={`text-sm ${i < suburb.starRating ? 'text-yellow-500' : 'text-gray-300'}`}>
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-1 text-gray-600">
                     <div className="flex justify-between">
                       <span>Population:</span>

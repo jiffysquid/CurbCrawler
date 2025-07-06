@@ -455,6 +455,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Suburb rating calculation function (converted from Python algorithm)
+  function calculateSuburbRating(price: number[], density: number[]): number[] {
+    if (price.length !== density.length || price.length === 0) {
+      return [];
+    }
+
+    // 1. Normalize
+    const minP = Math.min(...price);
+    const maxP = Math.max(...price);
+    const minD = Math.min(...density);
+    const maxD = Math.max(...density);
+    
+    // Handle edge cases where min and max are the same
+    const priceRange = maxP - minP;
+    const densityRange = maxD - minD;
+    
+    const NP = price.map(p => priceRange === 0 ? 0.5 : (p - minP) / priceRange);
+    const ND = density.map(d => densityRange === 0 ? 0.5 : (d - minD) / densityRange);
+
+    // 2. Distance from center (0.5, 0.5)
+    const D_max = Math.sqrt(0.5 * 0.5 + 0.5 * 0.5);
+    const dists = NP.map((np, i) => Math.sqrt(Math.pow(np - 0.5, 2) + Math.pow(ND[i] - 0.5, 2)));
+
+    // 3. Goodness
+    const goods = dists.map(d => Math.max(0, Math.min(1, 1 - (d / D_max))));
+
+    // 4. Stars
+    const stars = goods.map(g => Math.round(g * 4) + 1);
+
+    return stars;
+  }
+
   // Demographics data for clearout suburbs using Australian Bureau of Statistics
   app.get("/api/suburbs/demographics", async (req, res) => {
     try {
@@ -639,6 +671,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const demographics = allDemographics.filter(suburb => 
         suburb.clearoutStatus === "current" || suburb.clearoutStatus === "next"
       );
+
+      // Calculate star ratings for the filtered suburbs
+      if (demographics.length > 0) {
+        const prices = demographics.map(suburb => suburb.medianHousePrice);
+        const densities = demographics.map(suburb => suburb.populationDensity);
+        
+        console.log(`Rating calculation - Prices: [${prices.join(', ')}], Densities: [${densities.join(', ')}]`);
+        
+        const ratings = calculateSuburbRating(prices, densities);
+        
+        console.log(`Calculated ratings: [${ratings.join(', ')}]`);
+        
+        // Add star ratings to each suburb
+        demographics.forEach((suburb, index) => {
+          (suburb as any).starRating = ratings[index];
+        });
+        
+        console.log(`Calculated star ratings for ${demographics.length} suburbs:`, 
+          demographics.map(s => `${s.name}: ${(s as any).starRating} stars`).join(', '));
+      }
 
       console.log(`Returning demographics for ${demographics.length} active clearout suburbs`);
       res.json(demographics);

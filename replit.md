@@ -161,6 +161,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Fixed clearout schedule to display only current week (7 days) and next week (7 days) instead of 2-week periods
 - July 6, 2025: Enhanced demographics endpoint with comprehensive data for all Brisbane clearout suburbs including ALGESTER, CALAMVALE, PARKINSON and all next week suburbs
 - July 6, 2025: R2 backup system successfully loading missing suburb boundaries - CALAMVALE (147 coordinates) and PARKINSON (138 coordinates) from user's KML files
+- July 6, 2025: Implemented suburb star rating system using Python algorithm that normalizes price/density data and calculates 1-5 star ratings based on distance from optimal center point
+- July 6, 2025: Added visual star rating display in demographics overlay showing ALGESTER (2 stars), CALAMVALE (1 star), PARKINSON (2 stars) based on price/density analysis
 
 ## User Preferences
 
