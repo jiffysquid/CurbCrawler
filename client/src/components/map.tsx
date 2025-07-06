@@ -506,11 +506,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
               fillColor = '#10B981';    // Green fill
               borderStyle = '';         // Solid border
               status = 'Current clearout period';
+              console.log(`${suburbBaseName}: Setting GREEN colors - border: ${color}, fill: ${fillColor}`);
             } else if (isNextClearout) {
               color = '#2563EB';        // Blue border for next period
               fillColor = '#3B82F6';    // Blue fill  
               borderStyle = '10, 5';    // Dashed border
               status = 'Next clearout period';
+              console.log(`${suburbBaseName}: Setting BLUE colors - border: ${color}, fill: ${fillColor}`);
             }
           }
 
