@@ -233,34 +233,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     console.log('Movement detected:', { distance, isRecording, bearing });
     
     if (distance > 5) {
-      // Invert the bearing so map rotates opposite to direction of travel
-      // This keeps the vehicle marker pointing forward while map rotates around it
-      const rotationAngle = -bearing; // Negative bearing for opposite rotation
-      setMapRotation(rotationAngle);
+      // TEMPORARILY DISABLED: Map rotation disabled to fix tile loading issues
+      console.log('🚫 Map rotation temporarily disabled - distance:', distance, 'bearing:', bearing);
       
-      console.log('APPLYING MAP ROTATION:', rotationAngle, 'degrees based on bearing:', bearing);
-      
-      // Apply rotation to the map's bearing instead of CSS rotation
-      // This rotates the content while keeping tiles properly loaded
-      if (mapInstanceRef.current.setBearing) {
-        // Use native map bearing rotation if available
-        console.log('Setting map bearing for rotation');
-        mapInstanceRef.current.setBearing(rotationAngle);
-      } else {
-        // Fallback to CSS rotation - only if not loading tiles
-        const mapContainer = mapInstanceRef.current.getContainer();
-        if (mapContainer && !isLoadingTiles) {
-          console.log('Rotating map container with CSS transform');
-          // Apply CSS transform to rotate map around center point
-          mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-          mapContainer.style.transformOrigin = '50% 50%';
-          mapContainer.style.transition = 'transform 0.5s ease-out';
-          setPendingRotation(null); // Clear any pending rotation
-        } else if (isLoadingTiles) {
-          console.log('⏳ Delaying rotation - tiles are loading');
-          setPendingRotation(rotationAngle); // Store for later application
-        }
-      }
+      // Store the bearing for potential future use but don't apply rotation
+      setMapRotation(0); // Keep map at 0 rotation
     } else {
       console.log('No significant movement detected - no rotation applied');
     }
@@ -282,6 +259,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         mapContainer.style.transform = `rotate(${pendingRotation}deg)`;
         mapContainer.style.transformOrigin = '50% 50%';
         mapContainer.style.transition = 'transform 0.5s ease-out';
+        // Prevent scroll bars from rotated content
+        mapContainer.parentElement.style.overflow = 'hidden';
         setPendingRotation(null);
       }
     }
@@ -813,10 +792,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       const scaleFactor = Math.max(0.5, Math.min(2, currentZoom / 15));
       const scaledSize = Math.round(baseSize * scaleFactor);
       
-      // Use divIcon for IMAX van image - apply counter-rotation to stay upright
+      // Use divIcon for IMAX van image - no rotation needed since map rotation is disabled
       vehicleIcon = L.divIcon({
         className: 'vehicle-marker-image',
-        html: `<div style="transform: rotate(${-mapRotation}deg); transform-origin: center; width: ${scaledSize}px; height: ${scaledSize}px;">
+        html: `<div style="width: ${scaledSize}px; height: ${scaledSize}px;">
           <img src="${imaxVanImage}" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>`,
         iconSize: [scaledSize, scaledSize],

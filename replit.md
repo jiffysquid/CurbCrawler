@@ -147,6 +147,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 4, 2025: Fixed KML simulation connection using global window callbacks - vehicle marker now follows route correctly
 - July 4, 2025: Fixed map rotation system - removed recording requirement, rotation now works during KML simulation
 - July 4, 2025: Enhanced tile loading with keepBuffer=8 and padding=2.0 to prevent missing tiles during map rotation
+- July 4, 2025: Temporarily disabled map rotation due to tile loading issues and scroll bar problems - focusing on core functionality first
 
 ## User Preferences
 
