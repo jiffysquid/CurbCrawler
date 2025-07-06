@@ -67,7 +67,8 @@ async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
   const boundaries = [];
   const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
-  const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT || 'https://63f373c6c8bec8bc1893b65c6f4d46ba.r2.cloudflarestorage.com';
+  // Use the correct public R2 URL for accessing public buckets
+  const endpoint = 'https://pub-ed1d9de860694e218d1e938020acddf9.r2.dev';
   
   if (!accessKeyId || !secretAccessKey) {
     console.log('Cloudflare R2 credentials not available, skipping backup source');
@@ -76,6 +77,9 @@ async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
   
   console.log(`Using R2 endpoint: ${endpoint}`);
   console.log(`Using Access Key ID: ${accessKeyId.substring(0, 8)}...`);
+  
+  // Test simple access first
+  console.log('Testing basic bucket access...');
   
   for (const suburbName of suburbNames) {
     try {
