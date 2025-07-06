@@ -730,8 +730,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: "62298059", name: "Botanic Gardens", lat: -27.4747, lng: 153.0294, address: "City Botanic Gardens", accessible: true, fee: false }
       ];
 
-      // Calculate distance using Haversine formula for accuracy
-      const nearbyToilets = toilets.filter(toilet => {
+      // Calculate distance using Haversine formula and add distance to each toilet
+      const toiletsWithDistance = toilets.map(toilet => {
         const R = 6371; // Earth's radius in km
         const dLat = (toilet.lat - userLat) * Math.PI / 180;
         const dLng = (toilet.lng - userLng) * Math.PI / 180;
@@ -742,10 +742,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const distance = R * c;
         
         console.log(`Toilet ${toilet.name}: ${distance.toFixed(2)}km from user location`);
-        return distance <= 5;
+        return { ...toilet, distance };
       });
 
+      // Filter to only include toilets within 5km and sort by distance (closest first)
+      const nearbyToilets = toiletsWithDistance
+        .filter(toilet => toilet.distance <= 5)
+        .sort((a, b) => a.distance - b.distance);
+
       console.log(`Found ${nearbyToilets.length} toilets within 5km of current location`);
+      console.log(`Closest toilet: ${nearbyToilets[0]?.name} at ${nearbyToilets[0]?.distance.toFixed(2)}km`);
       res.json(nearbyToilets);
     } catch (error) {
       console.error("Error fetching toilets:", error);

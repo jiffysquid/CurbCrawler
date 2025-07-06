@@ -164,6 +164,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Implemented suburb star rating system using Python algorithm that normalizes price/density data and calculates 1-5 star ratings based on distance from optimal center point
 - July 6, 2025: Added visual star rating display in demographics overlay showing ALGESTER (2 stars), CALAMVALE (1 star), PARKINSON (2 stars) based on price/density analysis
 - July 6, 2025: Fixed public toilet display issue - toilets now properly show on map after fixing settings initialization and effect dependency timing
+- July 6, 2025: Fixed toilet proximity sorting - toilets now display in order of closest distance, showing Roma Street Parkland (2.67km) as nearest, with distance information in popups
 
 ## User Preferences
 

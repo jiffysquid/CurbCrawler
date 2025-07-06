@@ -622,6 +622,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             <div class="text-sm">
               <strong>${toilet.name}</strong><br/>
               ${toilet.address ? `${toilet.address}<br/>` : ''}
+              ${toilet.distance ? `<small>📍 ${toilet.distance.toFixed(2)}km away</small><br/>` : ''}
               <small>Hours: ${toilet.openHours || '24/7'}</small><br/>
               ${toilet.accessible ? '<small>♿ Accessible</small><br/>' : ''}
               ${toilet.fee ? '<small>💰 Fee required</small>' : '<small>🆓 Free</small>'}

@@ -77,5 +77,6 @@ export type PublicToilet = {
   openHours?: string;
   accessible?: boolean;
   fee?: boolean;
+  distance?: number;
   properties?: Record<string, any>;
 };
