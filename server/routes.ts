@@ -7,6 +7,57 @@ import axios from 'axios';
 
 const PORT = parseInt(process.env.PORT || "5000");
 
+// Helper function to check for missing suburbs from clearout schedule
+async function checkForMissingSuburbs(existingBoundaries: any[]): Promise<string[]> {
+  try {
+    const clearoutResponse = await axios.get('http://localhost:5000/api/clearout-schedule');
+    const clearoutData = clearoutResponse.data;
+    
+    const allScheduledSuburbs = [...(clearoutData.current || []), ...(clearoutData.next || [])];
+    const existingSuburbNames = existingBoundaries.map(b => b.name.toUpperCase());
+    
+    const missing = allScheduledSuburbs.filter(suburb => 
+      !existingSuburbNames.includes(suburb.toUpperCase())
+    );
+    
+    return missing;
+  } catch (error) {
+    console.log("Error checking for missing suburbs:", error);
+    return [];
+  }
+}
+
+// Helper function to fetch suburb boundaries from Cloudflare R2 backup
+async function fetchFromBackupSource(suburbNames: string[]): Promise<any[]> {
+  const boundaries = [];
+  const baseUrl = 'https://63f373c6c8bec8bc1893b65c6f4d46ba.r2.cloudflarestorage.com/curbside';
+  
+  for (const suburbName of suburbNames) {
+    try {
+      console.log(`Fetching ${suburbName} from backup source...`);
+      const response = await axios.get(`${baseUrl}/${suburbName.toLowerCase()}.json`, {
+        timeout: 10000
+      });
+      
+      if (response.data && response.data.coordinates) {
+        boundaries.push({
+          name: suburbName.toUpperCase(),
+          coordinates: response.data.coordinates,
+          properties: {
+            source: 'cloudflare-r2-backup',
+            ...response.data.properties
+          }
+        });
+        console.log(`Successfully loaded ${suburbName} from backup source`);
+      }
+    } catch (error: any) {
+      console.log(`Failed to fetch ${suburbName} from backup source:`, error.message);
+    }
+  }
+  
+  return boundaries;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
 
@@ -167,6 +218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+
   // Authentic Brisbane City Council suburb boundaries using geo_shape data
   app.get("/api/suburbs/boundaries", async (req, res) => {
     try {
@@ -285,6 +338,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           console.log(`Providing ${suburbBoundaries.length} authentic Brisbane Council suburb boundaries`);
+          
+          // Check for missing suburbs and fetch from backup source
+          const missingSuburbs = await checkForMissingSuburbs(suburbBoundaries);
+          if (missingSuburbs.length > 0) {
+            console.log(`Fetching ${missingSuburbs.length} missing suburbs from backup source: ${missingSuburbs.join(', ')}`);
+            const backupSuburbs = await fetchFromBackupSource(missingSuburbs);
+            suburbBoundaries.push(...backupSuburbs);
+            console.log(`Added ${backupSuburbs.length} suburbs from backup source`);
+          }
+          
           res.json(suburbBoundaries);
           return;
         } else {
