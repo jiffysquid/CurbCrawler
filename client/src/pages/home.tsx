@@ -451,12 +451,12 @@ export default function Home() {
         />
 
         {/* Mobile Menu Button */}
-        <div className="absolute top-20 right-4 z-20 md:hidden">
+        <div className="fixed top-4 right-4 z-[1001] md:hidden">
           <Button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             size="sm"
             variant="outline"
-            className="bg-white/90 backdrop-blur-sm"
+            className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
           >
             {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
@@ -506,7 +506,7 @@ export default function Home() {
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-30 md:hidden">
+        <div className="fixed inset-0 z-[1002] md:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
           <div className="absolute right-0 top-0 h-full w-80 bg-background border-l shadow-lg">
             <div className="p-4 border-b flex items-center justify-between">
