@@ -245,25 +245,26 @@ export default function Home() {
         }
         
         // Calculate distance from session locations
-        let distance = 0;
+        let distanceKm = 0;
         if (sessionLocations.length > 1) {
           for (let i = 1; i < sessionLocations.length; i++) {
             const prev = sessionLocations[i - 1];
             const current = sessionLocations[i];
             const segmentDistance = calculateDistance(prev.lat, prev.lng, current.lat, current.lng);
-            distance += segmentDistance;
+            distanceKm += segmentDistance; // calculateDistance returns km
           }
         }
         
-        const distanceStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance.toFixed(0)}m`;
+        // Format distance display
+        const distanceStr = distanceKm >= 1 ? `${distanceKm.toFixed(1)}km` : `${(distanceKm * 1000).toFixed(0)}m`;
         
         // Calculate fuel cost based on distance and fuel price setting
         const fuelPrice = parseFloat(localStorage.getItem('fuelPrice') || '2.00');
         const fuelConsumption = 8; // L/100km average car consumption
-        const distanceKm = distance / 1000; // Convert to km
         const fuelCost = (distanceKm * fuelConsumption / 100) * fuelPrice;
         const costStr = fuelCost.toFixed(2);
         
+        console.log(`📊 Recording stats: ${duration}, ${distanceStr}, $${costStr} (${sessionLocations.length} locations)`);
         setRecordingStats({ duration, distance: distanceStr, cost: costStr });
       }, 1000);
     }

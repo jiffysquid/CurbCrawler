@@ -126,6 +126,13 @@ export default function SimpleControls({
                   )}
                 </div>
               )}
+              
+              {/* Debug: Show when recordingStats is null/undefined */}
+              {!recordingStats && isRecording && (
+                <div className="text-xs text-gray-400">
+                  Stats loading...
+                </div>
+              )}
             </div>
           )}
           
