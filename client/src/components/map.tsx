@@ -711,16 +711,30 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
   }, [allSessions]);
 
-  // Update current location marker
+  // Update current location marker (only when vehicle marker is not active)
   useEffect(() => {
     if (!mapInstanceRef.current || !L || !currentLocation) return;
 
     // Remove existing current location marker
     if (currentLocationMarkerRef.current) {
       mapInstanceRef.current.removeLayer(currentLocationMarkerRef.current);
+      currentLocationMarkerRef.current = null;
     }
 
-    // Add new current location marker
+    // Skip creating dot marker when vehicle marker is being used (focuses on vehicle types)
+    const isUsingVehicleMarker = focusArea && focusArea !== 'none';
+    if (isUsingVehicleMarker) {
+      // Just handle map centering without creating a dot marker
+      if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
+        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
+        hasInitialLocationRef.current = true;
+      } else {
+        mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
+      }
+      return;
+    }
+
+    // Add new current location marker only when vehicle marker is not used
     const icon = L.divIcon({
       className: 'current-location-marker',
       html: `
@@ -753,7 +767,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Always pan to current location to keep vehicle marker centered
       mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
     }
-  }, [currentLocation, currentSuburb, isTracking]);
+  }, [currentLocation, currentSuburb, isTracking, focusArea]);
 
   // Handle vehicle marker display
   useEffect(() => {
