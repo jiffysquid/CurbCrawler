@@ -35,7 +35,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const historicalRoutesRef = useRef<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [showSuburbs, setShowSuburbs] = useState(true);
-  const [showToilets, setShowToilets] = useState(true);
+  const [showToilets, setShowToilets] = useState(false);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
   const [isLoadingTiles, setIsLoadingTiles] = useState(false);
@@ -67,7 +67,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (savedShowToilets !== null) {
       setShowToilets(savedShowToilets === 'true');
     } else {
-      setShowToilets(true); // Default to showing toilets
+      setShowToilets(false); // Default to hiding toilets
     }
 
     // Listen for storage changes from settings panel
