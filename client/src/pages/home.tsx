@@ -74,8 +74,10 @@ export default function Home() {
       setLocation(gpsLocation);
       console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
       
-      // Update current suburb when location changes
-      updateCurrentSuburb(gpsLocation);
+      // Update current suburb when location changes (non-blocking)
+      updateCurrentSuburb(gpsLocation).catch(error => {
+        console.log('Suburb lookup failed, continuing with GPS tracking:', error);
+      });
       
       // Update real-time distance tracking during recording
       if (isRecording && lastRecordingLocation) {
@@ -102,11 +104,17 @@ export default function Home() {
   // Function to update current suburb
   const updateCurrentSuburb = async (location: { lat: number; lng: number }) => {
     try {
-      const response = await fetch(`/api/suburbs/lookup?lat=${location.lat}&lng=${location.lng}`);
+      const response = await fetch(`/api/suburbs/lookup?lat=${location.lat}&lng=${location.lng}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setCurrentSuburb(data.suburb || 'Unknown');
       } else {
+        console.log('Suburb lookup failed with status:', response.status);
         setCurrentSuburb('Unknown');
       }
     } catch (error) {
@@ -120,7 +128,9 @@ export default function Home() {
     console.log('🎯 Home: KML Location Update received:', newLocation.lat, newLocation.lng);
     try {
       setLocation(newLocation);
-      updateCurrentSuburb(newLocation);
+      updateCurrentSuburb(newLocation).catch(error => {
+        console.log('KML suburb lookup failed:', error);
+      });
       console.log('🎯 Home: Location state updated successfully');
     } catch (error) {
       console.error('🎯 Home: Error updating location state:', error);
@@ -138,7 +148,9 @@ export default function Home() {
     (window as any).kmlLocationCallback = (newLocation: { lat: number; lng: number; accuracy?: number }) => {
       console.log('🎯 Home: Global KML callback received:', newLocation.lat, newLocation.lng);
       setLocation(newLocation);
-      updateCurrentSuburb(newLocation);
+      updateCurrentSuburb(newLocation).catch(error => {
+        console.log('Global KML suburb lookup failed:', error);
+      });
     };
     
     console.log('🎯 Home: Global callback registered on window');
