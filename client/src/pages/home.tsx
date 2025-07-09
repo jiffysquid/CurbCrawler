@@ -8,6 +8,7 @@ import Settings from "@/components/settings";
 import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import { calculateDistance } from "@/lib/utils";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,16 @@ export default function Home() {
   const [currentSuburb, setCurrentSuburb] = useState<string>('Unknown');
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [recordingStats, setRecordingStats] = useState<{ duration: string; distance: string; cost: string }>({ duration: '0m', distance: '0.0km', cost: '0.00' });
+  const [realTimeDistance, setRealTimeDistance] = useState<number>(0);
+  const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number } | null>(null);
   
   const { toast } = useToast();
   
   // Use the geolocation hook for continuous GPS tracking
   const { location: gpsLocation, error: gpsError, isLoading: gpsLoading, isWatching, startWatching, stopWatching } = useGeolocation();
+  
+  // Use wake lock to keep screen on during recording
+  const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
   // Fetch sessions
   const { data: sessions = [] } = useQuery<SessionWithStats[]>({
@@ -70,8 +76,28 @@ export default function Home() {
       
       // Update current suburb when location changes
       updateCurrentSuburb(gpsLocation);
+      
+      // Update real-time distance tracking during recording
+      if (isRecording && lastRecordingLocation) {
+        const segmentDistance = calculateDistance(
+          lastRecordingLocation.lat, 
+          lastRecordingLocation.lng, 
+          gpsLocation.lat, 
+          gpsLocation.lng
+        );
+        // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
+        if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+          setRealTimeDistance(prev => prev + segmentDistance);
+          console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
+        }
+      }
+      
+      // Update last recording location if we're recording
+      if (isRecording) {
+        setLastRecordingLocation({ lat: gpsLocation.lat, lng: gpsLocation.lng });
+      }
     }
-  }, [gpsLocation]);
+  }, [gpsLocation, isRecording, lastRecordingLocation]);
 
   // Function to update current suburb
   const updateCurrentSuburb = async (location: { lat: number; lng: number }) => {
@@ -244,16 +270,8 @@ export default function Home() {
           duration = `${seconds}s`;
         }
         
-        // Calculate distance from session locations
-        let distanceKm = 0;
-        if (sessionLocations.length > 1) {
-          for (let i = 1; i < sessionLocations.length; i++) {
-            const prev = sessionLocations[i - 1];
-            const current = sessionLocations[i];
-            const segmentDistance = calculateDistance(prev.lat, prev.lng, current.lat, current.lng);
-            distanceKm += segmentDistance; // calculateDistance returns km
-          }
-        }
+        // Use real-time distance calculation for immediate updates
+        const distanceKm = realTimeDistance;
         
         // Format distance display
         const distanceStr = distanceKm >= 1 ? `${distanceKm.toFixed(1)}km` : `${(distanceKm * 1000).toFixed(0)}m`;
@@ -274,7 +292,7 @@ export default function Home() {
         clearInterval(timerInterval);
       }
     };
-  }, [isRecording, recordingStartTime, sessionLocations]);
+  }, [isRecording, recordingStartTime, realTimeDistance]);
 
   const handleStartSession = () => {
     if (!location) {
@@ -334,11 +352,16 @@ export default function Home() {
     setIsRecording(true);
     setRecordingStartTime(startTime);
     setRecordingStats({ duration: '0s', distance: '0m', cost: '0.00' });
+    setRealTimeDistance(0); // Reset real-time distance tracking
+    setLastRecordingLocation({ lat: location.lat, lng: location.lng }); // Set initial location
     
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
       startWatching();
     }
+    
+    // Request wake lock to keep screen on during recording
+    requestWakeLock();
     
     // Create a new session when starting recording
     const sessionData = {
@@ -355,6 +378,9 @@ export default function Home() {
         console.error('Error creating session:', error);
         setIsRecording(false);
         setRecordingStartTime(null);
+        setRealTimeDistance(0);
+        setLastRecordingLocation(null);
+        releaseWakeLock();
         toast({
           title: "Error",
           description: "Failed to start recording session.",
@@ -396,6 +422,9 @@ export default function Home() {
     setIsRecording(false);
     setRecordingStartTime(null);
     setRecordingStats({ duration: '0m', distance: '0.0km', cost: '0.00' });
+    setRealTimeDistance(0); // Reset real-time distance tracking
+    setLastRecordingLocation(null); // Clear last location
+    releaseWakeLock(); // Release wake lock when recording stops
     console.log("Stopped recording clearout search path");
   };
 
@@ -516,8 +545,8 @@ export default function Home() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[1002] md:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-background border-l shadow-lg">
-            <div className="p-4 border-b flex items-center justify-between">
+          <div className="absolute right-0 top-0 h-full w-80 bg-background border-l shadow-lg flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h1 className="text-xl font-semibold">Clearout Tracker</h1>
               <Button
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -528,9 +557,9 @@ export default function Home() {
               </Button>
             </div>
             
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               {/* Tab Navigation */}
-              <div className="flex border-b">
+              <div className="flex border-b flex-shrink-0">
                 <button
                   onClick={() => setActiveTab('sessions')}
                   className={`flex-1 px-4 py-2 text-sm font-medium ${
@@ -554,7 +583,7 @@ export default function Home() {
               </div>
 
               {/* Tab Content */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {activeTab === 'sessions' && (
                   <SessionHistory sessions={sessions} isLoading={false} isMobile />
                 )}
