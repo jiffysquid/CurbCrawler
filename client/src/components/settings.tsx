@@ -13,7 +13,7 @@ export default function Settings() {
   const [mapStyle, setMapStyle] = useState<string>("street");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
-  const [showToilets, setShowToilets] = useState<boolean>(true);
+  const [showToilets, setShowToilets] = useState<boolean>(false);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
   const { toast } = useToast();
@@ -35,7 +35,11 @@ export default function Settings() {
     } else {
       setShowSuburbBoundaries(true); // Default to showing suburbs
     }
-    if (savedShowToilets) setShowToilets(savedShowToilets === 'true');
+    if (savedShowToilets !== null) {
+      setShowToilets(savedShowToilets === 'true');
+    } else {
+      setShowToilets(false); // Default to hiding toilets
+    }
     if (savedFuelPrice) setFuelPrice(savedFuelPrice);
   }, []);
 

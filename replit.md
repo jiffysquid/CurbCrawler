@@ -165,6 +165,11 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 6, 2025: Added visual star rating display in demographics overlay showing ALGESTER (2 stars), CALAMVALE (1 star), PARKINSON (2 stars) based on price/density analysis
 - July 6, 2025: Fixed public toilet display issue - toilets now properly show on map after fixing settings initialization and effect dependency timing
 - July 6, 2025: Fixed toilet proximity sorting - toilets now display in order of closest distance, showing Roma Street Parkland (2.67km) as nearest, with distance information in popups
+- July 9, 2025: Fixed mobile settings menu scrolling with proper height constraints and flex layout
+- July 9, 2025: Implemented real-time distance tracking using GPS updates for immediate recording stats instead of slow session location queries
+- July 9, 2025: Added screen wake lock functionality to keep phone active during recording sessions for van field work
+- July 9, 2025: Enhanced error handling with proper cleanup of recording state and wake lock on errors
+- July 9, 2025: Changed default toilet visibility to hidden for cleaner initial map display - users can enable in settings if needed
 
 ## User Preferences
 
