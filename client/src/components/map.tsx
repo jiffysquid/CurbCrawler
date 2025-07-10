@@ -594,6 +594,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Handle public toilet markers
   useEffect(() => {
+    console.log('🚽 Toilet markers useEffect triggered:', { 
+      mapReady: !!mapInstanceRef.current, 
+      leafletLoaded: !!L, 
+      showToilets, 
+      toiletCount: publicToilets.length,
+      currentLocation: !!currentLocation
+    });
+    
     if (!mapInstanceRef.current || !L) return;
 
     // Clear existing toilet markers
@@ -604,6 +612,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
     // Only add toilet markers if showToilets is true and we have data
     if (showToilets && publicToilets.length > 0) {
+      console.log('🚽 Adding toilet markers to map:', publicToilets.length, 'toilets');
       publicToilets.forEach(toilet => {
         const toiletIcon = L.divIcon({
           className: 'toilet-marker',
@@ -631,6 +640,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
         toiletMarkersRef.current.push(marker);
       });
+      console.log('🚽 Successfully added', toiletMarkersRef.current.length, 'toilet markers to map');
+    } else {
+      console.log('🚽 Not adding toilet markers - showToilets:', showToilets, 'toiletCount:', publicToilets.length);
     }
   }, [publicToilets, showToilets, isMapReady, L]);
 
