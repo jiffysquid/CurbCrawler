@@ -335,7 +335,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const { data: publicToilets = [] } = useQuery<PublicToilet[]>({
     queryKey: ['/api/toilets', currentLocation?.lat, currentLocation?.lng],
     queryFn: async () => {
-      if (!currentLocation) return [];
+      if (!currentLocation) {
+        console.log('🚽 No current location for toilet query');
+        return [];
+      }
+      console.log('🚽 Fetching toilets for location:', currentLocation.lat, currentLocation.lng);
       const params = new URLSearchParams({
         lat: currentLocation.lat.toString(),
         lng: currentLocation.lng.toString(),
@@ -343,11 +347,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       });
       const response = await fetch(`/api/toilets?${params}`);
       if (!response.ok) throw new Error('Failed to fetch toilets');
-      return response.json();
+      const toilets = await response.json();
+      console.log('🚽 Received toilets:', toilets.length, 'toilets for location', currentLocation.lat, currentLocation.lng);
+      return toilets;
     },
     enabled: !!currentLocation && isMapReady,
     retry: 2,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 1 * 60 * 1000, // Cache for 1 minute (reduced to get fresh data)
   });
 
   // Fetch demographics data for active clearout suburbs

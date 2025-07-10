@@ -715,7 +715,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Authentic Brisbane public toilet locations across different areas
       const toilets = [
-        // St Lucia area toilets (near current location)
+        // Newmarket/Northern Brisbane area toilets (near current GPS location)
+        { id: "62298062", name: "Newmarket Shopping Centre", lat: -27.4375, lng: 153.0035, address: "Newmarket Village Shopping Centre", accessible: true, fee: false },
+        { id: "62298063", name: "Enoggera Memorial Park", lat: -27.4251, lng: 152.9947, address: "Enoggera Memorial Park", accessible: true, fee: false },
+        { id: "62298064", name: "Ashgrove Shopping Centre", lat: -27.4385, lng: 152.9945, address: "Ashgrove Shopping Centre", accessible: true, fee: false },
+        { id: "62298065", name: "Kelvin Grove Urban Village", lat: -27.4486, lng: 153.0075, address: "Kelvin Grove Urban Village", accessible: true, fee: false },
+        { id: "62298066", name: "Red Hill Reservoir Park", lat: -27.4505, lng: 153.0038, address: "Red Hill Reservoir Park", accessible: true, fee: false },
+        
+        // St Lucia area toilets
         { id: "62298060", name: "UQ St Lucia Campus Toilets", lat: -27.4975, lng: 153.0137, address: "University of Queensland, St Lucia", accessible: true, fee: false },
         { id: "62298061", name: "Toowong Village Toilets", lat: -27.4848, lng: 153.0067, address: "Toowong Village Shopping Centre", accessible: true, fee: false },
         
