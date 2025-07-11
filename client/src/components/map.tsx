@@ -4,7 +4,7 @@ import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Crosshair, Focus, Info, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance } from "@/lib/utils";
+import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance, throttle } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
 import { kmlSimulator } from "../utils/kmlParser";
 
@@ -305,12 +305,15 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     '#6366F1'  // Indigo
   ];
 
-  // Fetch suburb boundaries for Brisbane area
+  // Fetch suburb boundaries for Brisbane area with optimized caching
   const { data: suburbBoundaries = [], isError: suburbError } = useQuery<SuburbBoundary[]>({
     queryKey: ['/api/suburbs/boundaries'],
     enabled: isMapReady,
-    retry: 2,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1,
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes to reduce frequent re-fetches
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    refetchOnWindowFocus: false, // Prevent refetch on window focus to avoid UI freezing
+    refetchOnMount: false, // Prevent refetch on component mount if data exists
   });
 
   // Fetch council clearout schedule
@@ -331,7 +334,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
 
-  // Fetch public toilets near current location
+  // Fetch public toilets near current location with throttled requests
   const { data: publicToilets = [] } = useQuery<PublicToilet[]>({
     queryKey: ['/api/toilets', currentLocation?.lat, currentLocation?.lng],
     queryFn: async () => {
@@ -352,8 +355,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       return toilets;
     },
     enabled: !!currentLocation && isMapReady,
-    retry: 2,
-    staleTime: 1 * 60 * 1000, // Cache for 1 minute (reduced to get fresh data)
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to reduce requests
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
   // Fetch demographics data for active clearout suburbs
@@ -460,36 +464,44 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     };
   }, []);
 
-  // Handle suburb boundaries
+  // Handle suburb boundaries with throttling to prevent excessive re-renders
   useEffect(() => {
     if (!mapInstanceRef.current || !L) return;
 
-    // Clear existing suburb polygons
-    suburbPolygonsRef.current.forEach(polygon => {
-      mapInstanceRef.current.removeLayer(polygon);
-    });
-    suburbPolygonsRef.current = [];
-
-    // Only add if we have data and want to show suburbs - filter for current and next week only
-    if (showSuburbs && suburbBoundaries.length > 0) {
-      // Filter boundaries to show only current and next week clearouts
-      const relevantBoundaries = suburbBoundaries.filter(suburb => {
-        if (clearoutSchedule) {
-          const suburbBaseName = suburb.name.split(',')[0].trim().toUpperCase();
-          
-          // Use exact matching for more precise filtering
-          const isCurrentClearout = clearoutSchedule.current.some(name => 
-            suburbBaseName === name.toUpperCase()
-          );
-          const isNextClearout = clearoutSchedule.next.some(name => 
-            suburbBaseName === name.toUpperCase()
-          );
-          
-          console.log(`Filtering ${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
-          return isCurrentClearout || isNextClearout;
+    // Throttle suburb boundary updates to prevent UI freezing
+    let timeoutId: NodeJS.Timeout;
+    
+    const updateSuburbBoundaries = () => {
+      // Clear existing suburb polygons
+      suburbPolygonsRef.current.forEach(polygon => {
+        try {
+          mapInstanceRef.current.removeLayer(polygon);
+        } catch (error) {
+          console.warn('Error removing suburb polygon:', error);
         }
-        return false;
       });
+      suburbPolygonsRef.current = [];
+
+      // Only add if we have data and want to show suburbs - filter for current and next week only
+      if (showSuburbs && suburbBoundaries.length > 0) {
+        // Filter boundaries to show only current and next week clearouts
+        const relevantBoundaries = suburbBoundaries.filter(suburb => {
+          if (clearoutSchedule) {
+            const suburbBaseName = suburb.name.split(',')[0].trim().toUpperCase();
+            
+            // Use exact matching for more precise filtering
+            const isCurrentClearout = clearoutSchedule.current.some(name => 
+              suburbBaseName === name.toUpperCase()
+            );
+            const isNextClearout = clearoutSchedule.next.some(name => 
+              suburbBaseName === name.toUpperCase()
+            );
+            
+            console.log(`Filtering ${suburbBaseName}: current=${isCurrentClearout}, next=${isNextClearout}`);
+            return isCurrentClearout || isNextClearout;
+          }
+          return false;
+        });
       
       // Add suburb boundary polygons with clearout-based styling
       relevantBoundaries.forEach(suburb => {
@@ -583,8 +595,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
       });
 
-      console.log(`Displayed ${relevantBoundaries.length} relevant suburb boundaries (current + next week clearouts)`);
-    }
+        console.log(`Displayed ${relevantBoundaries.length} relevant suburb boundaries (current + next week clearouts)`);
+      }
+    };
+    
+    // Use timeout to throttle updates and prevent UI freezing
+    timeoutId = setTimeout(updateSuburbBoundaries, 500);
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [suburbBoundaries, showSuburbs, clearoutSchedule]);
 
   // Handle suburb fetch error
@@ -782,8 +804,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
       hasInitialLocationRef.current = true;
     } else {
-      // Always pan to current location to keep vehicle marker centered
-      mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
+      // Always pan to current location to keep vehicle marker centered - with no animation to prevent UI freeze
+      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { 
+        animate: false,
+        duration: 0
+      });
     }
   }, [currentLocation, currentSuburb, isTracking, focusArea]);
 
@@ -877,8 +902,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       if (isTracking) {
         const currentZoom = mapInstanceRef.current.getZoom();
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], currentZoom, { 
-          animate: true,
-          duration: 0.5
+          animate: false,
+          duration: 0
         });
       }
       
@@ -988,48 +1013,66 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     };
   }, [currentLocation, focusArea, imaxVanImage, mapRotation]);
 
-  // Update route polyline
+  // Update route polyline with throttling to prevent UI freezing
   useEffect(() => {
     if (!mapInstanceRef.current || !L || sessionLocations.length === 0) return;
 
-    // Remove existing route
-    if (routePolylineRef.current) {
-      mapInstanceRef.current.removeLayer(routePolylineRef.current);
-    }
-
-    // Add new route if we have multiple points
-    if (sessionLocations.length > 1) {
-      const routeCoords = sessionLocations.map(loc => [loc.lat, loc.lng]);
-      
-      routePolylineRef.current = L.polyline(routeCoords, {
-        color: '#10B981',
-        weight: 4,
-        opacity: 0.8,
-        smoothFactor: 1
-      }).addTo(mapInstanceRef.current);
-
-      // Add route markers at significant points
-      sessionLocations.forEach((location, index) => {
-        if (index % 10 === 0 || index === sessionLocations.length - 1) { // Every 10th point or last point
-          const marker = L.circleMarker([location.lat, location.lng], {
-            radius: 3,
-            fillColor: '#10B981',
-            color: '#059669',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-          }).addTo(mapInstanceRef.current);
-
-          marker.bindPopup(`
-            <div class="text-sm">
-              <strong>Route Point ${index + 1}</strong><br/>
-              ${location.suburb || 'Unknown Suburb'}<br/>
-              <small>${new Date(location.timestamp).toLocaleTimeString()}</small>
-            </div>
-          `);
+    // Throttle route updates to prevent UI freezing
+    let timeoutId: NodeJS.Timeout;
+    
+    const updateRoutePolyline = () => {
+      // Remove existing route
+      if (routePolylineRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(routePolylineRef.current);
+        } catch (error) {
+          console.warn('Error removing route polyline:', error);
         }
-      });
-    }
+      }
+
+      // Add new route if we have multiple points
+      if (sessionLocations.length > 1) {
+        const routeCoords = sessionLocations.map(loc => [loc.lat, loc.lng]);
+        
+        routePolylineRef.current = L.polyline(routeCoords, {
+          color: '#10B981',
+          weight: 4,
+          opacity: 0.8,
+          smoothFactor: 1
+        }).addTo(mapInstanceRef.current);
+
+        // Add route markers at significant points (reduced frequency to prevent UI freezing)
+        sessionLocations.forEach((location, index) => {
+          if (index % 20 === 0 || index === sessionLocations.length - 1) { // Every 20th point or last point
+            const marker = L.circleMarker([location.lat, location.lng], {
+              radius: 3,
+              fillColor: '#10B981',
+              color: '#059669',
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            }).addTo(mapInstanceRef.current);
+
+            marker.bindPopup(`
+              <div class="text-sm">
+                <strong>Route Point ${index + 1}</strong><br/>
+                ${location.suburb || 'Unknown Suburb'}<br/>
+                <small>${new Date(location.timestamp).toLocaleTimeString()}</small>
+              </div>
+            `);
+          }
+        });
+      }
+    };
+
+    // Use timeout to throttle updates and prevent UI freezing
+    timeoutId = setTimeout(updateRoutePolyline, 300);
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [sessionLocations]);
 
 
