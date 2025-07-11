@@ -101,6 +101,49 @@ export default function Home() {
     }
   }, [gpsLocation, isRecording, lastRecordingLocation]);
 
+  // GPS monitoring and auto-restart during recording - prevents crashes
+  useEffect(() => {
+    let gpsMonitorInterval: NodeJS.Timeout;
+    
+    if (isRecording) {
+      console.log('📡 Starting GPS monitoring to prevent recording crashes');
+      
+      gpsMonitorInterval = setInterval(() => {
+        try {
+          // Check if GPS is still active during recording
+          if (isRecording && !isWatching) {
+            console.log('⚠️ GPS stopped during recording - restarting GPS to prevent crash');
+            startWatching();
+            toast({
+              title: "GPS Auto-Restart",
+              description: "GPS was restarted to prevent recording interruption.",
+            });
+          }
+          
+          // Check if we have a stale location (no updates for too long)
+          if (isRecording && location) {
+            const now = Date.now();
+            const locationAge = now - (location as any).timestamp || 0;
+            
+            // If location is older than 30 seconds, restart GPS
+            if (locationAge > 30000) {
+              console.log('⚠️ GPS location is stale - restarting GPS');
+              startWatching();
+            }
+          }
+        } catch (error) {
+          console.error('❌ GPS monitoring error:', error);
+        }
+      }, 15000); // Check every 15 seconds
+    }
+    
+    return () => {
+      if (gpsMonitorInterval) {
+        clearInterval(gpsMonitorInterval);
+      }
+    };
+  }, [isRecording, isWatching, startWatching, location, toast]);
+
   // Function to update current suburb
   const updateCurrentSuburb = async (location: { lat: number; lng: number }) => {
     try {
@@ -188,23 +231,32 @@ export default function Home() {
     },
   });
 
-  // Add location mutation for continuous tracking
+  // Add location mutation for continuous tracking with error handling
   const addLocationMutation = useMutation({
     mutationFn: async (locationData: any) => {
       const response = await apiRequest('POST', '/api/locations', locationData);
       return response.json();
     },
+    onError: (error) => {
+      console.error('❌ Failed to save location point:', error);
+      // Don't stop recording on individual location save failures
+      // Just log the error and continue recording
+    },
   });
 
 
 
-  // Continuous location recording during active recording
+  // Continuous location recording during active recording with robust error handling
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
+    let retryCount = 0;
+    const maxRetries = 3;
     
     if (isRecording && location) {
       const activeSession = sessions.find(s => s.isActive);
       if (activeSession) {
+        console.log('🔄 Starting continuous location recording for session:', activeSession.id);
+        
         // Get GPS accuracy setting to determine recording interval
         const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
         let recordingInterval = 5000; // Default 5 seconds
@@ -222,24 +274,65 @@ export default function Home() {
         }
         
         // Record location at intervals based on GPS accuracy setting
-        intervalId = setInterval(() => {
-          addLocationMutation.mutate({
-            sessionId: activeSession.id,
-            latitude: location.lat,
-            longitude: location.lng,
-            timestamp: new Date().toISOString(),
-            accuracy: location.accuracy || undefined
-          });
+        intervalId = setInterval(async () => {
+          try {
+            // Ensure we still have a valid session and location
+            if (!isRecording || !location) {
+              console.log('🛑 Recording stopped or location lost, clearing interval');
+              clearInterval(intervalId);
+              return;
+            }
+            
+            // Check if session is still active
+            const currentSession = sessions.find(s => s.isActive);
+            if (!currentSession) {
+              console.log('🛑 No active session found, stopping location recording');
+              clearInterval(intervalId);
+              return;
+            }
+            
+            console.log('📍 Recording location point:', location.lat, location.lng);
+            
+            // Record location point
+            addLocationMutation.mutate({
+              sessionId: currentSession.id,
+              latitude: location.lat,
+              longitude: location.lng,
+              timestamp: new Date().toISOString(),
+              accuracy: location.accuracy || undefined
+            });
+            
+            // Reset retry count on successful recording
+            retryCount = 0;
+            
+          } catch (error) {
+            console.error('❌ Location recording error:', error);
+            retryCount++;
+            
+            // If too many retries, show error but don't stop recording
+            if (retryCount >= maxRetries) {
+              console.error('❌ Max retries reached, but continuing recording');
+              toast({
+                title: "Recording Warning",
+                description: "Some location points may not have been saved, but recording continues.",
+                variant: "destructive",
+              });
+              retryCount = 0; // Reset for next cycle
+            }
+          }
         }, recordingInterval);
+        
+        console.log('✅ Location recording interval set:', recordingInterval + 'ms');
       }
     }
 
     return () => {
       if (intervalId) {
+        console.log('🧹 Cleaning up location recording interval');
         clearInterval(intervalId);
       }
     };
-  }, [isRecording, location, sessions, addLocationMutation]);
+  }, [isRecording, location, sessions, addLocationMutation, toast]);
 
   const activeSession = sessions.find(s => s.isActive);
   const isTracking = Boolean(activeSession);

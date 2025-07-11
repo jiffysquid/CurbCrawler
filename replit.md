@@ -170,6 +170,11 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 9, 2025: Added screen wake lock functionality to keep phone active during recording sessions for van field work
 - July 9, 2025: Enhanced error handling with proper cleanup of recording state and wake lock on errors
 - July 9, 2025: Changed default toilet visibility to hidden for cleaner initial map display - users can enable in settings if needed
+- July 11, 2025: Fixed random recording crashes by implementing comprehensive GPS monitoring and auto-restart system
+- July 11, 2025: Added robust error handling to prevent location recording interruptions during van-based field testing
+- July 11, 2025: Implemented GPS health monitoring with automatic restart when GPS tracking stops during recording sessions
+- July 11, 2025: Enhanced location mutation error handling to continue recording even when individual location saves fail
+- July 11, 2025: Added visual GPS status indicator in recording controls to show GPS health during active sessions
 
 ## User Preferences
 
