@@ -25,7 +25,7 @@ export default function Home() {
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [recordingStats, setRecordingStats] = useState<{ duration: string; distance: string; cost: string }>({ duration: '0m', distance: '0.0km', cost: '0.00' });
   const [realTimeDistance, setRealTimeDistance] = useState<number>(0);
-  const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number; timestamp?: number } | null>(null);
   
   const { toast } = useToast();
   
@@ -68,40 +68,52 @@ export default function Home() {
     }
   }, [toast, startWatching]);
 
-  // Update location state when GPS location changes
+  // Update location state when GPS location changes with throttling to prevent UI freeze
   useEffect(() => {
     if (gpsLocation) {
       setLocation(gpsLocation);
       console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
       
-      // Update current suburb when location changes (non-blocking)
-      updateCurrentSuburb(gpsLocation).catch(error => {
-        console.log('Suburb lookup failed, continuing with GPS tracking:', error);
-      });
-      
-      // Update real-time distance tracking during recording
-      if (isRecording && lastRecordingLocation) {
-        const segmentDistance = calculateDistance(
-          lastRecordingLocation.lat, 
-          lastRecordingLocation.lng, 
-          gpsLocation.lat, 
-          gpsLocation.lng
-        );
-        // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
-        if (segmentDistance > 0.001) { // 0.001 km = 1 meter
-          setRealTimeDistance(prev => prev + segmentDistance);
-          console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
-        }
-      }
-      
-      // Update last recording location if we're recording
+      // Throttle expensive operations during recording to prevent UI freeze
       if (isRecording) {
-        setLastRecordingLocation({ lat: gpsLocation.lat, lng: gpsLocation.lng });
+        // Only update distance every 2 seconds to prevent constant calculations
+        const now = Date.now();
+        const lastUpdate = lastRecordingLocation?.timestamp || 0;
+        
+        if (now - lastUpdate > 2000) { // 2 second throttle
+          if (lastRecordingLocation) {
+            const segmentDistance = calculateDistance(
+              lastRecordingLocation.lat, 
+              lastRecordingLocation.lng, 
+              gpsLocation.lat, 
+              gpsLocation.lng
+            );
+            // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
+            if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+              setRealTimeDistance(prev => prev + segmentDistance);
+              console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
+            }
+          }
+          
+          // Update last recording location with timestamp
+          setLastRecordingLocation({ 
+            lat: gpsLocation.lat, 
+            lng: gpsLocation.lng, 
+            timestamp: now 
+          });
+        }
+      } else {
+        // When not recording, update suburb lookup (throttled)
+        setTimeout(() => {
+          updateCurrentSuburb(gpsLocation).catch(error => {
+            console.log('Suburb lookup failed, continuing with GPS tracking:', error);
+          });
+        }, 500);
       }
     }
-  }, [gpsLocation, isRecording, lastRecordingLocation]);
+  }, [gpsLocation, isRecording]);
 
-  // GPS monitoring and auto-restart during recording - prevents crashes
+  // GPS monitoring and auto-restart during recording - prevents crashes with reduced frequency
   useEffect(() => {
     let gpsMonitorInterval: NodeJS.Timeout;
     
@@ -120,7 +132,7 @@ export default function Home() {
             });
           }
           
-          // Check if we have a stale location (no updates for too long)
+          // Check if we have a stale location (no updates for too long) - reduced frequency
           if (isRecording && location) {
             const now = Date.now();
             const locationAge = now - (location as any).timestamp || 0;
@@ -134,7 +146,7 @@ export default function Home() {
         } catch (error) {
           console.error('❌ GPS monitoring error:', error);
         }
-      }, 15000); // Check every 15 seconds
+      }, 30000); // Check every 30 seconds to reduce CPU usage
     }
     
     return () => {
@@ -257,19 +269,19 @@ export default function Home() {
       if (activeSession) {
         console.log('🔄 Starting continuous location recording for session:', activeSession.id);
         
-        // Get GPS accuracy setting to determine recording interval
+        // Get GPS accuracy setting to determine recording interval (increased to reduce UI freeze)
         const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
-        let recordingInterval = 5000; // Default 5 seconds
+        let recordingInterval = 10000; // Default 10 seconds (increased from 5)
         
         switch (gpsAccuracy) {
           case 'high':
-            recordingInterval = 2000; // 2 seconds for high accuracy
+            recordingInterval = 5000; // 5 seconds for high accuracy (increased from 2)
             break;
           case 'medium':
-            recordingInterval = 5000; // 5 seconds for medium
+            recordingInterval = 10000; // 10 seconds for medium (increased from 5)
             break;
           case 'low':
-            recordingInterval = 10000; // 10 seconds for low accuracy
+            recordingInterval = 15000; // 15 seconds for low accuracy (increased from 10)
             break;
         }
         
