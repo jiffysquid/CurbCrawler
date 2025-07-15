@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Battery, Database, AlertTriangle, Focus, DollarSign, Route } from "lucide-react";
+import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-react";
 import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
 
 export default function Settings() {
@@ -124,13 +124,7 @@ export default function Settings() {
     }
   };
 
-  const handleClearData = () => {
-    // In a real app, this would clear session data from storage
-    toast({
-      title: "Data Cleared",
-      description: "All session data has been cleared successfully.",
-    });
-  };
+
 
   const handleClearPaths = () => {
     clearAllPersistentPaths();
@@ -332,45 +326,7 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Data Management */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center space-x-2">
-            <Database className="h-4 w-4" />
-            <span>Data Management</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="text-xs text-gray-600">
-              Session data is stored locally on your device. You can clear all data to start fresh.
-            </div>
-            
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="w-full">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Clear All Session Data
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all your tracking sessions and location data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearData} className="bg-red-500 hover:bg-red-600">
-                    Delete All Data
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* API Configuration */}
       <Card>
