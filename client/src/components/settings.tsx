@@ -50,6 +50,7 @@ export default function Settings() {
     } else {
       setShowLabels(true); // Default to showing labels
     }
+
     if (savedFuelPrice) setFuelPrice(savedFuelPrice);
     if (savedPathColorScheme) setPathColorScheme(savedPathColorScheme);
   }, []);
@@ -67,6 +68,12 @@ export default function Settings() {
 
   useEffect(() => {
     localStorage.setItem('mapStyle', mapStyle);
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'mapStyle',
+      newValue: mapStyle,
+      storageArea: localStorage
+    }));
   }, [mapStyle]);
 
   useEffect(() => {
@@ -124,6 +131,16 @@ export default function Settings() {
     }));
   }, [pathColorScheme]);
 
+  useEffect(() => {
+    localStorage.setItem('showLabels', String(showLabels));
+    // Trigger storage event for same-tab communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'showLabels',
+      newValue: String(showLabels),
+      storageArea: localStorage
+    }));
+  }, [showLabels]);
+
   const handleFuelPriceChange = (value: string) => {
     // Only allow valid decimal numbers
     if (/^\d*\.?\d{0,2}$/.test(value)) {
@@ -167,6 +184,9 @@ export default function Settings() {
               <SelectContent>
                 <SelectItem value="openstreetmap">OpenStreetMap (Free)</SelectItem>
                 <SelectItem value="openstreetmap-no-labels">OpenStreetMap No Labels</SelectItem>
+                <SelectItem value="mapbox-streets">Mapbox Streets</SelectItem>
+                <SelectItem value="mapbox-satellite">Mapbox Satellite</SelectItem>
+                <SelectItem value="mapbox-outdoors">Mapbox Outdoors</SelectItem>
                 <SelectItem value="cartodb-positron">CartoDB Light</SelectItem>
                 <SelectItem value="cartodb-positron-no-labels">CartoDB Light No Labels</SelectItem>
                 <SelectItem value="esri-world-imagery">Esri Satellite</SelectItem>
@@ -174,7 +194,7 @@ export default function Settings() {
               </SelectContent>
             </Select>
             <CardDescription className="text-xs">
-              No Labels versions prevent text rotation when map rotates
+              Mapbox provides high-quality tiles with better rotation support. No Labels versions prevent text rotation when map rotates.
             </CardDescription>
           </div>
 

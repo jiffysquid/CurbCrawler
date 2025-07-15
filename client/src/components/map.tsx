@@ -36,12 +36,15 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [isMapReady, setIsMapReady] = useState(false);
   const [showSuburbs, setShowSuburbs] = useState(true);
   const [showToilets, setShowToilets] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+  const [mapStyle, setMapStyle] = useState<string>('openstreetmap');
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
   const [pathColorScheme, setPathColorScheme] = useState<'bright' | 'fade'>('bright');
   const [persistentPaths, setPersistentPaths] = useState<PersistentPath[]>([]);
   const [isLoadingTiles, setIsLoadingTiles] = useState(false);
   const [pendingRotation, setPendingRotation] = useState<number | null>(null);
+  const labelsLayerRef = useRef<any>(null);
 
   const [showDemographics, setShowDemographics] = useState(false);
   
@@ -54,11 +57,76 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
+  // Tile provider configuration
+  const getTileConfig = (provider: string) => {
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    
+    switch (provider) {
+      case 'mapbox-streets':
+        return {
+          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          tileSize: 512,
+          zoomOffset: -1
+        };
+      case 'mapbox-satellite':
+        return {
+          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          tileSize: 512,
+          zoomOffset: -1
+        };
+      case 'mapbox-outdoors':
+        return {
+          url: `https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          tileSize: 512,
+          zoomOffset: -1
+        };
+      case 'cartodb-positron':
+        return {
+          url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd'
+        };
+      case 'cartodb-positron-no-labels':
+        return {
+          url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd'
+        };
+      case 'esri-world-imagery':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        };
+      case 'esri-world-topo':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+        };
+      case 'openstreetmap-no-labels':
+        return {
+          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd'
+        };
+      case 'openstreetmap':
+      default:
+        return {
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        };
+    }
+  };
+
   // Load settings and persistent paths from localStorage
   useEffect(() => {
     const savedFocusArea = localStorage.getItem('focusArea');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
+    const savedShowLabels = localStorage.getItem('showLabels');
+    const savedMapStyle = localStorage.getItem('mapStyle');
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
@@ -71,6 +139,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       setShowToilets(savedShowToilets === 'true');
     } else {
       setShowToilets(false); // Default to hiding toilets
+    }
+    if (savedShowLabels !== null) {
+      setShowLabels(savedShowLabels === 'true');
+    } else {
+      setShowLabels(true); // Default to showing labels
+    }
+    if (savedMapStyle) {
+      setMapStyle(savedMapStyle);
+    } else {
+      setMapStyle('openstreetmap'); // Default to OpenStreetMap
     }
     if (savedPathColorScheme) {
       setPathColorScheme(savedPathColorScheme as 'bright' | 'fade');
@@ -93,6 +171,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       }
       if (e.key === 'pathColorScheme' && e.newValue) {
         setPathColorScheme(e.newValue as 'bright' | 'fade');
+      }
+      if (e.key === 'showLabels' && e.newValue) {
+        setShowLabels(e.newValue === 'true');
+      }
+      if (e.key === 'mapStyle' && e.newValue) {
+        setMapStyle(e.newValue);
       }
       if (e.key === 'persistentPaths') {
         const paths = loadPersistentPaths();
@@ -422,11 +506,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           wheelPxPerZoomLevel: 60,
         });
 
-        // Add OpenStreetMap tiles with tile loading events
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
+        // Add tiles with dynamic provider selection
+        const tileConfig = getTileConfig(mapStyle);
+        const tileLayer = L.tileLayer(tileConfig.url, {
+          attribution: tileConfig.attribution,
           maxZoom: 19,
-          tileSize: 256,
+          tileSize: tileConfig.tileSize || 256,
+          zoomOffset: tileConfig.zoomOffset || 0,
+          subdomains: tileConfig.subdomains || 'abc',
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 16,  // Increased from 12 to 16 for better rotation coverage
@@ -468,6 +555,103 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       }
     };
   }, []);
+
+  // Update tile layer when map style changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L) return;
+
+    const updateTileLayer = () => {
+      // Remove all existing tile layers
+      mapInstanceRef.current.eachLayer((layer: any) => {
+        if (layer instanceof L.TileLayer) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      });
+
+      // Add new tile layer with current style
+      const tileConfig = getTileConfig(mapStyle);
+      const tileLayer = L.tileLayer(tileConfig.url, {
+        attribution: tileConfig.attribution,
+        maxZoom: 19,
+        tileSize: tileConfig.tileSize || 256,
+        zoomOffset: tileConfig.zoomOffset || 0,
+        subdomains: tileConfig.subdomains || 'abc',
+        updateWhenIdle: false,
+        updateWhenZooming: false,
+        keepBuffer: 16,
+        padding: 4.0,
+        bounds: null,
+        continuousWorld: true,
+        noWrap: false,
+        detectRetina: true,
+        crossOrigin: false
+      });
+
+      // Listen for tile loading events
+      tileLayer.on('loading', () => {
+        setIsLoadingTiles(true);
+        console.log('🔄 Tiles loading started');
+      });
+
+      tileLayer.on('load', () => {
+        setIsLoadingTiles(false);
+        console.log('✅ Tiles loading completed');
+      });
+
+      tileLayer.addTo(mapInstanceRef.current);
+      
+      // Add separate labels layer if needed
+      updateLabelsLayer();
+      
+      console.log('🗺️ Updated tile layer to:', mapStyle);
+    };
+
+    updateTileLayer();
+  }, [mapStyle]);
+
+  // Function to update labels layer
+  const updateLabelsLayer = () => {
+    if (!mapInstanceRef.current || !L) return;
+
+    // Remove existing labels layer
+    if (labelsLayerRef.current) {
+      mapInstanceRef.current.removeLayer(labelsLayerRef.current);
+      labelsLayerRef.current = null;
+    }
+
+    // Check if we should add labels layer
+    const shouldShowLabels = showLabels && (
+      mapStyle.includes('no-labels') || 
+      mapStyle === 'esri-world-imagery' ||
+      mapStyle === 'mapbox-satellite'
+    );
+
+    if (shouldShowLabels) {
+      // Add labels overlay for no-labels styles
+      const labelsConfig = {
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd'
+      };
+
+      labelsLayerRef.current = L.tileLayer(labelsConfig.url, {
+        attribution: labelsConfig.attribution,
+        subdomains: labelsConfig.subdomains,
+        opacity: 0.8,
+        zIndex: 1000 // Ensure labels appear above base tiles
+      });
+
+      labelsLayerRef.current.addTo(mapInstanceRef.current);
+      console.log('🏷️ Added labels layer for', mapStyle);
+    } else {
+      console.log('🏷️ No labels layer needed for', mapStyle);
+    }
+  };
+
+  // Update labels layer when settings change
+  useEffect(() => {
+    updateLabelsLayer();
+  }, [showLabels, mapStyle]);
 
   // Handle suburb boundaries with throttling to prevent excessive re-renders
   useEffect(() => {
