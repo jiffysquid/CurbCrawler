@@ -61,8 +61,17 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const getTileConfig = (provider: string) => {
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     
+    console.log('🗺️ Getting tile config for provider:', provider);
+    
     switch (provider) {
       case 'mapbox-streets':
+        if (!mapboxToken) {
+          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
+          return {
+            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          };
+        }
         return {
           url: `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
           attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -70,6 +79,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           zoomOffset: -1
         };
       case 'mapbox-satellite':
+        if (!mapboxToken) {
+          console.warn('⚠️ Mapbox token missing, falling back to Esri satellite');
+          return {
+            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+          };
+        }
         return {
           url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
           attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -77,6 +93,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           zoomOffset: -1
         };
       case 'mapbox-outdoors':
+        if (!mapboxToken) {
+          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
+          return {
+            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          };
+        }
         return {
           url: `https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
           attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -113,6 +136,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         };
       case 'openstreetmap':
       default:
+        console.log('🗺️ Using default OpenStreetMap for provider:', provider);
         return {
           url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -145,10 +169,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } else {
       setShowLabels(true); // Default to showing labels
     }
-    if (savedMapStyle) {
+    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
       setMapStyle(savedMapStyle);
     } else {
       setMapStyle('openstreetmap'); // Default to OpenStreetMap
+      localStorage.setItem('mapStyle', 'openstreetmap'); // Clear invalid value
     }
     if (savedPathColorScheme) {
       setPathColorScheme(savedPathColorScheme as 'bright' | 'fade');

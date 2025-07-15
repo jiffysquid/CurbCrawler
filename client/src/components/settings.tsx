@@ -33,7 +33,12 @@ export default function Settings() {
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
-    if (savedMapStyle) setMapStyle(savedMapStyle);
+    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
+      setMapStyle(savedMapStyle);
+    } else {
+      setMapStyle('openstreetmap'); // Default to OpenStreetMap
+      localStorage.setItem('mapStyle', 'openstreetmap'); // Clear invalid value
+    }
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
     if (savedShowSuburbs !== null) {
       setShowSuburbBoundaries(savedShowSuburbs === 'true');
