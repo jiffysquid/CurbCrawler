@@ -11,10 +11,11 @@ import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-re
 import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
 
 export default function Settings() {
-  const [mapStyle, setMapStyle] = useState<string>("street");
+  const [mapStyle, setMapStyle] = useState<string>("openstreetmap");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
   const [showToilets, setShowToilets] = useState<boolean>(false);
+  const [showLabels, setShowLabels] = useState<boolean>(true);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
   const [pathColorScheme, setPathColorScheme] = useState<string>("bright");
@@ -27,6 +28,7 @@ export default function Settings() {
     const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
+    const savedShowLabels = localStorage.getItem('showLabels');
     const savedFuelPrice = localStorage.getItem('fuelPrice');
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
@@ -42,6 +44,11 @@ export default function Settings() {
       setShowToilets(savedShowToilets === 'true');
     } else {
       setShowToilets(false); // Default to hiding toilets
+    }
+    if (savedShowLabels !== null) {
+      setShowLabels(savedShowLabels === 'true');
+    } else {
+      setShowLabels(true); // Default to showing labels
     }
     if (savedFuelPrice) setFuelPrice(savedFuelPrice);
     if (savedPathColorScheme) setPathColorScheme(savedPathColorScheme);
@@ -152,17 +159,36 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="map-style" className="text-xs font-medium">Map Style</Label>
+            <Label htmlFor="map-style" className="text-xs font-medium">Map Provider</Label>
             <Select value={mapStyle} onValueChange={setMapStyle}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="street">Street View</SelectItem>
-                <SelectItem value="satellite">Satellite</SelectItem>
-                <SelectItem value="terrain">Terrain</SelectItem>
+                <SelectItem value="openstreetmap">OpenStreetMap (Free)</SelectItem>
+                <SelectItem value="openstreetmap-no-labels">OpenStreetMap No Labels</SelectItem>
+                <SelectItem value="cartodb-positron">CartoDB Light</SelectItem>
+                <SelectItem value="cartodb-positron-no-labels">CartoDB Light No Labels</SelectItem>
+                <SelectItem value="esri-world-imagery">Esri Satellite</SelectItem>
+                <SelectItem value="esri-world-topo">Esri Topographic</SelectItem>
               </SelectContent>
             </Select>
+            <CardDescription className="text-xs">
+              No Labels versions prevent text rotation when map rotates
+            </CardDescription>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-medium">Show Map Labels</Label>
+              <CardDescription className="text-xs">
+                Display street names and labels (always horizontal)
+              </CardDescription>
+            </div>
+            <Switch
+              checked={showLabels}
+              onCheckedChange={setShowLabels}
+            />
           </div>
 
           <div className="space-y-2">
