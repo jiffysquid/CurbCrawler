@@ -9,7 +9,7 @@ import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useWakeLock } from "@/hooks/use-wake-lock";
-import { calculateDistance } from "@/lib/utils";
+import { calculateDistance, savePersistentPath, loadPersistentPaths, PATH_COLORS, PersistentPath } from "@/lib/utils";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats, LocationPoint } from "@shared/schema";
@@ -26,6 +26,7 @@ export default function Home() {
   const [recordingStats, setRecordingStats] = useState<{ duration: string; distance: string; cost: string }>({ duration: '0m', distance: '0.0km', cost: '0.00' });
   const [realTimeDistance, setRealTimeDistance] = useState<number>(0);
   const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number; timestamp?: number } | null>(null);
+  const [recordingPath, setRecordingPath] = useState<{ lat: number; lng: number }[]>([]);
   
   const { toast } = useToast();
   
@@ -92,6 +93,9 @@ export default function Home() {
             if (segmentDistance > 0.001) { // 0.001 km = 1 meter
               setRealTimeDistance(prev => prev + segmentDistance);
               console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
+              
+              // Add to persistent path tracking
+              setRecordingPath(prev => [...prev, { lat: gpsLocation.lat, lng: gpsLocation.lng }]);
             }
           }
           
@@ -469,8 +473,9 @@ export default function Home() {
     setIsRecording(true);
     setRecordingStartTime(startTime);
     setRecordingStats({ duration: '0s', distance: '0m', cost: '0.00' });
-    setRealTimeDistance(0); // Reset real-time distance tracking
-    setLastRecordingLocation({ lat: location.lat, lng: location.lng }); // Set initial location
+    setRealTimeDistance(0);
+    setLastRecordingLocation({ lat: location.lat, lng: location.lng });
+    setRecordingPath([{ lat: location.lat, lng: location.lng }]); // Initialize persistent path
     
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
@@ -497,6 +502,7 @@ export default function Home() {
         setRecordingStartTime(null);
         setRealTimeDistance(0);
         setLastRecordingLocation(null);
+        setRecordingPath([]);
         releaseWakeLock();
         toast({
           title: "Error",
@@ -509,6 +515,33 @@ export default function Home() {
 
   const handleStopRecording = () => {
     const activeSession = sessions.find(s => s.isActive);
+    
+    // Save persistent path
+    if (recordingPath.length > 1 && recordingStartTime) {
+      const endTime = new Date();
+      const duration = (endTime.getTime() - recordingStartTime.getTime()) / 1000 / 60; // minutes
+      const pathDistance = realTimeDistance / 1000; // km
+      
+      const persistentPath: PersistentPath = {
+        id: `path-${Date.now()}`,
+        name: `Route ${new Date().toLocaleDateString()}`,
+        coordinates: recordingPath,
+        date: recordingStartTime.toISOString(),
+        distance: pathDistance,
+        duration: duration,
+        color: PATH_COLORS[0] // Will be dynamically colored based on index
+      };
+      
+      savePersistentPath(persistentPath);
+      // Trigger storage event to update the map
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'persistentPaths',
+        newValue: JSON.stringify(loadPersistentPaths()),
+        storageArea: localStorage
+      }));
+      console.log('Saved persistent path:', persistentPath.name, persistentPath.coordinates.length, 'points');
+    }
+    
     if (activeSession) {
       const updates = {
         endTime: new Date().toISOString(),
@@ -539,9 +572,10 @@ export default function Home() {
     setIsRecording(false);
     setRecordingStartTime(null);
     setRecordingStats({ duration: '0m', distance: '0.0km', cost: '0.00' });
-    setRealTimeDistance(0); // Reset real-time distance tracking
-    setLastRecordingLocation(null); // Clear last location
-    releaseWakeLock(); // Release wake lock when recording stops
+    setRealTimeDistance(0);
+    setLastRecordingLocation(null);
+    setRecordingPath([]);
+    releaseWakeLock();
     console.log("Stopped recording clearout search path");
   };
 

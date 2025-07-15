@@ -151,3 +151,68 @@ export function getVehicleIcon(vehicleType: string): string {
   
   return vehicleIcons[vehicleType as keyof typeof vehicleIcons] || '🚗';
 }
+
+// Path color utilities
+export const PATH_COLORS = [
+  '#10B981', // Green
+  '#3B82F6', // Blue  
+  '#F59E0B', // Orange
+  '#EF4444', // Red
+  '#8B5CF6', // Purple
+  '#06B6D4', // Cyan
+  '#F97316', // Orange-red
+  '#84CC16', // Lime
+];
+
+export function getPathColor(sessionIndex: number, colorScheme: 'bright' | 'fade' = 'bright', sessionCount: number = 0): { color: string; weight: number; opacity: number } {
+  if (colorScheme === 'bright') {
+    const color = PATH_COLORS[sessionIndex % PATH_COLORS.length];
+    return { color, weight: 4, opacity: 0.8 };
+  } else {
+    // Fade scheme - newer paths are brighter
+    const color = PATH_COLORS[sessionIndex % PATH_COLORS.length];
+    const age = sessionCount - sessionIndex;
+    const opacity = Math.max(0.3, 0.9 - (age * 0.1));
+    const weight = Math.max(2, 5 - age);
+    return { color, weight, opacity };
+  }
+}
+
+// Persistent path storage utilities
+export interface PersistentPath {
+  id: string;
+  name: string;
+  coordinates: { lat: number; lng: number }[];
+  date: string;
+  distance: number;
+  duration: number;
+  color: string;
+}
+
+export function savePersistentPath(path: PersistentPath): void {
+  const existingPaths = loadPersistentPaths();
+  existingPaths.push(path);
+  localStorage.setItem('persistentPaths', JSON.stringify(existingPaths));
+}
+
+export function loadPersistentPaths(): PersistentPath[] {
+  const stored = localStorage.getItem('persistentPaths');
+  if (!stored) return [];
+  
+  try {
+    return JSON.parse(stored);
+  } catch (error) {
+    console.error('Error loading persistent paths:', error);
+    return [];
+  }
+}
+
+export function deletePersistentPath(id: string): void {
+  const existingPaths = loadPersistentPaths();
+  const filteredPaths = existingPaths.filter(path => path.id !== id);
+  localStorage.setItem('persistentPaths', JSON.stringify(filteredPaths));
+}
+
+export function clearAllPersistentPaths(): void {
+  localStorage.removeItem('persistentPaths');
+}

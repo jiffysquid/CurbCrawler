@@ -103,10 +103,10 @@ export default function SimpleControls({
             <div className="flex items-center gap-4">
               <Button
                 onClick={handleStopRecording}
-                className="bg-red-600 hover:bg-red-700 text-white rounded-full px-6 py-2 flex items-center gap-2"
+                className="bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center p-0"
+                title="Stop recording"
               >
                 <Square size={16} />
-                Stop
               </Button>
               
               {/* Recording Stats */}

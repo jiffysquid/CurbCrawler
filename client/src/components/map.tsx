@@ -4,7 +4,7 @@ import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Crosshair, Focus, Info, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance, throttle } from "@/lib/utils";
+import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance, throttle, getPathColor, loadPersistentPaths, savePersistentPath, PersistentPath } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
 import { kmlSimulator } from "../utils/kmlParser";
 
@@ -38,6 +38,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showToilets, setShowToilets] = useState(false);
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
+  const [pathColorScheme, setPathColorScheme] = useState<'bright' | 'fade'>('bright');
+  const [persistentPaths, setPersistentPaths] = useState<PersistentPath[]>([]);
   const [isLoadingTiles, setIsLoadingTiles] = useState(false);
   const [pendingRotation, setPendingRotation] = useState<number | null>(null);
 
@@ -52,11 +54,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
-  // Load settings from localStorage and listen for changes
+  // Load settings and persistent paths from localStorage
   useEffect(() => {
     const savedFocusArea = localStorage.getItem('focusArea');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
+    const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
     if (savedShowSuburbs !== null) {
@@ -69,6 +72,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } else {
       setShowToilets(false); // Default to hiding toilets
     }
+    if (savedPathColorScheme) {
+      setPathColorScheme(savedPathColorScheme as 'bright' | 'fade');
+    }
+    
+    // Load persistent paths
+    const paths = loadPersistentPaths();
+    setPersistentPaths(paths);
 
     // Listen for storage changes from settings panel
     const handleStorageChange = (e: StorageEvent) => {
@@ -80,6 +90,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       }
       if (e.key === 'showToilets' && e.newValue) {
         setShowToilets(e.newValue === 'true');
+      }
+      if (e.key === 'pathColorScheme' && e.newValue) {
+        setPathColorScheme(e.newValue as 'bright' | 'fade');
+      }
+      if (e.key === 'persistentPaths') {
+        const paths = loadPersistentPaths();
+        setPersistentPaths(paths);
       }
     };
 
@@ -291,19 +308,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }).addTo(mapInstanceRef.current);
   }, []);
 
-  // Session colors for different paths
-  const sessionColors = [
-    '#10B981', // Green
-    '#3B82F6', // Blue  
-    '#F59E0B', // Orange
-    '#EF4444', // Red
-    '#8B5CF6', // Purple
-    '#06B6D4', // Cyan
-    '#F97316', // Orange-red
-    '#84CC16', // Lime
-    '#EC4899', // Pink
-    '#6366F1'  // Indigo
-  ];
+  // Using new PATH_COLORS system from utils
 
   // Fetch suburb boundaries for Brisbane area with optimized caching
   const { data: suburbBoundaries = [], isError: suburbError } = useQuery<SuburbBoundary[]>({
@@ -674,9 +679,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   }, [publicToilets, showToilets, isMapReady, L]);
 
-  // Handle historical session routes with different colors
+  // Handle persistent paths with new color system
   useEffect(() => {
-    if (!mapInstanceRef.current || !L || !allSessions.length) return;
+    if (!mapInstanceRef.current || !L) return;
 
     // Clear existing historical routes
     historicalRoutesRef.current.forEach(route => {
@@ -684,72 +689,69 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     });
     historicalRoutesRef.current = [];
 
-    // Add historical session routes with different colors
-    allSessions.forEach((session, index) => {
-      if (session.routeCoordinates && Array.isArray(session.routeCoordinates) && session.routeCoordinates.length > 1) {
-        const color = sessionColors[index % sessionColors.length];
-        const routeCoords = session.routeCoordinates.map((point: any) => [point.lat, point.lng]);
+    // Add persistent paths
+    persistentPaths.forEach((path, index) => {
+      if (path.coordinates && path.coordinates.length > 1) {
+        const pathStyle = getPathColor(index, pathColorScheme, persistentPaths.length);
+        const routeCoords = path.coordinates.map((point: any) => [point.lat, point.lng]);
         
         const polyline = L.polyline(routeCoords, {
-          color: color,
-          weight: 3,
-          opacity: 0.7,
+          color: pathStyle.color,
+          weight: pathStyle.weight,
+          opacity: pathStyle.opacity,
           smoothFactor: 1
         }).addTo(mapInstanceRef.current);
 
-        // Add popup with session info
+        // Add popup with path info
         polyline.bindPopup(`
           <div class="text-sm">
-            <strong>Session ${session.id}</strong><br/>
-            <small>Started: ${new Date(session.startTime).toLocaleDateString()}</small><br/>
-            <small>Duration: ${session.duration ? Math.round(session.duration) : 0} minutes</small><br/>
-            <small>Distance: ${session.distance?.toFixed(1) || '0.0'} km</small><br/>
-            <small>Suburbs: ${session.suburbsVisited?.length || 0}</small>
+            <strong>${path.name}</strong><br/>
+            <small>Date: ${new Date(path.date).toLocaleDateString()}</small><br/>
+            <small>Duration: ${Math.round(path.duration)} minutes</small><br/>
+            <small>Distance: ${path.distance.toFixed(1)} km</small>
           </div>
         `);
 
         historicalRoutesRef.current.push(polyline);
 
-        // Add start and end markers for completed sessions
-        if (!session.isActive && session.startLocation && session.endLocation) {
-          const startLoc = session.startLocation as any;
-          const endLoc = session.endLocation as any;
+        // Add start and end markers for paths
+        if (path.coordinates.length > 1) {
+          const startLoc = path.coordinates[0];
+          const endLoc = path.coordinates[path.coordinates.length - 1];
           
-          if (startLoc.lat && startLoc.lng && endLoc.lat && endLoc.lng) {
-            const startIcon = L.divIcon({
-              className: 'session-start-marker',
-              html: `
-                <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}"></div>
-              `,
-              iconSize: [12, 12],
-              iconAnchor: [6, 6]
-            });
+          const startIcon = L.divIcon({
+            className: 'path-start-marker',
+            html: `
+              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${pathStyle.color}"></div>
+            `,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+          });
 
-            const endIcon = L.divIcon({
-              className: 'session-end-marker',
-              html: `
-                <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${color}">
-                  <div class="w-1 h-1 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-                </div>
-              `,
-              iconSize: [12, 12],
-              iconAnchor: [6, 6]
-            });
+          const endIcon = L.divIcon({
+            className: 'path-end-marker',
+            html: `
+              <div class="w-3 h-3 rounded-full border-2 border-white shadow-lg" style="background-color: ${pathStyle.color}">
+                <div class="w-1 h-1 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+              </div>
+            `,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+          });
 
-            const startMarker = L.marker([startLoc.lat, startLoc.lng], { icon: startIcon })
-              .addTo(mapInstanceRef.current)
-              .bindPopup(`<div class="text-sm"><strong>Session ${session.id} Start</strong></div>`);
+          const startMarker = L.marker([startLoc.lat, startLoc.lng], { icon: startIcon })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(`<div class="text-sm"><strong>${path.name} Start</strong></div>`);
 
-            const endMarker = L.marker([endLoc.lat, endLoc.lng], { icon: endIcon })
-              .addTo(mapInstanceRef.current)
-              .bindPopup(`<div class="text-sm"><strong>Session ${session.id} End</strong></div>`);
+          const endMarker = L.marker([endLoc.lat, endLoc.lng], { icon: endIcon })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(`<div class="text-sm"><strong>${path.name} End</strong></div>`);
 
-            historicalRoutesRef.current.push(startMarker, endMarker);
-          }
+          historicalRoutesRef.current.push(startMarker, endMarker);
         }
       }
     });
-  }, [allSessions]);
+  }, [persistentPaths, pathColorScheme]);
 
   // Update current location marker (only when vehicle marker is not active)
   useEffect(() => {
@@ -1210,7 +1212,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       )}
 
       {/* Map controls */}
-      <div className="absolute bottom-20 right-4 md:bottom-6 md:right-96 z-20 flex flex-col gap-2">
+      <div className="absolute bottom-[180px] right-4 md:bottom-[124px] md:right-96 z-20 flex flex-col gap-2">
         
         {/* Demographics button */}
         <Button
