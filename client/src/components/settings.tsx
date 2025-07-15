@@ -182,11 +182,27 @@ export default function Settings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="map-style" className="text-xs font-medium">Map Provider</Label>
-            <Select value={mapStyle} onValueChange={setMapStyle}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
+            <Select 
+              value={mapStyle} 
+              onValueChange={(value) => {
+                console.log('Map provider changed to:', value);
+                setMapStyle(value);
+              }}
+              onOpenChange={(open) => {
+                console.log('Map provider dropdown opened:', open);
+              }}
+            >
+              <SelectTrigger className="h-9" onClick={() => console.log('Trigger clicked')}>
+                <SelectValue placeholder="Select map provider" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent 
+                className="z-[9999] max-h-[300px] bg-white border border-gray-200 shadow-lg"
+                position="popper"
+                sideOffset={5}
+                onOpenAutoFocus={(e) => {
+                  console.log('SelectContent opened');
+                }}
+              >
                 <SelectItem value="openstreetmap">OpenStreetMap (Free)</SelectItem>
                 <SelectItem value="openstreetmap-no-labels">OpenStreetMap No Labels</SelectItem>
                 <SelectItem value="mapbox-streets">Mapbox Streets</SelectItem>
