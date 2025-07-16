@@ -181,6 +181,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     
     // Load persistent paths
     const paths = loadPersistentPaths();
+    console.log('🗺️ Loading persistent paths from localStorage:', paths.length, 'paths');
+    paths.forEach((path, index) => {
+      console.log(`🗺️ Path ${index + 1}: "${path.name}" with ${path.coordinates.length} coordinates`);
+    });
     setPersistentPaths(paths);
 
     // Listen for storage changes from settings panel
@@ -205,6 +209,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       }
       if (e.key === 'persistentPaths') {
         const paths = loadPersistentPaths();
+        console.log('🗺️ Storage event - reloading persistent paths:', paths.length, 'paths');
         setPersistentPaths(paths);
       }
     };
@@ -899,10 +904,13 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     historicalRoutesRef.current = [];
 
     // Add persistent paths
+    console.log('🗺️ Rendering persistent paths:', persistentPaths.length);
     persistentPaths.forEach((path, index) => {
       if (path.coordinates && path.coordinates.length > 1) {
         const pathStyle = getPathColor(index, pathColorScheme, persistentPaths.length);
         const routeCoords = path.coordinates.map((point: any) => [point.lat, point.lng]);
+        
+        console.log(`🗺️ Path ${index + 1}: "${path.name}" with ${path.coordinates.length} coordinates, color: ${pathStyle.color}, opacity: ${pathStyle.opacity}`);
         
         const polyline = L.polyline(routeCoords, {
           color: pathStyle.color,

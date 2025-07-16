@@ -95,7 +95,11 @@ export default function Home() {
               console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
               
               // Add to persistent path tracking
-              setRecordingPath(prev => [...prev, { lat: gpsLocation.lat, lng: gpsLocation.lng }]);
+              setRecordingPath(prev => {
+                const newPath = [...prev, { lat: gpsLocation.lat, lng: gpsLocation.lng }];
+                console.log(`🗺️ Recording path updated: ${newPath.length} points`);
+                return newPath;
+              });
             }
           }
           
@@ -532,6 +536,9 @@ export default function Home() {
         color: PATH_COLORS[0] // Will be dynamically colored based on index
       };
       
+      console.log('🗺️ Saving persistent path:', persistentPath.name, 'with', persistentPath.coordinates.length, 'points');
+      console.log('🗺️ Path coordinates preview:', persistentPath.coordinates.slice(0, 3), '...');
+      
       savePersistentPath(persistentPath);
       // Trigger storage event to update the map
       window.dispatchEvent(new StorageEvent('storage', {
@@ -539,7 +546,9 @@ export default function Home() {
         newValue: JSON.stringify(loadPersistentPaths()),
         storageArea: localStorage
       }));
-      console.log('Saved persistent path:', persistentPath.name, persistentPath.coordinates.length, 'points');
+      console.log('✅ Saved persistent path:', persistentPath.name, persistentPath.coordinates.length, 'points');
+    } else {
+      console.log('⚠️ Cannot save path - recordingPath length:', recordingPath.length, 'recordingStartTime:', recordingStartTime);
     }
     
     if (activeSession) {
