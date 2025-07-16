@@ -59,9 +59,10 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
 
   // Tile provider configuration
   const getTileConfig = (provider: string) => {
-    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || import.meta.env.MAPBOX_ACCESS_TOKEN;
     
     console.log('🗺️ Getting tile config for provider:', provider);
+    console.log('🗺️ Mapbox token available:', !!mapboxToken);
     
     switch (provider) {
       case 'mapbox-streets':
@@ -102,6 +103,20 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
         return {
           url: `https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          tileSize: 512,
+          zoomOffset: -1
+        };
+      case 'mapbox-custom':
+        if (!mapboxToken) {
+          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
+          return {
+            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          };
+        }
+        return {
+          url: `https://api.mapbox.com/styles/v1/jifysquid/cmd422kxy01t601rf67tl9ra2/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
           attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           tileSize: 512,
           zoomOffset: -1
@@ -169,11 +184,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } else {
       setShowLabels(true); // Default to showing labels
     }
-    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
+    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'mapbox-custom', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
       setMapStyle(savedMapStyle);
     } else {
-      setMapStyle('openstreetmap'); // Default to OpenStreetMap
-      localStorage.setItem('mapStyle', 'openstreetmap'); // Clear invalid value
+      setMapStyle('mapbox-custom'); // Default to user's custom Mapbox style
+      localStorage.setItem('mapStyle', 'mapbox-custom'); // Set user's custom style as default
     }
     if (savedPathColorScheme) {
       setPathColorScheme(savedPathColorScheme as 'bright' | 'fade');

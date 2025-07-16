@@ -208,6 +208,7 @@ export default function Settings() {
                 <SelectItem value="mapbox-streets">Mapbox Streets</SelectItem>
                 <SelectItem value="mapbox-satellite">Mapbox Satellite</SelectItem>
                 <SelectItem value="mapbox-outdoors">Mapbox Outdoors</SelectItem>
+                <SelectItem value="mapbox-custom">Custom Mapbox Style</SelectItem>
                 <SelectItem value="cartodb-positron">CartoDB Light</SelectItem>
                 <SelectItem value="cartodb-positron-no-labels">CartoDB Light No Labels</SelectItem>
                 <SelectItem value="esri-world-imagery">Esri Satellite</SelectItem>
