@@ -998,11 +998,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     // Skip creating dot marker when vehicle marker is being used (focuses on vehicle types)
     const isUsingVehicleMarker = focusArea && focusArea !== 'none';
     if (isUsingVehicleMarker) {
-      // Just handle map centering without creating a dot marker
+      // Only center on initial load, not during regular updates
       if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
         hasInitialLocationRef.current = true;
-      } else {
+      } else if (isTracking) {
+        // Only center during recording sessions
         mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
       }
       return;
