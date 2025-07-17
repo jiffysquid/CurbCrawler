@@ -1002,7 +1002,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
         hasInitialLocationRef.current = true;
-      } else if (isTracking) {
+      } else if (isRecording) {
         // Only center during recording sessions
         mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
       }
@@ -1038,7 +1038,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
       hasInitialLocationRef.current = true;
-    } else if (isTracking) {
+    } else if (isRecording) {
       // Only center on current location during recording sessions
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { 
         animate: false,
@@ -1134,8 +1134,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       `);
 
-      // Keep map centered on vehicle location during tracking
-      if (isTracking) {
+      // Keep map centered on vehicle location during recording
+      if (isRecording) {
         const currentZoom = mapInstanceRef.current.getZoom();
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], currentZoom, { 
           animate: false,
