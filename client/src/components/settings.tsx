@@ -19,6 +19,7 @@ export default function Settings() {
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
   const [pathColorScheme, setPathColorScheme] = useState<string>("bright");
+  const [savedPaths, setSavedPaths] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Load settings from localStorage on mount
@@ -58,6 +59,9 @@ export default function Settings() {
 
     if (savedFuelPrice) setFuelPrice(savedFuelPrice);
     if (savedPathColorScheme) setPathColorScheme(savedPathColorScheme);
+    
+    // Load saved paths
+    setSavedPaths(loadPersistentPaths());
   }, []);
 
   // Save settings to localStorage when they change
@@ -157,6 +161,7 @@ export default function Settings() {
 
   const handleClearPaths = () => {
     clearAllPersistentPaths();
+    setSavedPaths([]);
     // Trigger storage event to update the map
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'persistentPaths',
@@ -366,6 +371,29 @@ export default function Settings() {
           <div className="space-y-3">
             <div className="text-xs text-gray-600">
               All recorded paths are saved permanently until manually deleted. They appear on the map using the selected color scheme.
+            </div>
+            
+            {/* Saved Paths List */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Saved Paths ({savedPaths.length})</Label>
+              {savedPaths.length === 0 ? (
+                <div className="text-xs text-gray-500 italic">No saved paths yet</div>
+              ) : (
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {savedPaths.map((path, index) => (
+                    <div key={path.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                      <div className="flex-1">
+                        <div className="font-medium">{path.name}</div>
+                        <div className="text-gray-500">{path.date} • {(path.distance / 1000).toFixed(1)}km</div>
+                      </div>
+                      <div 
+                        className="w-3 h-3 rounded-full border border-gray-300"
+                        style={{ backgroundColor: path.color }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <AlertDialog>

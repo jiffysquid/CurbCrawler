@@ -1037,13 +1037,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
       hasInitialLocationRef.current = true;
-    } else {
-      // Always pan to current location to keep vehicle marker centered - with no animation to prevent UI freeze
+    } else if (isTracking) {
+      // Only center on current location during recording sessions
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { 
         animate: false,
         duration: 0
       });
     }
+    // When not recording, let user scroll/zoom freely without auto-centering
   }, [currentLocation, currentSuburb, isTracking, focusArea]);
 
   // Handle vehicle marker display
