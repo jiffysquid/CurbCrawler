@@ -1014,7 +1014,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       className: 'current-location-marker',
       html: `
         <div class="relative">
-          <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg ${isTracking ? 'pulse-dot' : ''}"></div>
+          <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg ${isRecording ? 'pulse-dot' : ''}"></div>
           ${currentLocation.accuracy ? `<div class="absolute inset-0 rounded-full border border-blue-300 opacity-30" style="width: ${Math.min(currentLocation.accuracy / 2, 50)}px; height: ${Math.min(currentLocation.accuracy / 2, 50)}px; margin: auto;"></div>` : ''}
         </div>
       `,
@@ -1046,7 +1046,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       });
     }
     // When not recording, let user scroll/zoom freely without auto-centering
-  }, [currentLocation, currentSuburb, isTracking, focusArea]);
+  }, [currentLocation, currentSuburb, isRecording, focusArea]);
 
   // Handle vehicle marker display
   useEffect(() => {

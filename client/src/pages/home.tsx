@@ -355,7 +355,7 @@ export default function Home() {
   }, [isRecording, location, sessions, addLocationMutation, toast]);
 
   const activeSession = sessions.find(s => s.isActive);
-  const isTracking = Boolean(activeSession);
+  const isTracking = isRecording;
 
   // Get session locations for the map
   const { data: sessionLocations = [] } = useQuery<LocationPoint[]>({
