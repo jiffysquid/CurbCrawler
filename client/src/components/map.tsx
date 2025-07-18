@@ -393,56 +393,50 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
-      // DISABLE ROTATION TEMPORARILY - too erratic and wrong direction
       // Only rotate if:
-      // 1. We've moved significantly (>30 meters) 
-      // 2. It's been at least 10 seconds since last rotation (prevent oscillation)
-      // 3. The bearing change is significant (>45 degrees)
-      if (false && distance > 30 && timeSinceLastRotation > 10000) {
+      // 1. We've moved significantly (>25 meters) 
+      // 2. It's been at least 4 seconds since last rotation (prevent oscillation)
+      // 3. The bearing change is significant (>20 degrees)
+      if (distance > 25 && timeSinceLastRotation > 4000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
         console.log('🧭 Rotation check - distance:', distance, 'bearingDiff:', normalizedBearingDiff, 'timeSince:', timeSinceLastRotation);
         
-        if (normalizedBearingDiff > 45) {
+        if (normalizedBearingDiff > 20) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
-          // NEW APPROACH: Use Leaflet's native bearing rotation
-          // This avoids blank tiles and keeps UI elements properly positioned
+          // NEW APPROACH: Rotate entire map container around fixed vehicle marker
+          // This keeps the vehicle marker in the center while rotating the world around it
           try {
             // STEP 1: Ensure the map is properly centered on the vehicle
             const currentZoom = mapInstanceRef.current.getZoom();
             mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, { animate: false });
             
-            // STEP 2: Apply smooth rotation to the map
-            const mapPane = mapInstanceRef.current.getPanes().mapPane;
-            if (mapPane) {
-              // Fix the rotation direction - use positive bearing to rotate map so driving direction faces up
-              const rotationAngle = bearing;
+            // STEP 2: Apply CSS rotation to the entire map container
+            const mapContainer = mapInstanceRef.current.getContainer();
+            if (mapContainer) {
+              // Convert bearing to map rotation (invert so driving direction faces up)
+              const rotationAngle = -bearing;
               
-              // Use center of map container as rotation origin
-              mapPane.style.transform = `rotate(${rotationAngle}deg)`;
-              mapPane.style.transformOrigin = '50% 50%';
-              mapPane.style.transition = 'transform 1.5s ease-out';
+              // Apply rotation around the center of the map container
+              mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
+              mapContainer.style.transformOrigin = '50% 50%';
+              mapContainer.style.transition = 'transform 2s ease-out';
               
-              console.log('✅ Map rotation applied - bearing:', bearing, 'rotation:', rotationAngle, 'degrees');
-              console.log('✅ Map pane transform:', mapPane.style.transform);
+              console.log('✅ Map container rotation applied - bearing:', bearing, 'rotation:', rotationAngle, 'degrees');
+              console.log('✅ Map container transform:', mapContainer.style.transform);
             } else {
-              console.log('❌ Map pane not found');
+              console.log('❌ Map container not found');
             }
             
-            // Counter-rotate UI elements to keep them readable
-            const counterRotation = bearing; // Positive to counter the map rotation
-            
-            // Counter-rotate vehicle marker to keep it pointing up
+            // Keep vehicle marker fixed in position (no rotation needed as it stays centered)
             if (vehicleMarkerRef.current) {
               const vehicleElement = vehicleMarkerRef.current.getElement();
               if (vehicleElement) {
-                // Keep the vehicle marker always pointing north (up)
-                vehicleElement.style.transform = `rotate(${counterRotation}deg)`;
-                vehicleElement.style.transformOrigin = 'center center';
-                vehicleElement.style.transition = 'transform 1.5s ease-out';
-                console.log('✅ Counter-rotated vehicle marker to stay upright');
+                // Vehicle marker stays fixed in center - no rotation needed
+                vehicleElement.style.transform = 'none';
+                console.log('✅ Vehicle marker kept fixed in center');
               }
             }
             
@@ -1262,8 +1256,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         duration: 1.0
       });
       
-      // DISABLE ROTATION TEMPORARILY - too erratic and wrong direction
-      // updateMapRotationV2(currentLocation);
+      // Update map rotation based on driving direction
+      updateMapRotationV2(currentLocation);
       
       // Add current location to route if recording
       if (isRecording) {
