@@ -210,6 +210,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Re-implemented map rotation using CSS transform on entire map container around fixed vehicle marker - proper navigation rotation
 - July 18, 2025: Major migration from Leaflet to Mapbox GL JS for native rotation support and better navigation experience
 - July 18, 2025: Implemented Mapbox GL JS with custom style (cmd422kxy01t601rf67tl9ra2) and native bearing rotation for proper GPS navigation
+- July 18, 2025: Restored suburb info window with statistics button after Mapbox migration
+- July 18, 2025: Implemented single toggle button for van/suburb zoom (replaces separate zoom buttons)
+- July 18, 2025: Fixed suburb lookup API integration with proper query parameters and error handling
 
 ## User Preferences
 

@@ -232,25 +232,34 @@ export default function MapboxMap({
   // Load suburb boundaries
   const { data: suburbs } = useQuery({
     queryKey: ['/api/suburbs/boundaries'],
-    enabled: showSuburbs && mapReady
+    enabled: Boolean(showSuburbs && mapReady)
   });
 
   // Load toilets
   const { data: toilets } = useQuery({
     queryKey: ['/api/toilets'],
-    enabled: showToilets && mapReady && !!currentLocation
+    enabled: Boolean(showToilets && mapReady && currentLocation)
   });
 
   // Load demographics
   const { data: demographics } = useQuery({
     queryKey: ['/api/demographics'],
-    enabled: showDemographics && mapReady
+    enabled: Boolean(showDemographics && mapReady)
   });
 
   // Load current suburb info
   const { data: currentSuburb } = useQuery({
     queryKey: ['/api/suburbs/lookup', currentLocation?.lat, currentLocation?.lng],
-    enabled: !!currentLocation && mapReady
+    enabled: Boolean(currentLocation && mapReady && currentLocation?.lat && currentLocation?.lng),
+    queryFn: async () => {
+      if (!currentLocation?.lat || !currentLocation?.lng) return null;
+      
+      const response = await fetch(`/api/suburbs/lookup?lat=${currentLocation.lat}&lng=${currentLocation.lng}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch suburb');
+      }
+      return response.json();
+    }
   });
 
   // Debug suburb info
@@ -402,10 +411,7 @@ export default function MapboxMap({
               <span className="font-semibold text-lg">{currentSuburb.suburb}</span>
             </div>
             <Button
-              onClick={() => {
-                console.log('🔍 Info button clicked, current demographics:', !!demographics);
-                setShowDemographics(!showDemographics);
-              }}
+              onClick={() => setShowDemographics(!showDemographics)}
               size="sm"
               variant="ghost"
               className="h-8 w-8 p-0 hover:bg-gray-100"
