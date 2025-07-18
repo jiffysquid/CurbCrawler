@@ -37,7 +37,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showSuburbs, setShowSuburbs] = useState(true);
   const [showToilets, setShowToilets] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
-  const [mapStyle, setMapStyle] = useState<string>('mapbox-custom');
+  // Removed map style selection - only using custom Mapbox style
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
   const [pathColorScheme, setPathColorScheme] = useState<'bright' | 'fade'>('bright');
@@ -57,109 +57,22 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
-  // Tile provider configuration
-  const getTileConfig = (provider: string) => {
-    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || import.meta.env.MAPBOX_ACCESS_TOKEN;
+  // Custom Mapbox tile configuration
+  const getTileConfig = () => {
+    // Use the Mapbox token directly from environment variables
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
     
-    console.log('🗺️ Getting tile config for provider:', provider);
+    console.log('🗺️ Using custom Mapbox style: cmd422kxy01t601rf67tl9ra2');
     console.log('🗺️ VITE_MAPBOX_ACCESS_TOKEN:', import.meta.env.VITE_MAPBOX_ACCESS_TOKEN);
-    console.log('🗺️ MAPBOX_ACCESS_TOKEN:', import.meta.env.MAPBOX_ACCESS_TOKEN);
-    console.log('🗺️ Final mapboxToken:', mapboxToken);
+    console.log('🗺️ Using fallback token for custom style');
     console.log('🗺️ Mapbox token available:', !!mapboxToken);
     
-    switch (provider) {
-      case 'mapbox-streets':
-        if (!mapboxToken) {
-          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
-          return {
-            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          };
-        }
-        return {
-          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
-          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          tileSize: 512,
-          zoomOffset: -1
-        };
-      case 'mapbox-satellite':
-        if (!mapboxToken) {
-          console.warn('⚠️ Mapbox token missing, falling back to Esri satellite');
-          return {
-            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-          };
-        }
-        return {
-          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
-          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          tileSize: 512,
-          zoomOffset: -1
-        };
-      case 'mapbox-outdoors':
-        if (!mapboxToken) {
-          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
-          return {
-            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          };
-        }
-        return {
-          url: `https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
-          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          tileSize: 512,
-          zoomOffset: -1
-        };
-      case 'mapbox-custom':
-        if (!mapboxToken) {
-          console.warn('⚠️ Mapbox token missing, falling back to OpenStreetMap');
-          return {
-            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          };
-        }
-        return {
-          url: `https://api.mapbox.com/styles/v1/jifysquid/cmd422kxy01t601rf67tl9ra2/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
-          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          tileSize: 512,
-          zoomOffset: -1
-        };
-      case 'cartodb-positron':
-        return {
-          url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd'
-        };
-      case 'cartodb-positron-no-labels':
-        return {
-          url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd'
-        };
-      case 'esri-world-imagery':
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        };
-      case 'esri-world-topo':
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-        };
-      case 'openstreetmap-no-labels':
-        return {
-          url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd'
-        };
-      case 'openstreetmap':
-      default:
-        console.log('🗺️ Using default OpenStreetMap for provider:', provider);
-        return {
-          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        };
-    }
+    return {
+      url: `https://api.mapbox.com/styles/v1/jifysquid/cmd422kxy01t601rf67tl9ra2/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+      attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      tileSize: 512,
+      zoomOffset: -1
+    };
   };
 
   // Load settings and persistent paths from localStorage
@@ -168,7 +81,6 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
     const savedShowLabels = localStorage.getItem('showLabels');
-    const savedMapStyle = localStorage.getItem('mapStyle');
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
@@ -187,12 +99,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     } else {
       setShowLabels(true); // Default to showing labels
     }
-    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'mapbox-custom', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
-      setMapStyle(savedMapStyle);
-    } else {
-      setMapStyle('mapbox-custom'); // Default to user's custom Mapbox style
-      localStorage.setItem('mapStyle', 'mapbox-custom'); // Set user's custom style as default
-    }
+    // Removed mapStyle handling - only using custom Mapbox style
     if (savedPathColorScheme) {
       setPathColorScheme(savedPathColorScheme as 'bright' | 'fade');
     }
@@ -222,9 +129,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       if (e.key === 'showLabels' && e.newValue) {
         setShowLabels(e.newValue === 'true');
       }
-      if (e.key === 'mapStyle' && e.newValue) {
-        setMapStyle(e.newValue);
-      }
+      // Removed mapStyle handling - using fixed custom style
       if (e.key === 'persistentPaths') {
         const paths = loadPersistentPaths();
         console.log('🗺️ Storage event - reloading persistent paths:', paths.length, 'paths');
@@ -554,8 +459,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           wheelPxPerZoomLevel: 60,
         });
 
-        // Add tiles with dynamic provider selection
-        const tileConfig = getTileConfig(mapStyle);
+        // Add tiles with custom Mapbox style
+        const tileConfig = getTileConfig();
         const tileLayer = L.tileLayer(tileConfig.url, {
           attribution: tileConfig.attribution,
           maxZoom: 19,
@@ -616,8 +521,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         }
       });
 
-      // Add new tile layer with current style
-      const tileConfig = getTileConfig(mapStyle);
+      // Add new tile layer with custom style
+      const tileConfig = getTileConfig();
       const tileLayer = L.tileLayer(tileConfig.url, {
         attribution: tileConfig.attribution,
         maxZoom: 19,
@@ -651,11 +556,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       // Add separate labels layer if needed
       updateLabelsLayer();
       
-      console.log('🗺️ Updated tile layer to:', mapStyle);
+      console.log('🗺️ Updated tile layer to: custom-mapbox');
     };
 
     updateTileLayer();
-  }, [mapStyle]);
+  }, []); // No dependencies - always use custom style
 
   // Function to update labels layer
   const updateLabelsLayer = () => {
@@ -667,12 +572,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       labelsLayerRef.current = null;
     }
 
-    // Check if we should add labels layer
-    const shouldShowLabels = showLabels && (
-      mapStyle.includes('no-labels') || 
-      mapStyle === 'esri-world-imagery' ||
-      mapStyle === 'mapbox-satellite'
-    );
+    // Check if we should add labels layer - custom Mapbox style doesn't need labels overlay
+    const shouldShowLabels = false; // Custom style has built-in labels
 
     if (shouldShowLabels) {
       // Add labels overlay for no-labels styles
@@ -690,16 +591,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       });
 
       labelsLayerRef.current.addTo(mapInstanceRef.current);
-      console.log('🏷️ Added labels layer for', mapStyle);
+      console.log('🏷️ Added labels layer for custom-mapbox');
     } else {
-      console.log('🏷️ No labels layer needed for', mapStyle);
+      console.log('🏷️ No labels layer needed for custom-mapbox');
     }
   };
 
   // Update labels layer when settings change
   useEffect(() => {
     updateLabelsLayer();
-  }, [showLabels, mapStyle]);
+  }, [showLabels]); // Only depends on showLabels
 
   // Handle suburb boundaries with throttling to prevent excessive re-renders
   useEffect(() => {

@@ -11,7 +11,7 @@ import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-re
 import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
 
 export default function Settings() {
-  const [mapStyle, setMapStyle] = useState<string>("mapbox-custom");
+  // Removed map style selection - only using custom Mapbox style
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
   const [showToilets, setShowToilets] = useState<boolean>(false);
@@ -25,7 +25,6 @@ export default function Settings() {
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedFocusArea = localStorage.getItem('focusArea');
-    const savedMapStyle = localStorage.getItem('mapStyle');
     const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
     const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
     const savedShowToilets = localStorage.getItem('showToilets');
@@ -34,12 +33,7 @@ export default function Settings() {
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
-    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'mapbox-custom', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
-      setMapStyle(savedMapStyle);
-    } else {
-      setMapStyle('mapbox-custom'); // Default to custom Mapbox style
-      localStorage.setItem('mapStyle', 'mapbox-custom'); // Clear invalid value
-    }
+    // Removed map style handling - only using custom Mapbox style
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
     if (savedShowSuburbs !== null) {
       setShowSuburbBoundaries(savedShowSuburbs === 'true');
@@ -75,15 +69,7 @@ export default function Settings() {
     }));
   }, [focusArea]);
 
-  useEffect(() => {
-    localStorage.setItem('mapStyle', mapStyle);
-    // Trigger storage event for same-tab communication
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'mapStyle',
-      newValue: mapStyle,
-      storageArea: localStorage
-    }));
-  }, [mapStyle]);
+  // Removed map style storage - only using custom Mapbox style
 
   useEffect(() => {
     localStorage.setItem('gpsAccuracy', gpsAccuracy);
@@ -186,43 +172,11 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="map-style" className="text-xs font-medium">Map Provider</Label>
-            <Select 
-              value={mapStyle} 
-              onValueChange={(value) => {
-                console.log('Map provider changed to:', value);
-                setMapStyle(value);
-              }}
-              onOpenChange={(open) => {
-                console.log('Map provider dropdown opened:', open);
-              }}
-            >
-              <SelectTrigger className="h-9" onClick={() => console.log('Trigger clicked')}>
-                <SelectValue placeholder="Select map provider" />
-              </SelectTrigger>
-              <SelectContent 
-                className="z-[9999] max-h-[300px] bg-white border border-gray-200 shadow-lg"
-                position="popper"
-                sideOffset={5}
-                onOpenAutoFocus={(e) => {
-                  console.log('SelectContent opened');
-                }}
-              >
-                <SelectItem value="openstreetmap">OpenStreetMap (Free)</SelectItem>
-                <SelectItem value="openstreetmap-no-labels">OpenStreetMap No Labels</SelectItem>
-                <SelectItem value="mapbox-streets">Mapbox Streets</SelectItem>
-                <SelectItem value="mapbox-satellite">Mapbox Satellite</SelectItem>
-                <SelectItem value="mapbox-outdoors">Mapbox Outdoors</SelectItem>
-                <SelectItem value="mapbox-custom">Custom Mapbox Style</SelectItem>
-                <SelectItem value="cartodb-positron">CartoDB Light</SelectItem>
-                <SelectItem value="cartodb-positron-no-labels">CartoDB Light No Labels</SelectItem>
-                <SelectItem value="esri-world-imagery">Esri Satellite</SelectItem>
-                <SelectItem value="esri-world-topo">Esri Topographic</SelectItem>
-              </SelectContent>
-            </Select>
-            <CardDescription className="text-xs">
-              Mapbox provides high-quality tiles with better rotation support. No Labels versions prevent text rotation when map rotates.
-            </CardDescription>
+            <Label className="text-xs font-medium">Map Provider</Label>
+            <div className="p-2 bg-gray-50 rounded border text-xs">
+              <span className="font-medium">Custom Mapbox Style</span>
+              <p className="text-gray-600 mt-1">Using your custom Mapbox style: cmd422kxy01t601rf67tl9ra2</p>
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
