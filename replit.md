@@ -202,6 +202,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Implemented proper map rotation solution using native Leaflet bearing rotation with counter-rotating UI elements
 - July 18, 2025: Fixed rotation issues - van now stays pointing up, no blank tiles, and all text remains readable during map rotation
 - July 18, 2025: Map rotation now uses proper techniques: native map bearing rotation for tiles, counter-rotation for markers and UI elements
+- July 18, 2025: Fixed map rotation centering - rotation now occurs around vehicle position, not map center, for proper navigation experience
 
 ## User Preferences
 

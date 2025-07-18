@@ -394,33 +394,40 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
       // Only rotate if:
-      // 1. We've moved significantly (>5 meters)
-      // 2. It's been at least 2 seconds since last rotation (smooth, not jerky)
-      // 3. The bearing change is significant (>10 degrees)
-      if (distance > 5 && timeSinceLastRotation > 2000) {
+      // 1. We've moved significantly (>3 meters)
+      // 2. It's been at least 1 second since last rotation (smooth, not jerky)
+      // 3. The bearing change is significant (>5 degrees)
+      if (distance > 3 && timeSinceLastRotation > 1000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
-        if (normalizedBearingDiff > 10) {
+        if (normalizedBearingDiff > 5) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
           // NEW APPROACH: Use Leaflet's native bearing rotation
           // This avoids blank tiles and keeps UI elements properly positioned
           try {
-            // Method 1: Check if map has setBearing method (newer Leaflet versions)
-            if (typeof mapInstanceRef.current.setBearing === 'function') {
-              mapInstanceRef.current.setBearing(-bearing);
-              console.log('✅ Using native setBearing method');
+            // STEP 1: Ensure map is centered on vehicle before rotation
+            const currentZoom = mapInstanceRef.current.getZoom();
+            mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, { animate: false });
+            
+            // STEP 2: Get vehicle position in screen coordinates (should be center after setView)
+            const vehicleLatLng = L.latLng(newLocation.lat, newLocation.lng);
+            const vehiclePoint = mapInstanceRef.current.latLngToContainerPoint(vehicleLatLng);
+            
+            // STEP 3: Apply rotation around the vehicle's screen position
+            const mapPane = mapInstanceRef.current.getPanes().mapPane;
+            if (mapPane) {
+              const rotationAngle = -bearing;
+              
+              // Set transform origin to vehicle's screen position (should be center)
+              mapPane.style.transform = `rotate(${rotationAngle}deg)`;
+              mapPane.style.transformOrigin = `${vehiclePoint.x}px ${vehiclePoint.y}px`;
+              mapPane.style.transition = 'transform 1.5s ease-out';
+              
+              console.log('✅ Map centered on vehicle and rotating around point:', vehiclePoint.x, vehiclePoint.y);
             } else {
-              // Method 2: Use transform on map pane for older versions
-              const mapPane = mapInstanceRef.current.getPanes().mapPane;
-              if (mapPane) {
-                const rotationAngle = -bearing;
-                mapPane.style.transform = `rotate(${rotationAngle}deg)`;
-                mapPane.style.transformOrigin = '50% 50%';
-                mapPane.style.transition = 'transform 1.5s ease-out';
-                console.log('✅ Using map pane rotation');
-              }
+              console.log('❌ Map pane not found');
             }
             
             // Counter-rotate UI elements to keep them readable
@@ -430,10 +437,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             if (vehicleMarkerRef.current) {
               const vehicleElement = vehicleMarkerRef.current.getElement();
               if (vehicleElement) {
+                // Keep the vehicle marker always pointing north (up)
                 vehicleElement.style.transform = `rotate(${counterRotation}deg)`;
-                vehicleElement.style.transformOrigin = '50% 50%';
+                vehicleElement.style.transformOrigin = 'center center';
                 vehicleElement.style.transition = 'transform 1.5s ease-out';
-                console.log('✅ Counter-rotated vehicle marker');
+                console.log('✅ Counter-rotated vehicle marker to stay upright');
               }
             }
             
