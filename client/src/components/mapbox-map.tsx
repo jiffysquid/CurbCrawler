@@ -46,6 +46,7 @@ export default function MapboxMap({
   const lastRotationTime = useRef<number>(0);
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
   const [showDemographics, setShowDemographics] = useState(false);
+  const [isZoomedToVan, setIsZoomedToVan] = useState(true);
 
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
@@ -355,23 +356,25 @@ export default function MapboxMap({
   }, [persistentPaths, mapReady]);
 
   // Map controls
-  const zoomToVan = () => {
+  const toggleZoom = () => {
     if (mapRef.current && currentLocation) {
-      mapRef.current.easeTo({
-        center: [currentLocation.lng, currentLocation.lat],
-        zoom: 18,
-        duration: 1000
-      });
-    }
-  };
-
-  const zoomToSuburb = () => {
-    if (mapRef.current && currentLocation) {
-      mapRef.current.easeTo({
-        center: [currentLocation.lng, currentLocation.lat],
-        zoom: 13,
-        duration: 1000
-      });
+      if (isZoomedToVan) {
+        // Zoom out to suburb view
+        mapRef.current.easeTo({
+          center: [currentLocation.lng, currentLocation.lat],
+          zoom: 13,
+          duration: 1000
+        });
+        setIsZoomedToVan(false);
+      } else {
+        // Zoom in to van view
+        mapRef.current.easeTo({
+          center: [currentLocation.lng, currentLocation.lat],
+          zoom: 18,
+          duration: 1000
+        });
+        setIsZoomedToVan(true);
+      }
     }
   };
 
@@ -396,6 +399,7 @@ export default function MapboxMap({
               size="sm"
               variant="ghost"
               className="h-8 w-8 p-0"
+              title="View Statistics"
             >
               <Info className="h-4 w-4" />
             </Button>
@@ -447,22 +451,19 @@ export default function MapboxMap({
       {/* Map Controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
         <Button
-          onClick={zoomToVan}
+          onClick={toggleZoom}
           size="sm"
           variant="outline"
-          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
-          title="Zoom to Van"
+          className={`bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg ${
+            isZoomedToVan ? 'bg-blue-50 border-blue-300' : 'bg-green-50 border-green-300'
+          }`}
+          title={isZoomedToVan ? 'Zoom to Suburb' : 'Zoom to Van'}
         >
-          <Car className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={zoomToSuburb}
-          size="sm"
-          variant="outline"
-          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
-          title="Zoom to Suburb"
-        >
-          <Building className="h-4 w-4" />
+          {isZoomedToVan ? (
+            <Building className="h-4 w-4" />
+          ) : (
+            <Car className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>
