@@ -198,9 +198,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Moved path management from settings to sessions tab for logical organization
 - July 18, 2025: Fixed saved path distance calculation - now shows correct kilometers traveled instead of 0km
 - July 18, 2025: Created dedicated PathManagement component for sessions tab integration
-- July 18, 2025: Implemented smooth map rotation system - road always faces up while driving with 1.5 second smooth transitions
-- July 18, 2025: Added intelligent rotation logic preventing quick spinning when GPS confused - only rotates on significant movement and bearing changes
-- July 18, 2025: Map rotation activates automatically during movement with minimum 5 meter movement threshold and 2 second rotation intervals
+- July 18, 2025: Attempted map rotation system but disabled due to technical issues - van rotated with map, blank tiles appeared, and text became unreadable
+- July 18, 2025: Map rotation temporarily disabled until proper solution can be implemented that keeps van pointing up and text readable
 
 ## User Preferences
 

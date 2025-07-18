@@ -360,84 +360,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     updateCurrentSuburb();
   }, [currentLocation]);
 
-  // Enhanced rotation function with improved logic
+  // DISABLED: Map rotation functionality temporarily disabled
+  // Issues: van rotates with map, blank tiles around edges, road names rotate
+  // User needs: van always points up, no blank tiles, readable text
   const updateMapRotationV2 = useCallback((newLocation: { lat: number; lng: number }) => {
-    if (!mapInstanceRef.current) return;
-    
-    const now = Date.now();
-    const timeSinceLastRotation = now - lastRotationTime;
-    
-    console.log('🔄 updateMapRotation called with:', {
-      hasMap: !!mapInstanceRef.current,
-      isRecording,
-      newLocation,
-      prevLocation: previousLocationRef.current
-    });
-    
-    // If we have a previous location, calculate bearing for rotation
-    if (previousLocationRef.current) {
-      const bearing = calculateBearing(
-        previousLocationRef.current.lat,
-        previousLocationRef.current.lng,
-        newLocation.lat,
-        newLocation.lng
-      );
-      
-      const distance = calculateDistance(
-        previousLocationRef.current.lat,
-        previousLocationRef.current.lng,
-        newLocation.lat,
-        newLocation.lng
-      ) * 1000; // Convert to meters
-      
-      console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
-      
-      // Only rotate if:
-      // 1. We've moved significantly (>5 meters)
-      // 2. It's been at least 2 seconds since last rotation (smooth, not jerky)
-      // 3. The bearing change is significant (>10 degrees)
-      if (distance > 5 && timeSinceLastRotation > 2000) {
-        const bearingDiff = Math.abs(bearing - (currentBearing || 0));
-        const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
-        
-        if (normalizedBearingDiff > 10) {
-          console.log('🔄 Applying smooth rotation:', bearing, 'degrees (prev:', currentBearing, ')');
-          
-          // Apply smooth rotation to map container
-          const mapContainer = mapInstanceRef.current.getContainer();
-          if (mapContainer) {
-            // Calculate the rotation needed to make driving direction face up
-            const rotationAngle = -bearing; // Negative to rotate map, not vehicle
-            
-            mapContainer.style.transform = `rotate(${rotationAngle}deg)`;
-            mapContainer.style.transformOrigin = '50% 50%';
-            mapContainer.style.transition = 'transform 1.5s ease-out'; // Smooth 1.5s transition
-            
-            // Prevent scroll bars from appearing due to rotation
-            if (mapContainer.parentElement) {
-              mapContainer.parentElement.style.overflow = 'hidden';
-            }
-            
-            setCurrentBearing(bearing);
-            setMapRotation(rotationAngle);
-            setLastRotationTime(now);
-          }
-        } else {
-          console.log('🔄 Bearing change too small:', normalizedBearingDiff, 'degrees - no rotation');
-        }
-      } else {
-        console.log('🔄 Movement too small or rotation too recent - no rotation applied');
-      }
-    } else {
-      console.log('📍 Setting initial location for rotation tracking');
-    }
-    
-    // Always update previous location for bearing calculation when there's movement
-    const prevLoc = previousLocationRef.current;
-    if (!prevLoc || calculateDistance(prevLoc.lat, prevLoc.lng, newLocation.lat, newLocation.lng) * 1000 > 1) {
-      previousLocationRef.current = newLocation;
-    }
-  }, [currentBearing, lastRotationTime, isRecording]);
+    console.log('🚫 Map rotation disabled - would cause van rotation, blank tiles, and rotated text issues');
+    // Rotation disabled until we can implement proper solution
+    return;
+  }, []);
 
   // Apply pending rotation when tiles finish loading
   useEffect(() => {
