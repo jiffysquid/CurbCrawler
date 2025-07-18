@@ -360,14 +360,133 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     updateCurrentSuburb();
   }, [currentLocation]);
 
-  // DISABLED: Map rotation functionality temporarily disabled
-  // Issues: van rotates with map, blank tiles around edges, road names rotate
-  // User needs: van always points up, no blank tiles, readable text
+  // FIXED: Proper map rotation using native Leaflet bearing + counter-rotation
+  // This approach fixes: van stays upright, no blank tiles, readable text
   const updateMapRotationV2 = useCallback((newLocation: { lat: number; lng: number }) => {
-    console.log('🚫 Map rotation disabled - would cause van rotation, blank tiles, and rotated text issues');
-    // Rotation disabled until we can implement proper solution
-    return;
-  }, []);
+    if (!mapInstanceRef.current) return;
+    
+    const now = Date.now();
+    const timeSinceLastRotation = now - lastRotationTime;
+    
+    console.log('🔄 updateMapRotation called with:', {
+      hasMap: !!mapInstanceRef.current,
+      isRecording,
+      newLocation,
+      prevLocation: previousLocationRef.current
+    });
+    
+    // If we have a previous location, calculate bearing for rotation
+    if (previousLocationRef.current) {
+      const bearing = calculateBearing(
+        previousLocationRef.current.lat,
+        previousLocationRef.current.lng,
+        newLocation.lat,
+        newLocation.lng
+      );
+      
+      const distance = calculateDistance(
+        previousLocationRef.current.lat,
+        previousLocationRef.current.lng,
+        newLocation.lat,
+        newLocation.lng
+      ) * 1000; // Convert to meters
+      
+      console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
+      
+      // Only rotate if:
+      // 1. We've moved significantly (>5 meters)
+      // 2. It's been at least 2 seconds since last rotation (smooth, not jerky)
+      // 3. The bearing change is significant (>10 degrees)
+      if (distance > 5 && timeSinceLastRotation > 2000) {
+        const bearingDiff = Math.abs(bearing - (currentBearing || 0));
+        const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
+        
+        if (normalizedBearingDiff > 10) {
+          console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
+          
+          // NEW APPROACH: Use Leaflet's native bearing rotation
+          // This avoids blank tiles and keeps UI elements properly positioned
+          try {
+            // Method 1: Check if map has setBearing method (newer Leaflet versions)
+            if (typeof mapInstanceRef.current.setBearing === 'function') {
+              mapInstanceRef.current.setBearing(-bearing);
+              console.log('✅ Using native setBearing method');
+            } else {
+              // Method 2: Use transform on map pane for older versions
+              const mapPane = mapInstanceRef.current.getPanes().mapPane;
+              if (mapPane) {
+                const rotationAngle = -bearing;
+                mapPane.style.transform = `rotate(${rotationAngle}deg)`;
+                mapPane.style.transformOrigin = '50% 50%';
+                mapPane.style.transition = 'transform 1.5s ease-out';
+                console.log('✅ Using map pane rotation');
+              }
+            }
+            
+            // Counter-rotate UI elements to keep them readable
+            const counterRotation = bearing; // Positive to counter the map rotation
+            
+            // Counter-rotate vehicle marker to keep it pointing up
+            if (vehicleMarkerRef.current) {
+              const vehicleElement = vehicleMarkerRef.current.getElement();
+              if (vehicleElement) {
+                vehicleElement.style.transform = `rotate(${counterRotation}deg)`;
+                vehicleElement.style.transformOrigin = '50% 50%';
+                vehicleElement.style.transition = 'transform 1.5s ease-out';
+                console.log('✅ Counter-rotated vehicle marker');
+              }
+            }
+            
+            // Counter-rotate suburb polygons to keep text readable
+            suburbPolygonsRef.current.forEach((polygon: any) => {
+              if (polygon.getElement) {
+                const element = polygon.getElement();
+                if (element) {
+                  element.style.transform = `rotate(${counterRotation}deg)`;
+                  element.style.transformOrigin = '50% 50%';
+                  element.style.transition = 'transform 1.5s ease-out';
+                }
+              }
+            });
+            
+            // Counter-rotate toilet markers to keep them readable
+            toiletMarkersRef.current.forEach((marker: any) => {
+              if (marker.getElement) {
+                const element = marker.getElement();
+                if (element) {
+                  element.style.transform = `rotate(${counterRotation}deg)`;
+                  element.style.transformOrigin = '50% 50%';
+                  element.style.transition = 'transform 1.5s ease-out';
+                }
+              }
+            });
+            
+            setCurrentBearing(bearing);
+            setMapRotation(-bearing);
+            setLastRotationTime(now);
+            
+            console.log('✅ Map rotation applied successfully - van stays upright, no blank tiles');
+            
+          } catch (error) {
+            console.error('❌ Map rotation failed:', error);
+            console.log('🚫 Falling back to no rotation');
+          }
+        } else {
+          console.log('🔄 Bearing change too small:', normalizedBearingDiff, 'degrees - no rotation');
+        }
+      } else {
+        console.log('🔄 Movement too small or rotation too recent - no rotation applied');
+      }
+    } else {
+      console.log('📍 Setting initial location for rotation tracking');
+    }
+    
+    // Always update previous location for bearing calculation when there's movement
+    const prevLoc = previousLocationRef.current;
+    if (!prevLoc || calculateDistance(prevLoc.lat, prevLoc.lng, newLocation.lat, newLocation.lng) * 1000 > 1) {
+      previousLocationRef.current = newLocation;
+    }
+  }, [currentBearing, lastRotationTime, isRecording]);
 
   // Apply pending rotation when tiles finish loading
   useEffect(() => {

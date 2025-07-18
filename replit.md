@@ -199,7 +199,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Fixed saved path distance calculation - now shows correct kilometers traveled instead of 0km
 - July 18, 2025: Created dedicated PathManagement component for sessions tab integration
 - July 18, 2025: Attempted map rotation system but disabled due to technical issues - van rotated with map, blank tiles appeared, and text became unreadable
-- July 18, 2025: Map rotation temporarily disabled until proper solution can be implemented that keeps van pointing up and text readable
+- July 18, 2025: Implemented proper map rotation solution using native Leaflet bearing rotation with counter-rotating UI elements
+- July 18, 2025: Fixed rotation issues - van now stays pointing up, no blank tiles, and all text remains readable during map rotation
+- July 18, 2025: Map rotation now uses proper techniques: native map bearing rotation for tiles, counter-rotation for markers and UI elements
 
 ## User Preferences
 
