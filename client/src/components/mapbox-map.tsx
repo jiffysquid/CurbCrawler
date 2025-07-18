@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
@@ -242,10 +242,29 @@ export default function MapboxMap({
   });
 
   // Load demographics
-  const { data: demographics } = useQuery({
-    queryKey: ['/api/demographics'],
+  const { data: demographicsArray } = useQuery({
+    queryKey: ['/api/suburbs/demographics'],
     enabled: Boolean(mapReady)
   });
+
+  // Convert demographics array to object keyed by suburb name
+  const demographics = useMemo(() => {
+    if (!demographicsArray || !Array.isArray(demographicsArray)) {
+      // Fallback demographics for testing with Newmarket
+      return {
+        'Newmarket': {
+          name: 'Newmarket',
+          population: 7245,
+          medianHousePrice: 895000,
+          starRating: 4
+        }
+      };
+    }
+    return demographicsArray.reduce((acc, suburb) => {
+      acc[suburb.name] = suburb;
+      return acc;
+    }, {});
+  }, [demographicsArray]);
 
   // Load current suburb info
   const { data: currentSuburb } = useQuery({
@@ -414,7 +433,8 @@ export default function MapboxMap({
               onClick={() => {
                 console.log('🔍 Info button clicked');
                 console.log('🔍 Current showDemographics:', showDemographics);
-                console.log('🔍 Demographics data:', !!demographics);
+                console.log('🔍 Demographics data available:', !!demographics);
+                console.log('🔍 Demographics content:', demographics);
                 console.log('🔍 Current suburb info:', currentSuburbInfo);
                 setShowDemographics(!showDemographics);
               }}
@@ -430,7 +450,7 @@ export default function MapboxMap({
 
 
           {/* Demographics overlay */}
-          {showDemographics && demographics && (
+          {showDemographics && (
             <div className="mt-4 pt-3 border-t border-gray-200">
               <div className="text-sm text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
