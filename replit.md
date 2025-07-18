@@ -13,7 +13,7 @@ This is a full-stack location tracking application built with React and Express.
 - **UI Framework**: Shadcn/ui components built on Radix UI primitives
 - **Styling**: Tailwind CSS with custom design system
 - **Build Tool**: Vite for development and bundling
-- **Map Integration**: Leaflet for interactive mapping
+- **Map Integration**: Mapbox GL JS for interactive mapping with native rotation support
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js
@@ -208,6 +208,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Fixed map rotation direction and oscillation - rotation now uses positive bearing and higher thresholds to prevent back-and-forth swinging
 - July 18, 2025: Temporarily disabled map rotation due to erratic behavior and wrong direction - focusing on stable van visibility first
 - July 18, 2025: Re-implemented map rotation using CSS transform on entire map container around fixed vehicle marker - proper navigation rotation
+- July 18, 2025: Major migration from Leaflet to Mapbox GL JS for native rotation support and better navigation experience
+- July 18, 2025: Implemented Mapbox GL JS with custom style (cmd422kxy01t601rf67tl9ra2) and native bearing rotation for proper GPS navigation
 
 ## User Preferences
 

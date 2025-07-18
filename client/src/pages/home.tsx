@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import Map from "@/components/map";
+import MapboxMap from "@/components/mapbox-map";
 import SimpleControls from "@/components/simple-controls";
 import SessionHistory from "@/components/session-history";
 import Settings from "@/components/settings";
@@ -28,6 +28,7 @@ export default function Home() {
   const [realTimeDistance, setRealTimeDistance] = useState<number>(0);
   const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number; timestamp?: number } | null>(null);
   const [recordingPath, setRecordingPath] = useState<{ lat: number; lng: number }[]>([]);
+  const [persistentPaths, setPersistentPaths] = useState<any[]>([]);
   
   const { toast } = useToast();
   
@@ -61,6 +62,11 @@ export default function Home() {
       // Production mode: Start continuous GPS tracking immediately
       console.log("Production mode: Starting continuous GPS tracking");
       startWatching();
+      
+      // Load persistent paths from localStorage
+      const paths = loadPersistentPaths();
+      setPersistentPaths(paths);
+      console.log('🗺️ Loaded persistent paths:', paths.length);
     } else {
       toast({
         title: "Geolocation Not Supported",
@@ -621,13 +627,14 @@ export default function Home() {
     <div className="flex h-screen bg-background">
       {/* Map Container */}
       <div className="flex-1 relative">
-        <Map
+        <MapboxMap
           currentLocation={location}
-          sessionLocations={sessionLocations}
-          currentSuburb={currentSuburb}
-          isTracking={isTracking}
           isRecording={isRecording}
-          allSessions={sessions}
+          onLocationUpdate={handleKMLLocationUpdate}
+          persistentPaths={persistentPaths}
+          focusArea="imax-van"
+          showSuburbs={true}
+          showToilets={false}
         />
         
         {/* Simple Controls */}
