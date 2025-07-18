@@ -253,6 +253,13 @@ export default function MapboxMap({
     enabled: !!currentLocation && mapReady
   });
 
+  // Debug suburb info
+  useEffect(() => {
+    if (currentSuburb) {
+      console.log('🏘️ Current suburb detected:', currentSuburb.suburb);
+    }
+  }, [currentSuburb]);
+
   // Update current suburb info with clearout type
   useEffect(() => {
     if (currentSuburb && suburbs) {
@@ -395,13 +402,16 @@ export default function MapboxMap({
               <span className="font-semibold text-lg">{currentSuburb.suburb}</span>
             </div>
             <Button
-              onClick={() => setShowDemographics(!showDemographics)}
+              onClick={() => {
+                console.log('🔍 Info button clicked, current demographics:', !!demographics);
+                setShowDemographics(!showDemographics);
+              }}
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 hover:bg-gray-100"
               title="View Statistics"
             >
-              <Info className="h-4 w-4" />
+              <Info className="h-4 w-4 text-blue-600" />
             </Button>
           </div>
           
