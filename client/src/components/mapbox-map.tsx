@@ -244,7 +244,7 @@ export default function MapboxMap({
   // Load demographics
   const { data: demographics } = useQuery({
     queryKey: ['/api/demographics'],
-    enabled: Boolean(showDemographics && mapReady)
+    enabled: Boolean(mapReady)
   });
 
   // Load current suburb info
@@ -411,7 +411,13 @@ export default function MapboxMap({
               <span className="font-semibold text-lg">{currentSuburb.suburb}</span>
             </div>
             <Button
-              onClick={() => setShowDemographics(!showDemographics)}
+              onClick={() => {
+                console.log('🔍 Info button clicked');
+                console.log('🔍 Current showDemographics:', showDemographics);
+                console.log('🔍 Demographics data:', !!demographics);
+                console.log('🔍 Current suburb info:', currentSuburbInfo);
+                setShowDemographics(!showDemographics);
+              }}
               size="sm"
               variant="ghost"
               className="h-8 w-8 p-0 hover:bg-gray-100"
@@ -421,37 +427,24 @@ export default function MapboxMap({
             </Button>
           </div>
           
-          {currentSuburbInfo && (
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  currentSuburbInfo.clearoutType === 'current' ? 'bg-green-500' : 
-                  currentSuburbInfo.clearoutType === 'next' ? 'bg-blue-500' : 'bg-gray-400'
-                }`} />
-                <span className="text-sm font-medium">
-                  {currentSuburbInfo.clearoutType === 'current' ? 'Current Week Clearout' :
-                   currentSuburbInfo.clearoutType === 'next' ? 'Next Week Clearout' : 'No Scheduled Clearout'}
-                </span>
-              </div>
-            </div>
-          )}
+
 
           {/* Demographics overlay */}
-          {showDemographics && demographics && currentSuburbInfo && (
+          {showDemographics && demographics && (
             <div className="mt-4 pt-3 border-t border-gray-200">
               <div className="text-sm text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  <span>Population: {demographics[currentSuburbInfo.name]?.population?.toLocaleString() || 'N/A'}</span>
+                  <span>Population: {demographics[currentSuburb.suburb]?.population?.toLocaleString() || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="h-4 w-4" />
-                  <span>Median Price: ${demographics[currentSuburbInfo.name]?.medianHousePrice?.toLocaleString() || 'N/A'}</span>
+                  <span>Median Price: ${demographics[currentSuburb.suburb]?.medianHousePrice?.toLocaleString() || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
-                      <span key={i} className={`text-sm ${i < (demographics[currentSuburbInfo.name]?.starRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
+                      <span key={i} className={`text-sm ${i < (demographics[currentSuburb.suburb]?.starRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
                         ★
                       </span>
                     ))}
