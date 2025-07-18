@@ -229,22 +229,22 @@ export default function MapboxMap({
     previousLocationRef.current = currentLocation;
   }, [currentLocation, mapReady]);
 
+  // Load clearout schedule to get current and next suburbs
+  const { data: clearoutSchedule } = useQuery({
+    queryKey: ['/api/clearout-schedule'],
+    enabled: Boolean(mapReady)
+  });
+
   // Load suburb boundaries
   const { data: suburbs } = useQuery({
     queryKey: ['/api/suburbs/boundaries'],
-    enabled: Boolean(showSuburbs && mapReady)
+    enabled: Boolean(showSuburbs && mapReady && clearoutSchedule)
   });
 
   // Load toilets
   const { data: toilets } = useQuery({
     queryKey: ['/api/toilets'],
     enabled: Boolean(showToilets && mapReady && currentLocation)
-  });
-
-  // Load clearout schedule to get current and next suburbs
-  const { data: clearoutSchedule } = useQuery({
-    queryKey: ['/api/clearout-schedule'],
-    enabled: Boolean(mapReady)
   });
 
   // Load demographics with proper current/next suburb parameters
@@ -329,8 +329,8 @@ export default function MapboxMap({
     if (source && suburbs) {
       // Filter to only show current and next week clearouts
       const filteredSuburbs = suburbs.filter((suburb: any) => {
-        const isCurrent = suburb.clearoutType === 'current';
-        const isNext = suburb.clearoutType === 'next';
+        const isCurrent = clearoutSchedule?.current?.includes(suburb.name) || suburb.clearoutType === 'current';
+        const isNext = clearoutSchedule?.next?.includes(suburb.name) || suburb.clearoutType === 'next';
         return isCurrent || isNext;
       });
 
