@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationPoint, SuburbBoundary, PublicToilet, SessionWithStats } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Crosshair, Focus, Info, BarChart3 } from "lucide-react";
+import { Crosshair, Focus, Info, BarChart3, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVehicleFocusCoordinates, getVehicleIcon, calculateBearing, calculateDistance, throttle, getPathColor, loadPersistentPaths, savePersistentPath, PersistentPath } from "@/lib/utils";
 import imaxVanImage from "@assets/imax_1750683369388.png";
@@ -45,6 +45,30 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [isLoadingTiles, setIsLoadingTiles] = useState(false);
   const [pendingRotation, setPendingRotation] = useState<number | null>(null);
   const labelsLayerRef = useRef<any>(null);
+  const [isZoomedIn, setIsZoomedIn] = useState(false);
+  const [savedZoomLevel, setSavedZoomLevel] = useState(12);
+
+  // Track zoom level changes to update button state
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const handleZoomEnd = () => {
+      const currentZoom = mapInstanceRef.current.getZoom();
+      // Consider zoomed in if zoom level is 15 or higher
+      setIsZoomedIn(currentZoom >= 15);
+    };
+
+    mapInstanceRef.current.on('zoomend', handleZoomEnd);
+    
+    // Set initial state
+    handleZoomEnd();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.off('zoomend', handleZoomEnd);
+      }
+    };
+  }, [isMapReady]);
 
   const [showDemographics, setShowDemographics] = useState(false);
   
@@ -1279,10 +1303,23 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     }
   };
 
-  const focusOnVehicle = () => {
-    if (mapInstanceRef.current) {
-      const coordinates = getVehicleFocusCoordinates(focusArea, currentLocation);
-      mapInstanceRef.current.setView([coordinates.lat, coordinates.lng], coordinates.zoom);
+  const toggleZoom = () => {
+    if (!mapInstanceRef.current || !currentLocation) return;
+    
+    const currentZoom = mapInstanceRef.current.getZoom();
+    
+    if (isZoomedIn) {
+      // Zoom out to see whole suburb
+      setSavedZoomLevel(currentZoom);
+      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 11); // Suburb-wide view
+      setIsZoomedIn(false);
+      console.log('🔍 Zoomed out to suburb view (zoom 11)');
+    } else {
+      // Zoom in to current location
+      const closeZoom = savedZoomLevel > 15 ? savedZoomLevel : 17; // Use saved zoom or default close zoom
+      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], closeZoom);
+      setIsZoomedIn(true);
+      console.log('🔍 Zoomed in to location (zoom', closeZoom, ')');
     }
   };
 
@@ -1392,14 +1429,14 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         
 
         
-        {/* Focus on Vehicle button */}
+        {/* Toggle Zoom button */}
         <Button
-          onClick={focusOnVehicle}
+          onClick={toggleZoom}
           size="sm"
           className="bg-primary hover:bg-blue-700 text-white shadow-lg"
-          title={`Focus on vehicle (${focusArea.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())})`}
+          title={isZoomedIn ? "Zoom out to see whole suburb" : "Zoom in to current location"}
         >
-          <Focus className="h-4 w-4" />
+          {isZoomedIn ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
         </Button>
         
 
