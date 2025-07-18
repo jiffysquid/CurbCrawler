@@ -167,13 +167,13 @@ export const PATH_COLORS = [
 export function getPathColor(sessionIndex: number, colorScheme: 'bright' | 'fade' = 'bright', sessionCount: number = 0): { color: string; weight: number; opacity: number } {
   if (colorScheme === 'bright') {
     const color = PATH_COLORS[sessionIndex % PATH_COLORS.length];
-    return { color, weight: 4, opacity: 0.8 };
+    return { color, weight: 8, opacity: 0.75 };  // Double thickness, 75% opacity
   } else {
     // Fade scheme - newer paths are brighter
     const color = PATH_COLORS[sessionIndex % PATH_COLORS.length];
     const age = sessionCount - sessionIndex;
-    const opacity = Math.max(0.3, 0.9 - (age * 0.1));
-    const weight = Math.max(2, 5 - age);
+    const opacity = Math.max(0.3, 0.75 - (age * 0.1));  // 75% max opacity
+    const weight = Math.max(4, 10 - age);  // Double thickness
     return { color, weight, opacity };
   }
 }
@@ -191,6 +191,19 @@ export interface PersistentPath {
 
 export function savePersistentPath(path: PersistentPath): void {
   const existingPaths = loadPersistentPaths();
+  // Calculate correct distance from coordinates if missing
+  if (!path.distance && path.coordinates && path.coordinates.length > 1) {
+    let totalDistance = 0;
+    for (let i = 1; i < path.coordinates.length; i++) {
+      totalDistance += calculateDistance(
+        path.coordinates[i-1].lat,
+        path.coordinates[i-1].lng,
+        path.coordinates[i].lat,
+        path.coordinates[i].lng
+      );
+    }
+    path.distance = totalDistance;
+  }
   existingPaths.push(path);
   localStorage.setItem('persistentPaths', JSON.stringify(existingPaths));
 }

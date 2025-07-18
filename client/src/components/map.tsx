@@ -995,10 +995,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
       hasInitialLocationRef.current = true;
     } else if (isRecording) {
-      // Only center on current location during recording sessions
+      // Only center on current location during recording sessions with smooth scrolling
       mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), { 
-        animate: false,
-        duration: 0
+        animate: true,
+        duration: 1.0, // Smooth scrolling - increased duration
+        easeLinearity: 0.25 // Smooth easing
       });
     }
     // When not recording, let user scroll/zoom freely without auto-centering
@@ -1132,8 +1133,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           
           currentRoutePolylineRef.current = L.polyline(routeCoords, {
             color: '#EF4444',  // Red color for current session
-            weight: 5,
-            opacity: 0.9,
+            weight: 10,  // Double the thickness (was 5)
+            opacity: 0.75,  // 75% opacity (was 0.9)
             smoothFactor: 1,
             dashArray: '10, 5'  // Dashed line to distinguish from historical routes
           }).addTo(mapInstanceRef.current);
@@ -1228,8 +1229,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         
         routePolylineRef.current = L.polyline(routeCoords, {
           color: '#10B981',
-          weight: 4,
-          opacity: 0.8,
+          weight: 8,  // Double the thickness (was 4)
+          opacity: 0.75,  // 75% opacity (was 0.8)
           smoothFactor: 1
         }).addTo(mapInstanceRef.current);
 
@@ -1309,11 +1310,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     const currentZoom = mapInstanceRef.current.getZoom();
     
     if (isZoomedIn) {
-      // Zoom out to see whole suburb
+      // Zoom out to see current clearout area
       setSavedZoomLevel(currentZoom);
-      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 11); // Suburb-wide view
+      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 13); // Clearout area view
       setIsZoomedIn(false);
-      console.log('🔍 Zoomed out to suburb view (zoom 11)');
+      console.log('🔍 Zoomed out to clearout area view (zoom 13)');
     } else {
       // Zoom in to current location
       const closeZoom = savedZoomLevel > 15 ? savedZoomLevel : 17; // Use saved zoom or default close zoom

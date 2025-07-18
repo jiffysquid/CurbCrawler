@@ -124,10 +124,7 @@ export default function SimpleControls({
                       <div className="text-green-600">${recordingStats.cost}</div>
                     </>
                   )}
-                  <div className="text-gray-500">|</div>
-                  <div className={`text-xs ${location ? 'text-green-600' : 'text-red-600'}`}>
-                    {location ? '📡 GPS' : '⚠️ GPS'}
-                  </div>
+
                 </div>
               )}
               

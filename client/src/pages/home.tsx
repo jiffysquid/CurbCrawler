@@ -13,6 +13,7 @@ import { calculateDistance, savePersistentPath, loadPersistentPaths, PATH_COLORS
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats, LocationPoint } from "@shared/schema";
+import PathManagement from "@/components/path-management";
 
 type TabType = 'sessions' | 'settings';
 
@@ -745,7 +746,10 @@ export default function Home() {
               {/* Tab Content */}
               <div className="flex-1 overflow-y-auto min-h-0">
                 {activeTab === 'sessions' && (
-                  <SessionHistory sessions={sessions} isLoading={false} isMobile />
+                  <div className="h-full flex flex-col">
+                    <SessionHistory sessions={sessions} isLoading={false} isMobile />
+                    <PathManagement />
+                  </div>
                 )}
                 {activeTab === 'settings' && <Settings />}
               </div>

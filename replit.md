@@ -187,6 +187,17 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Successfully implemented exclusive custom Mapbox style (mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2)
 - July 18, 2025: Removed all map provider selection options - application now uses only the custom Mapbox style
 - July 18, 2025: Replaced map provider dropdown with fixed display showing current custom style in use
+- July 18, 2025: Implemented comprehensive field testing improvements based on user feedback
+- July 18, 2025: Removed GPS status indicator from recording controls for cleaner interface
+- July 18, 2025: Changed zoom out behavior to focus on clearout areas (zoom 13) instead of suburb-wide view
+- July 18, 2025: Enhanced path line styling - doubled thickness to 8px weight and reduced opacity to 75%
+- July 18, 2025: Fixed screen wake lock to automatically reactivate when returning to app window
+- July 18, 2025: Implemented smooth scrolling during recording with 1.0 second duration and easing
+- July 18, 2025: Removed map labels and debug info from settings menu for simplified interface
+- July 18, 2025: Fixed vehicle type dropdown with proper z-index positioning
+- July 18, 2025: Moved path management from settings to sessions tab for logical organization
+- July 18, 2025: Fixed saved path distance calculation - now shows correct kilometers traveled instead of 0km
+- July 18, 2025: Created dedicated PathManagement component for sessions tab integration
 
 ## User Preferences
 

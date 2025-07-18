@@ -54,14 +54,24 @@ export function useWakeLock() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isActive && !wakeLockRef.current) {
+        console.log('Document visible again, re-requesting wake lock');
+        requestWakeLock();
+      }
+    };
+
+    const handlePageFocus = () => {
+      if (isActive && !wakeLockRef.current) {
+        console.log('Page focused again, re-requesting wake lock');
         requestWakeLock();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handlePageFocus);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handlePageFocus);
     };
   }, [isActive]);
 
