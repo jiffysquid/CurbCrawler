@@ -57,18 +57,22 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
-  // Custom Mapbox tile configuration
+  // Custom Mapbox tile configuration with cache busting
   const getTileConfig = () => {
     // Use the Mapbox token directly from environment variables
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
+    
+    // Add cache busting parameter to force fresh tiles
+    const cacheBust = Date.now();
     
     console.log('🗺️ Using custom Mapbox style: cmd422kxy01t601rf67tl9ra2');
     console.log('🗺️ VITE_MAPBOX_ACCESS_TOKEN:', import.meta.env.VITE_MAPBOX_ACCESS_TOKEN);
     console.log('🗺️ Using fallback token for custom style');
     console.log('🗺️ Mapbox token available:', !!mapboxToken);
+    console.log('🗺️ Cache bust timestamp:', cacheBust);
     
     return {
-      url: `https://api.mapbox.com/styles/v1/jifysquid/cmd422kxy01t601rf67tl9ra2/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
+      url: `https://api.mapbox.com/styles/v1/jifysquid/cmd422kxy01t601rf67tl9ra2/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}&cb=${cacheBust}`,
       attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       tileSize: 512,
       zoomOffset: -1
@@ -475,7 +479,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
           continuousWorld: true,  // Allows seamless world wrapping
           noWrap: false,   // Allow world wrapping
           detectRetina: true,
-          crossOrigin: false
+          crossOrigin: false,
+          // Force cache clearing
+          className: 'mapbox-tiles-fresh'
+        });
+
+        // Clear any existing tile cache
+        if (tileLayer._tileCache) {
+          tileLayer._tileCache.clear();
+        }
+        
+        // Force immediate tile refresh
+        tileLayer.on('tileloadstart', function(e) {
+          e.tile.crossOrigin = '';
         });
 
         // Listen for tile loading events
@@ -537,7 +553,19 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         continuousWorld: true,
         noWrap: false,
         detectRetina: true,
-        crossOrigin: false
+        crossOrigin: false,
+        // Force cache clearing
+        className: 'mapbox-tiles-fresh'
+      });
+
+      // Clear any existing tile cache
+      if (tileLayer._tileCache) {
+        tileLayer._tileCache.clear();
+      }
+      
+      // Force immediate tile refresh
+      tileLayer.on('tileloadstart', function(e) {
+        e.tile.crossOrigin = '';
       });
 
       // Listen for tile loading events
