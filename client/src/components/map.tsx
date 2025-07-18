@@ -393,17 +393,18 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
+      // DISABLE ROTATION TEMPORARILY - too erratic and wrong direction
       // Only rotate if:
-      // 1. We've moved significantly (>10 meters)
-      // 2. It's been at least 3 seconds since last rotation (prevent oscillation)
-      // 3. The bearing change is significant (>15 degrees)
-      if (distance > 10 && timeSinceLastRotation > 3000) {
+      // 1. We've moved significantly (>30 meters) 
+      // 2. It's been at least 10 seconds since last rotation (prevent oscillation)
+      // 3. The bearing change is significant (>45 degrees)
+      if (false && distance > 30 && timeSinceLastRotation > 10000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
         console.log('🧭 Rotation check - distance:', distance, 'bearingDiff:', normalizedBearingDiff, 'timeSince:', timeSinceLastRotation);
         
-        if (normalizedBearingDiff > 15) {
+        if (normalizedBearingDiff > 45) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
           // NEW APPROACH: Use Leaflet's native bearing rotation
@@ -1261,8 +1262,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         duration: 1.0
       });
       
-      // Update map rotation based on driving direction
-      updateMapRotationV2(currentLocation);
+      // DISABLE ROTATION TEMPORARILY - too erratic and wrong direction
+      // updateMapRotationV2(currentLocation);
       
       // Add current location to route if recording
       if (isRecording) {

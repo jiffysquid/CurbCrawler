@@ -206,6 +206,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Resolved van visibility issues - map now properly centers on vehicle marker at all times
 - July 18, 2025: Re-enabled map rotation with improved stability - slower rotation (15m/15° thresholds) and 2-second smooth transitions
 - July 18, 2025: Fixed map rotation direction and oscillation - rotation now uses positive bearing and higher thresholds to prevent back-and-forth swinging
+- July 18, 2025: Temporarily disabled map rotation due to erratic behavior and wrong direction - focusing on stable van visibility first
 
 ## User Preferences
 
