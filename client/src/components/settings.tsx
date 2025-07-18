@@ -284,21 +284,6 @@ export default function Settings() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="path-color-scheme" className="text-xs font-medium">Path Color Scheme</Label>
-            <Select value={pathColorScheme} onValueChange={setPathColorScheme}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bright">Bright Colors (Cycle through 8 colors)</SelectItem>
-                <SelectItem value="fade">Fade with Age (Newer paths brighter)</SelectItem>
-              </SelectContent>
-            </Select>
-            <CardDescription className="text-xs">
-              Choose how recorded paths are colored on the map
-            </CardDescription>
-          </div>
         </CardContent>
       </Card>
 
@@ -370,11 +355,24 @@ export default function Settings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="path-color-scheme" className="text-xs font-medium">Path Color Scheme</Label>
-            <Select value={pathColorScheme} onValueChange={setPathColorScheme}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
+            <Select 
+              value={pathColorScheme} 
+              onValueChange={(value) => {
+                console.log('Path color scheme changed to:', value);
+                setPathColorScheme(value);
+              }}
+              onOpenChange={(open) => {
+                console.log('Path color scheme dropdown opened:', open);
+              }}
+            >
+              <SelectTrigger className="h-9" onClick={() => console.log('Path color scheme trigger clicked')}>
+                <SelectValue placeholder="Select color scheme" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent 
+                className="z-[9999] max-h-[300px] bg-white border border-gray-200 shadow-lg"
+                position="popper"
+                sideOffset={5}
+              >
                 <SelectItem value="bright">Bright Colors (Cycle through 8 colors)</SelectItem>
                 <SelectItem value="fade">Fade with Age (Newer paths brighter)</SelectItem>
               </SelectContent>
