@@ -62,6 +62,9 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || import.meta.env.MAPBOX_ACCESS_TOKEN;
     
     console.log('🗺️ Getting tile config for provider:', provider);
+    console.log('🗺️ VITE_MAPBOX_ACCESS_TOKEN:', import.meta.env.VITE_MAPBOX_ACCESS_TOKEN);
+    console.log('🗺️ MAPBOX_ACCESS_TOKEN:', import.meta.env.MAPBOX_ACCESS_TOKEN);
+    console.log('🗺️ Final mapboxToken:', mapboxToken);
     console.log('🗺️ Mapbox token available:', !!mapboxToken);
     
     switch (provider) {
