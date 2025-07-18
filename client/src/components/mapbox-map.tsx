@@ -241,25 +241,34 @@ export default function MapboxMap({
     enabled: Boolean(showToilets && mapReady && currentLocation)
   });
 
-  // Load demographics
-  const { data: demographicsArray } = useQuery({
-    queryKey: ['/api/suburbs/demographics'],
+  // Load clearout schedule to get current and next suburbs
+  const { data: clearoutSchedule } = useQuery({
+    queryKey: ['/api/suburbs/clearout-schedule'],
     enabled: Boolean(mapReady)
   });
 
-  // Convert demographics array to object keyed by suburb name
+  // Load demographics with proper current/next suburb parameters
+  const { data: demographicsArray } = useQuery({
+    queryKey: ['/api/suburbs/demographics', clearoutSchedule?.current, clearoutSchedule?.next],
+    queryFn: async () => {
+      if (!clearoutSchedule) return [];
+      const params = new URLSearchParams();
+      if (clearoutSchedule.current) {
+        clearoutSchedule.current.forEach(suburb => params.append('current', suburb));
+      }
+      if (clearoutSchedule.next) {
+        clearoutSchedule.next.forEach(suburb => params.append('next', suburb));
+      }
+      const response = await fetch(`/api/suburbs/demographics?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch demographics');
+      return response.json();
+    },
+    enabled: Boolean(mapReady && clearoutSchedule)
+  });
+
+  // Convert demographics array to object keyed by suburb name for individual lookups
   const demographics = useMemo(() => {
-    if (!demographicsArray || !Array.isArray(demographicsArray)) {
-      // Fallback demographics for testing with Newmarket
-      return {
-        'Newmarket': {
-          name: 'Newmarket',
-          population: 7245,
-          medianHousePrice: 895000,
-          starRating: 4
-        }
-      };
-    }
+    if (!demographicsArray || !Array.isArray(demographicsArray)) return {};
     return demographicsArray.reduce((acc, suburb) => {
       acc[suburb.name] = suburb;
       return acc;
@@ -449,8 +458,8 @@ export default function MapboxMap({
           
 
 
-          {/* Demographics overlay */}
-          {showDemographics && (
+          {/* Demographics overlay showing individual suburb info */}
+          {showDemographics && demographics[currentSuburb.suburb] && (
             <div className="mt-4 pt-3 border-t border-gray-200">
               <div className="text-sm text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
@@ -474,6 +483,72 @@ export default function MapboxMap({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* All Clearout Suburbs Demographics Window */}
+      {showDemographics && demographicsArray && demographicsArray.length > 0 && (
+        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Clearout Suburbs
+          </h3>
+          
+          {/* Current Week Suburbs */}
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              Current Week
+            </h4>
+            <div className="space-y-2">
+              {demographicsArray.filter(suburb => suburb.clearoutStatus === 'current').map((suburb, index) => (
+                <div key={suburb.name} className="bg-green-50 border border-green-200 rounded p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm">{suburb.name}</span>
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className={`text-xs ${i < (suburb.starRating || 0) ? 'text-yellow-500' : 'text-gray-300'}`}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <div>Population: {suburb.population?.toLocaleString() || 'N/A'}</div>
+                    <div>Median Price: ${suburb.medianHousePrice?.toLocaleString() || 'N/A'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Next Week Suburbs */}
+          <div>
+            <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              Next Week
+            </h4>
+            <div className="space-y-2">
+              {demographicsArray.filter(suburb => suburb.clearoutStatus === 'next').map((suburb, index) => (
+                <div key={suburb.name} className="bg-blue-50 border border-blue-200 rounded p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm">{suburb.name}</span>
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className={`text-xs ${i < (suburb.starRating || 0) ? 'text-yellow-500' : 'text-gray-300'}`}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <div>Population: {suburb.population?.toLocaleString() || 'N/A'}</div>
+                    <div>Median Price: ${suburb.medianHousePrice?.toLocaleString() || 'N/A'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

@@ -213,6 +213,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Restored suburb info window with statistics button after Mapbox migration
 - July 18, 2025: Implemented single toggle button for van/suburb zoom (replaces separate zoom buttons)
 - July 18, 2025: Fixed suburb lookup API integration with proper query parameters and error handling
+- July 18, 2025: Implemented comprehensive demographics window showing all current and next week clearout suburbs with star ratings, population, and median house prices
+- July 18, 2025: Added proper clearout schedule integration for authentic Brisbane Council data display
 
 ## User Preferences
 
