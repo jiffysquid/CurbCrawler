@@ -6,7 +6,7 @@ import { calculateBearing, calculateDistance } from '../lib/utils';
 import { PathData } from '../lib/path-storage';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Minus, Plus, RotateCcw } from 'lucide-react';
+import { MapPin, Navigation, Info, Users, Car, Building } from 'lucide-react';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -355,26 +355,17 @@ export default function MapboxMap({
   }, [persistentPaths, mapReady]);
 
   // Map controls
-  const zoomIn = () => {
-    if (mapRef.current) {
-      mapRef.current.zoomIn();
+  const zoomToVan = () => {
+    if (mapRef.current && currentLocation) {
+      mapRef.current.easeTo({
+        center: [currentLocation.lng, currentLocation.lat],
+        zoom: 18,
+        duration: 1000
+      });
     }
   };
 
-  const zoomOut = () => {
-    if (mapRef.current) {
-      mapRef.current.zoomOut();
-    }
-  };
-
-  const resetRotation = () => {
-    if (mapRef.current) {
-      mapRef.current.easeTo({ bearing: 0, duration: 1000 });
-      currentBearingRef.current = 0;
-    }
-  };
-
-  const centerOnLocation = () => {
+  const zoomToSuburb = () => {
     if (mapRef.current && currentLocation) {
       mapRef.current.easeTo({
         center: [currentLocation.lng, currentLocation.lat],
@@ -392,24 +383,61 @@ export default function MapboxMap({
         style={{ minHeight: '400px' }}
       />
       
-      {/* Current Suburb Info */}
+      {/* Current Suburb Info Window */}
       {currentSuburb && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border z-[1000]">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            <span className="font-medium">{currentSuburb.suburb}</span>
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border z-[1000] min-w-[280px]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-lg">{currentSuburb.suburb}</span>
+            </div>
+            <Button
+              onClick={() => setShowDemographics(!showDemographics)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
           </div>
+          
           {currentSuburbInfo && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${
                   currentSuburbInfo.clearoutType === 'current' ? 'bg-green-500' : 
                   currentSuburbInfo.clearoutType === 'next' ? 'bg-blue-500' : 'bg-gray-400'
                 }`} />
-                <span>
-                  {currentSuburbInfo.clearoutType === 'current' ? 'Current Week' :
-                   currentSuburbInfo.clearoutType === 'next' ? 'Next Week' : 'No Clearout'}
+                <span className="text-sm font-medium">
+                  {currentSuburbInfo.clearoutType === 'current' ? 'Current Week Clearout' :
+                   currentSuburbInfo.clearoutType === 'next' ? 'Next Week Clearout' : 'No Scheduled Clearout'}
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* Demographics overlay */}
+          {showDemographics && demographics && currentSuburbInfo && (
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <div className="text-sm text-gray-600 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>Population: {demographics[currentSuburbInfo.name]?.population?.toLocaleString() || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  <span>Median Price: ${demographics[currentSuburbInfo.name]?.medianHousePrice?.toLocaleString() || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} className={`text-sm ${i < (demographics[currentSuburbInfo.name]?.starRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-500">Price/Density Rating</span>
+                </div>
               </div>
             </div>
           )}
@@ -419,36 +447,22 @@ export default function MapboxMap({
       {/* Map Controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
         <Button
-          onClick={zoomIn}
+          onClick={zoomToVan}
           size="sm"
           variant="outline"
           className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+          title="Zoom to Van"
         >
-          <Plus className="h-4 w-4" />
+          <Car className="h-4 w-4" />
         </Button>
         <Button
-          onClick={zoomOut}
+          onClick={zoomToSuburb}
           size="sm"
           variant="outline"
           className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+          title="Zoom to Suburb"
         >
-          <Minus className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={resetRotation}
-          size="sm"
-          variant="outline"
-          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={centerOnLocation}
-          size="sm"
-          variant="outline"
-          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
-        >
-          <Navigation className="h-4 w-4" />
+          <Building className="h-4 w-4" />
         </Button>
       </div>
     </div>

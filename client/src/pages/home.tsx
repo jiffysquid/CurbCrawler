@@ -29,6 +29,8 @@ export default function Home() {
   const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number; timestamp?: number } | null>(null);
   const [recordingPath, setRecordingPath] = useState<{ lat: number; lng: number }[]>([]);
   const [persistentPaths, setPersistentPaths] = useState<any[]>([]);
+  const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
+  const [showToilets, setShowToilets] = useState<boolean>(false);
   
   const { toast } = useToast();
   
@@ -67,6 +69,17 @@ export default function Home() {
       const paths = loadPersistentPaths();
       setPersistentPaths(paths);
       console.log('🗺️ Loaded persistent paths:', paths.length);
+      
+      // Load settings from localStorage
+      const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
+      const savedShowToilets = localStorage.getItem('showToilets');
+      
+      if (savedShowSuburbs !== null) {
+        setShowSuburbBoundaries(savedShowSuburbs === 'true');
+      }
+      if (savedShowToilets !== null) {
+        setShowToilets(savedShowToilets === 'true');
+      }
     } else {
       toast({
         title: "Geolocation Not Supported",
@@ -633,8 +646,8 @@ export default function Home() {
           onLocationUpdate={handleKMLLocationUpdate}
           persistentPaths={persistentPaths}
           focusArea="imax-van"
-          showSuburbs={true}
-          showToilets={false}
+          showSuburbs={showSuburbBoundaries}
+          showToilets={showToilets}
         />
         
         {/* Simple Controls */}
@@ -704,7 +717,14 @@ export default function Home() {
             {activeTab === 'sessions' && (
               <SessionHistory sessions={sessions} isLoading={false} />
             )}
-            {activeTab === 'settings' && <Settings />}
+            {activeTab === 'settings' && (
+              <Settings 
+                showSuburbBoundaries={showSuburbBoundaries}
+                setShowSuburbBoundaries={setShowSuburbBoundaries}
+                showToilets={showToilets}
+                setShowToilets={setShowToilets}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -758,7 +778,14 @@ export default function Home() {
                     <PathManagement />
                   </div>
                 )}
-                {activeTab === 'settings' && <Settings />}
+                {activeTab === 'settings' && (
+                  <Settings 
+                    showSuburbBoundaries={showSuburbBoundaries}
+                    setShowSuburbBoundaries={setShowSuburbBoundaries}
+                    showToilets={showToilets}
+                    setShowToilets={setShowToilets}
+                  />
+                )}
               </div>
             </div>
           </div>

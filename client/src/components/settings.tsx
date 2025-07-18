@@ -10,11 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-react";
 import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
 
-export default function Settings() {
+interface SettingsProps {
+  showSuburbBoundaries: boolean;
+  setShowSuburbBoundaries: (show: boolean) => void;
+  showToilets: boolean;
+  setShowToilets: (show: boolean) => void;
+}
+
+export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries, showToilets, setShowToilets }: SettingsProps) {
   // Removed map style selection - only using custom Mapbox style
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
-  const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
-  const [showToilets, setShowToilets] = useState<boolean>(false);
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
@@ -26,25 +31,12 @@ export default function Settings() {
   useEffect(() => {
     const savedFocusArea = localStorage.getItem('focusArea');
     const savedGpsAccuracy = localStorage.getItem('gpsAccuracy');
-    const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
-    const savedShowToilets = localStorage.getItem('showToilets');
     const savedShowLabels = localStorage.getItem('showLabels');
     const savedFuelPrice = localStorage.getItem('fuelPrice');
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
-    // Removed map style handling - only using custom Mapbox style
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
-    if (savedShowSuburbs !== null) {
-      setShowSuburbBoundaries(savedShowSuburbs === 'true');
-    } else {
-      setShowSuburbBoundaries(true); // Default to showing suburbs
-    }
-    if (savedShowToilets !== null) {
-      setShowToilets(savedShowToilets === 'true');
-    } else {
-      setShowToilets(false); // Default to hiding toilets
-    }
     if (savedShowLabels !== null) {
       setShowLabels(savedShowLabels === 'true');
     } else {
