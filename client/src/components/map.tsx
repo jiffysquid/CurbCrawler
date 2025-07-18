@@ -393,42 +393,35 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
-      // TEMPORARILY DISABLE ROTATION - focusing on van visibility first
       // Only rotate if:
-      // 1. We've moved significantly (>10 meters)
-      // 2. It's been at least 5 seconds since last rotation (smooth, not jerky)
-      // 3. The bearing change is significant (>20 degrees)
-      if (false && distance > 10 && timeSinceLastRotation > 5000) {
+      // 1. We've moved significantly (>15 meters)
+      // 2. It's been at least 3 seconds since last rotation (smooth, not jerky)
+      // 3. The bearing change is significant (>15 degrees)
+      if (distance > 15 && timeSinceLastRotation > 3000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
-        if (normalizedBearingDiff > 20) {
+        if (normalizedBearingDiff > 15) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
           // NEW APPROACH: Use Leaflet's native bearing rotation
           // This avoids blank tiles and keeps UI elements properly positioned
           try {
-            // STEP 1: Ensure map is centered on vehicle before rotation
+            // STEP 1: Ensure the map is properly centered on the vehicle
             const currentZoom = mapInstanceRef.current.getZoom();
             mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, { animate: false });
             
-            // STEP 2: Get the map container center point for proper rotation
-            const mapContainer = mapInstanceRef.current.getContainer();
-            const containerRect = mapContainer.getBoundingClientRect();
-            const centerX = containerRect.width / 2;
-            const centerY = containerRect.height / 2;
-            
-            // STEP 3: Apply rotation around the map center (where vehicle should be)
+            // STEP 2: Apply smooth rotation to the map
             const mapPane = mapInstanceRef.current.getPanes().mapPane;
             if (mapPane) {
               const rotationAngle = -bearing;
               
-              // Set transform origin to map center
+              // Use center of map container as rotation origin
               mapPane.style.transform = `rotate(${rotationAngle}deg)`;
-              mapPane.style.transformOrigin = `${centerX}px ${centerY}px`;
-              mapPane.style.transition = 'transform 1.5s ease-out';
+              mapPane.style.transformOrigin = 'center center';
+              mapPane.style.transition = 'transform 2.0s ease-out';
               
-              console.log('✅ Map centered on vehicle and rotating around center:', centerX, centerY);
+              console.log('✅ Map rotation applied smoothly:', rotationAngle, 'degrees');
             } else {
               console.log('❌ Map pane not found');
             }
@@ -1264,8 +1257,8 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         duration: 1.0
       });
       
-      // TEMPORARILY DISABLE ROTATION - focusing on van visibility first
-      // updateMapRotationV2(currentLocation);
+      // Update map rotation based on driving direction
+      updateMapRotationV2(currentLocation);
       
       // Add current location to route if recording
       if (isRecording) {
