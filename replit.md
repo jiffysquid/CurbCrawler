@@ -184,6 +184,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 15, 2025: All recorded paths now automatically saved until manually deleted and visible by default
 - July 17, 2025: Fixed map scrolling/zooming - map now only centers on vehicle during recording sessions, allowing free navigation when not recording
 - July 17, 2025: Added saved paths display in settings menu showing all recorded paths with names, dates, distances, and color indicators
+- July 18, 2025: Successfully implemented exclusive custom Mapbox style (mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2)
+- July 18, 2025: Removed all map provider selection options - application now uses only the custom Mapbox style
+- July 18, 2025: Replaced map provider dropdown with fixed display showing current custom style in use
 
 ## User Preferences
 
