@@ -243,7 +243,7 @@ export default function MapboxMap({
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({
-    queryKey: ['/api/suburbs/clearout-schedule'],
+    queryKey: ['/api/clearout-schedule'],
     enabled: Boolean(mapReady)
   });
 
@@ -266,7 +266,7 @@ export default function MapboxMap({
       console.log('🔍 Demographics data received:', data.length, 'suburbs');
       return data;
     },
-    enabled: Boolean(mapReady && clearoutSchedule)
+    enabled: Boolean(clearoutSchedule && clearoutSchedule.current && clearoutSchedule.next)
   });
 
   // Convert demographics array to object keyed by suburb name for individual lookups
@@ -450,6 +450,7 @@ export default function MapboxMap({
                 console.log('🔍 Demographics array length:', demographicsArray?.length);
                 console.log('🔍 Clearout schedule:', clearoutSchedule);
                 console.log('🔍 Current suburb info:', currentSuburb);
+                console.log('🔍 Window condition check:', showDemographics && demographicsArray && demographicsArray.length > 0);
                 setShowDemographics(!showDemographics);
               }}
               size="sm"
@@ -496,7 +497,7 @@ export default function MapboxMap({
         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
           <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Building className="h-5 w-5" />
-            Clearout Suburbs
+            Clearout Suburbs ({demographicsArray.length} suburbs)
           </h3>
           
           {/* Current Week Suburbs */}
