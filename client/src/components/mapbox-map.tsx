@@ -259,9 +259,12 @@ export default function MapboxMap({
       if (clearoutSchedule.next) {
         clearoutSchedule.next.forEach(suburb => params.append('next', suburb));
       }
+      console.log('🔍 Fetching demographics with params:', params.toString());
       const response = await fetch(`/api/suburbs/demographics?${params}`);
       if (!response.ok) throw new Error('Failed to fetch demographics');
-      return response.json();
+      const data = await response.json();
+      console.log('🔍 Demographics data received:', data.length, 'suburbs');
+      return data;
     },
     enabled: Boolean(mapReady && clearoutSchedule)
   });
@@ -269,6 +272,7 @@ export default function MapboxMap({
   // Convert demographics array to object keyed by suburb name for individual lookups
   const demographics = useMemo(() => {
     if (!demographicsArray || !Array.isArray(demographicsArray)) return {};
+    console.log('🔍 Converting demographics array to object:', demographicsArray.length, 'suburbs');
     return demographicsArray.reduce((acc, suburb) => {
       acc[suburb.name] = suburb;
       return acc;
@@ -442,9 +446,10 @@ export default function MapboxMap({
               onClick={() => {
                 console.log('🔍 Info button clicked');
                 console.log('🔍 Current showDemographics:', showDemographics);
-                console.log('🔍 Demographics data available:', !!demographics);
-                console.log('🔍 Demographics content:', demographics);
-                console.log('🔍 Current suburb info:', currentSuburbInfo);
+                console.log('🔍 Demographics array:', demographicsArray);
+                console.log('🔍 Demographics array length:', demographicsArray?.length);
+                console.log('🔍 Clearout schedule:', clearoutSchedule);
+                console.log('🔍 Current suburb info:', currentSuburb);
                 setShowDemographics(!showDemographics);
               }}
               size="sm"
