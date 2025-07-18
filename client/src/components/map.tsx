@@ -393,15 +393,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
+      // TEMPORARILY DISABLE ROTATION - focusing on van visibility first
       // Only rotate if:
-      // 1. We've moved significantly (>3 meters)
-      // 2. It's been at least 1 second since last rotation (smooth, not jerky)
-      // 3. The bearing change is significant (>5 degrees)
-      if (distance > 3 && timeSinceLastRotation > 1000) {
+      // 1. We've moved significantly (>10 meters)
+      // 2. It's been at least 5 seconds since last rotation (smooth, not jerky)
+      // 3. The bearing change is significant (>20 degrees)
+      if (false && distance > 10 && timeSinceLastRotation > 5000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
-        if (normalizedBearingDiff > 5) {
+        if (normalizedBearingDiff > 20) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
           // NEW APPROACH: Use Leaflet's native bearing rotation
@@ -1121,8 +1122,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
         hasInitialLocationRef.current = true;
       } else {
-        // Always center on vehicle marker when using vehicle focus
-        mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
+        // Always center on vehicle marker when using vehicle focus - with smooth animation
+        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], mapInstanceRef.current.getZoom(), {
+          animate: true,
+          duration: 1.0
+        });
       }
       return;
     }
@@ -1253,17 +1257,15 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
         </div>
       `);
 
-      // Keep map centered on vehicle location during recording
-      if (isRecording) {
-        const currentZoom = mapInstanceRef.current.getZoom();
-        mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], currentZoom, { 
-          animate: false,
-          duration: 0
-        });
-      }
+      // Always keep map centered on vehicle location (not just during recording)
+      const currentZoom = mapInstanceRef.current.getZoom();
+      mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], currentZoom, { 
+        animate: true,
+        duration: 1.0
+      });
       
-      // Update map rotation based on driving direction
-      updateMapRotationV2(currentLocation);
+      // TEMPORARILY DISABLE ROTATION - focusing on van visibility first
+      // updateMapRotationV2(currentLocation);
       
       // Add current location to route if recording
       if (isRecording) {
