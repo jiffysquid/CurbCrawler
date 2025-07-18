@@ -6,7 +6,7 @@ import { calculateBearing, calculateDistance } from '../lib/utils';
 import { PathData } from '../lib/path-storage';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Info, Users, Car, Building } from 'lucide-react';
+import { MapPin, Navigation, Info, Users, Car, Building, X } from 'lucide-react';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -495,10 +495,21 @@ export default function MapboxMap({
       {/* All Clearout Suburbs Demographics Window */}
       {showDemographics && demographicsArray && demographicsArray.length > 0 && (
         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Clearout Suburbs ({demographicsArray.length} suburbs)
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Clearout Suburbs ({demographicsArray.length} suburbs)
+            </h3>
+            <Button
+              onClick={() => setShowDemographics(false)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              title="Close"
+            >
+              <X className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
           
           {/* Current Week Suburbs */}
           <div className="mb-4">
