@@ -37,7 +37,7 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
   const [showSuburbs, setShowSuburbs] = useState(true);
   const [showToilets, setShowToilets] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
-  const [mapStyle, setMapStyle] = useState<string>('openstreetmap');
+  const [mapStyle, setMapStyle] = useState<string>('mapbox-custom');
   const [focusArea, setFocusArea] = useState<string>('imax-van');
   const [mapRotation, setMapRotation] = useState(0);
   const [pathColorScheme, setPathColorScheme] = useState<'bright' | 'fade'>('bright');

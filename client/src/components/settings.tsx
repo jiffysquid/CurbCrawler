@@ -11,7 +11,7 @@ import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-re
 import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
 
 export default function Settings() {
-  const [mapStyle, setMapStyle] = useState<string>("openstreetmap");
+  const [mapStyle, setMapStyle] = useState<string>("mapbox-custom");
   const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
   const [showToilets, setShowToilets] = useState<boolean>(false);
@@ -34,11 +34,11 @@ export default function Settings() {
     const savedPathColorScheme = localStorage.getItem('pathColorScheme');
     
     if (savedFocusArea) setFocusArea(savedFocusArea);
-    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
+    if (savedMapStyle && ['openstreetmap', 'openstreetmap-no-labels', 'mapbox-streets', 'mapbox-satellite', 'mapbox-outdoors', 'mapbox-custom', 'cartodb-positron', 'cartodb-positron-no-labels', 'esri-world-imagery', 'esri-world-topo'].includes(savedMapStyle)) {
       setMapStyle(savedMapStyle);
     } else {
-      setMapStyle('openstreetmap'); // Default to OpenStreetMap
-      localStorage.setItem('mapStyle', 'openstreetmap'); // Clear invalid value
+      setMapStyle('mapbox-custom'); // Default to custom Mapbox style
+      localStorage.setItem('mapStyle', 'mapbox-custom'); // Clear invalid value
     }
     if (savedGpsAccuracy) setGpsAccuracy(savedGpsAccuracy);
     if (savedShowSuburbs !== null) {
@@ -368,6 +368,22 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="path-color-scheme" className="text-xs font-medium">Path Color Scheme</Label>
+            <Select value={pathColorScheme} onValueChange={setPathColorScheme}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bright">Bright Colors (Cycle through 8 colors)</SelectItem>
+                <SelectItem value="fade">Fade with Age (Newer paths brighter)</SelectItem>
+              </SelectContent>
+            </Select>
+            <CardDescription className="text-xs">
+              Choose how recorded paths are colored on the map
+            </CardDescription>
+          </div>
+          
           <div className="space-y-3">
             <div className="text-xs text-gray-600">
               All recorded paths are saved permanently until manually deleted. They appear on the map using the selected color scheme.
