@@ -334,24 +334,31 @@ export default function MapboxMap({
         return isCurrent || isNext;
       });
 
-      const features = filteredSuburbs.map((suburb: any) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [suburb.coordinates.map((coord: any) => [coord[1], coord[0]])]
-        },
-        properties: {
-          name: suburb.name,
-          fillColor: suburb.clearoutType === 'current' ? '#10B981' : '#3B82F6',
-          borderColor: suburb.clearoutType === 'current' ? '#059669' : '#2563EB',
-          clearoutType: suburb.clearoutType
-        }
-      }));
+      const features = filteredSuburbs.map((suburb: any) => {
+        const isCurrent = clearoutSchedule?.current?.includes(suburb.name);
+        const isNext = clearoutSchedule?.next?.includes(suburb.name);
+        const clearoutType = isCurrent ? 'current' : isNext ? 'next' : 'none';
+        
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [suburb.coordinates.map((coord: any) => [coord[1], coord[0]])]
+          },
+          properties: {
+            name: suburb.name,
+            fillColor: clearoutType === 'current' ? '#10B981' : '#3B82F6',
+            borderColor: clearoutType === 'current' ? '#059669' : '#2563EB',
+            clearoutType: clearoutType
+          }
+        };
+      });
 
       source.setData({ type: 'FeatureCollection', features });
       console.log('✅ Updated suburb boundaries:', features.length, 'relevant suburbs (current + next week)');
+      console.log('🎨 Suburb colors:', features.map(f => `${f.properties.name}: ${f.properties.clearoutType} (${f.properties.fillColor})`));
     }
-  }, [suburbs, showSuburbs, mapReady]);
+  }, [suburbs, showSuburbs, mapReady, clearoutSchedule]);
 
   // Update toilet markers
   useEffect(() => {
