@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { calculateBearing, calculateDistance } from '../lib/utils';
 import { PathData } from '../lib/path-storage';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
+import { Button } from '@/components/ui/button';
+import { MapPin, Navigation, Minus, Plus, RotateCcw } from 'lucide-react';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -14,6 +16,16 @@ interface MapboxMapProps {
   focusArea?: string;
   showSuburbs?: boolean;
   showToilets?: boolean;
+}
+
+interface SuburbInfo {
+  name: string;
+  clearoutType: 'current' | 'next' | 'none';
+  demographics?: {
+    population: number;
+    medianHousePrice: number;
+    starRating: number;
+  };
 }
 
 export default function MapboxMap({
@@ -32,6 +44,8 @@ export default function MapboxMap({
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const currentBearingRef = useRef<number | null>(null);
   const lastRotationTime = useRef<number>(0);
+  const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
+  const [showDemographics, setShowDemographics] = useState(false);
 
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
@@ -226,7 +240,37 @@ export default function MapboxMap({
     enabled: showToilets && mapReady && !!currentLocation
   });
 
-  // Update suburb boundaries
+  // Load demographics
+  const { data: demographics } = useQuery({
+    queryKey: ['/api/demographics'],
+    enabled: showDemographics && mapReady
+  });
+
+  // Load current suburb info
+  const { data: currentSuburb } = useQuery({
+    queryKey: ['/api/suburbs/lookup', currentLocation?.lat, currentLocation?.lng],
+    enabled: !!currentLocation && mapReady
+  });
+
+  // Update current suburb info with clearout type
+  useEffect(() => {
+    if (currentSuburb && suburbs) {
+      const suburbData = suburbs.find((s: any) => s.name === currentSuburb.suburb);
+      if (suburbData) {
+        setCurrentSuburbInfo({
+          name: suburbData.name,
+          clearoutType: suburbData.clearoutType || 'none'
+        });
+      } else {
+        setCurrentSuburbInfo({
+          name: currentSuburb.suburb,
+          clearoutType: 'none'
+        });
+      }
+    }
+  }, [currentSuburb, suburbs]);
+
+  // Update suburb boundaries - only show current and next week clearouts
   useEffect(() => {
     if (!mapRef.current || !mapReady || !showSuburbs) return;
 
@@ -234,7 +278,14 @@ export default function MapboxMap({
     const source = map.getSource('suburbs') as mapboxgl.GeoJSONSource;
     
     if (source && suburbs) {
-      const features = suburbs.map((suburb: any) => ({
+      // Filter to only show current and next week clearouts
+      const filteredSuburbs = suburbs.filter((suburb: any) => {
+        const isCurrent = suburb.clearoutType === 'current';
+        const isNext = suburb.clearoutType === 'next';
+        return isCurrent || isNext;
+      });
+
+      const features = filteredSuburbs.map((suburb: any) => ({
         type: 'Feature',
         geometry: {
           type: 'Polygon',
@@ -242,13 +293,14 @@ export default function MapboxMap({
         },
         properties: {
           name: suburb.name,
-          fillColor: suburb.name.includes('current') ? '#10B981' : '#3B82F6',
-          borderColor: suburb.name.includes('current') ? '#059669' : '#2563EB'
+          fillColor: suburb.clearoutType === 'current' ? '#10B981' : '#3B82F6',
+          borderColor: suburb.clearoutType === 'current' ? '#059669' : '#2563EB',
+          clearoutType: suburb.clearoutType
         }
       }));
 
       source.setData({ type: 'FeatureCollection', features });
-      console.log('✅ Updated suburb boundaries:', features.length, 'suburbs');
+      console.log('✅ Updated suburb boundaries:', features.length, 'relevant suburbs (current + next week)');
     }
   }, [suburbs, showSuburbs, mapReady]);
 
@@ -302,6 +354,36 @@ export default function MapboxMap({
     }
   }, [persistentPaths, mapReady]);
 
+  // Map controls
+  const zoomIn = () => {
+    if (mapRef.current) {
+      mapRef.current.zoomIn();
+    }
+  };
+
+  const zoomOut = () => {
+    if (mapRef.current) {
+      mapRef.current.zoomOut();
+    }
+  };
+
+  const resetRotation = () => {
+    if (mapRef.current) {
+      mapRef.current.easeTo({ bearing: 0, duration: 1000 });
+      currentBearingRef.current = 0;
+    }
+  };
+
+  const centerOnLocation = () => {
+    if (mapRef.current && currentLocation) {
+      mapRef.current.easeTo({
+        center: [currentLocation.lng, currentLocation.lat],
+        zoom: 13,
+        duration: 1000
+      });
+    }
+  };
+
   return (
     <div className="relative w-full h-full">
       <div
@@ -309,6 +391,66 @@ export default function MapboxMap({
         className="w-full h-full"
         style={{ minHeight: '400px' }}
       />
+      
+      {/* Current Suburb Info */}
+      {currentSuburb && (
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border z-[1000]">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span className="font-medium">{currentSuburb.suburb}</span>
+          </div>
+          {currentSuburbInfo && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${
+                  currentSuburbInfo.clearoutType === 'current' ? 'bg-green-500' : 
+                  currentSuburbInfo.clearoutType === 'next' ? 'bg-blue-500' : 'bg-gray-400'
+                }`} />
+                <span>
+                  {currentSuburbInfo.clearoutType === 'current' ? 'Current Week' :
+                   currentSuburbInfo.clearoutType === 'next' ? 'Next Week' : 'No Clearout'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Map Controls */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
+        <Button
+          onClick={zoomIn}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={zoomOut}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={resetRotation}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={centerOnLocation}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg"
+        >
+          <Navigation className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
