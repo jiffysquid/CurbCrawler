@@ -411,21 +411,23 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
             const currentZoom = mapInstanceRef.current.getZoom();
             mapInstanceRef.current.setView([newLocation.lat, newLocation.lng], currentZoom, { animate: false });
             
-            // STEP 2: Get vehicle position in screen coordinates (should be center after setView)
-            const vehicleLatLng = L.latLng(newLocation.lat, newLocation.lng);
-            const vehiclePoint = mapInstanceRef.current.latLngToContainerPoint(vehicleLatLng);
+            // STEP 2: Get the map container center point for proper rotation
+            const mapContainer = mapInstanceRef.current.getContainer();
+            const containerRect = mapContainer.getBoundingClientRect();
+            const centerX = containerRect.width / 2;
+            const centerY = containerRect.height / 2;
             
-            // STEP 3: Apply rotation around the vehicle's screen position
+            // STEP 3: Apply rotation around the map center (where vehicle should be)
             const mapPane = mapInstanceRef.current.getPanes().mapPane;
             if (mapPane) {
               const rotationAngle = -bearing;
               
-              // Set transform origin to vehicle's screen position (should be center)
+              // Set transform origin to map center
               mapPane.style.transform = `rotate(${rotationAngle}deg)`;
-              mapPane.style.transformOrigin = `${vehiclePoint.x}px ${vehiclePoint.y}px`;
+              mapPane.style.transformOrigin = `${centerX}px ${centerY}px`;
               mapPane.style.transition = 'transform 1.5s ease-out';
               
-              console.log('✅ Map centered on vehicle and rotating around point:', vehiclePoint.x, vehiclePoint.y);
+              console.log('✅ Map centered on vehicle and rotating around center:', centerX, centerY);
             } else {
               console.log('❌ Map pane not found');
             }
@@ -1114,12 +1116,12 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
     // Skip creating dot marker when vehicle marker is being used (focuses on vehicle types)
     const isUsingVehicleMarker = focusArea && focusArea !== 'none';
     if (isUsingVehicleMarker) {
-      // Only center on initial load, not during regular updates
+      // Always center on the vehicle marker, not just during recording
       if (markersRef.current.length === 0 && !hasInitialLocationRef.current) {
         mapInstanceRef.current.setView([currentLocation.lat, currentLocation.lng], 15);
         hasInitialLocationRef.current = true;
-      } else if (isRecording) {
-        // Only center during recording sessions
+      } else {
+        // Always center on vehicle marker when using vehicle focus
         mapInstanceRef.current.panTo([currentLocation.lat, currentLocation.lng]);
       }
       return;
