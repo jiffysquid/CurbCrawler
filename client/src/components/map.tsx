@@ -394,14 +394,16 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
       console.log('🧭 Calculated bearing:', bearing, 'degrees, distance:', distance, 'meters');
       
       // Only rotate if:
-      // 1. We've moved significantly (>15 meters)
-      // 2. It's been at least 3 seconds since last rotation (smooth, not jerky)
-      // 3. The bearing change is significant (>15 degrees)
-      if (distance > 15 && timeSinceLastRotation > 3000) {
+      // 1. We've moved significantly (>5 meters)
+      // 2. It's been at least 2 seconds since last rotation (smooth, not jerky)
+      // 3. The bearing change is significant (>8 degrees)
+      if (distance > 5 && timeSinceLastRotation > 2000) {
         const bearingDiff = Math.abs(bearing - (currentBearing || 0));
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
         
-        if (normalizedBearingDiff > 15) {
+        console.log('🧭 Rotation check - distance:', distance, 'bearingDiff:', normalizedBearingDiff, 'timeSince:', timeSinceLastRotation);
+        
+        if (normalizedBearingDiff > 8) {
           console.log('🔄 Applying proper map rotation:', bearing, 'degrees (prev:', currentBearing, ')');
           
           // NEW APPROACH: Use Leaflet's native bearing rotation
@@ -418,10 +420,11 @@ export default function Map({ currentLocation, sessionLocations, currentSuburb, 
               
               // Use center of map container as rotation origin
               mapPane.style.transform = `rotate(${rotationAngle}deg)`;
-              mapPane.style.transformOrigin = 'center center';
-              mapPane.style.transition = 'transform 2.0s ease-out';
+              mapPane.style.transformOrigin = '50% 50%';
+              mapPane.style.transition = 'transform 1.5s ease-out';
               
-              console.log('✅ Map rotation applied smoothly:', rotationAngle, 'degrees');
+              console.log('✅ Map rotation applied smoothly:', rotationAngle, 'degrees from bearing:', bearing);
+              console.log('✅ Map pane transform:', mapPane.style.transform);
             } else {
               console.log('❌ Map pane not found');
             }
