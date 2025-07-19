@@ -16,6 +16,7 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
   const [isVisible, setIsVisible] = useState(false);
   const [kmlLoaded, setKmlLoaded] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState({ current: 0, total: 0, percentage: 0 });
+  const [permissionRequested, setPermissionRequested] = useState(false);
   
   useEffect(() => {
     // Load KML file on component mount
@@ -51,6 +52,42 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
       console.warn('⚠️ GPS Debug: No onLocationUpdate callback provided');
     }
   }, [onLocationUpdate]);
+
+  const requestGPSPermission = async () => {
+    try {
+      setPermissionRequested(true);
+      console.log('🔐 Requesting GPS permission for Replit app...');
+      
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by this browser/app');
+      }
+
+      // Request permission explicitly
+      const permission = await navigator.permissions.query({name: 'geolocation'});
+      console.log('📍 Current permission state:', permission.state);
+      
+      // Try to get current position to trigger permission request
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+      
+      console.log('✅ GPS permission granted, got position:', position.coords.latitude, position.coords.longitude);
+      
+      // Trigger the test GPS function to start watching
+      onTestGPS();
+      
+    } catch (error) {
+      console.error('❌ GPS permission failed:', error);
+    }
+  };
 
   if (!isVisible) {
     return (
@@ -109,6 +146,18 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
         </div>
         
         <div className="pt-2 border-t space-y-2">
+          {!location && !isWatching && (
+            <Button
+              onClick={requestGPSPermission}
+              size="sm"
+              className="w-full flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              disabled={permissionRequested}
+            >
+              <MapPin size={12} />
+              {permissionRequested ? 'Requesting...' : 'Enable GPS for Replit App'}
+            </Button>
+          )}
+          
           <Button
             onClick={onTestGPS}
             size="sm"
