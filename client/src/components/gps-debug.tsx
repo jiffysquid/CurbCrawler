@@ -123,6 +123,10 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
           <strong>Status:</strong> {isWatching ? 'Active' : 'Inactive'}
         </div>
         
+        <div>
+          <strong>Permission:</strong> {!location || location.lat === -27.4445 ? 'Test coordinates - Need real GPS' : 'Real GPS active'}
+        </div>
+        
         {location && (
           <div>
             <strong>Location:</strong><br/>
@@ -146,7 +150,7 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
         </div>
         
         <div className="pt-2 border-t space-y-2">
-          {!location && !isWatching && (
+          {(!location || location.lat === -27.4445) && (
             <Button
               onClick={requestGPSPermission}
               size="sm"
