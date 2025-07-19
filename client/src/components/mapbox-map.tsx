@@ -13,6 +13,7 @@ interface MapboxMapProps {
   isRecording: boolean;
   onLocationUpdate: (location: { lat: number; lng: number }) => void;
   persistentPaths: PathData[];
+  currentRecordingPath?: { lat: number; lng: number }[];
   focusArea?: string;
   showSuburbs?: boolean;
   showToilets?: boolean;
@@ -33,6 +34,7 @@ export default function MapboxMap({
   isRecording,
   onLocationUpdate,
   persistentPaths,
+  currentRecordingPath = [],
   focusArea = 'imax-van',
   showSuburbs = true,
   showToilets = false
@@ -89,6 +91,12 @@ export default function MapboxMap({
         data: { type: 'FeatureCollection', features: [] }
       });
 
+      // Add current recording path source
+      map.addSource('current-recording-path', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
       // Add suburb polygons layer
       map.addLayer({
         id: 'suburbs-fill',
@@ -132,6 +140,18 @@ export default function MapboxMap({
           'line-color': ['get', 'color'],
           'line-width': 8,
           'line-opacity': 0.75
+        }
+      });
+
+      // Add current recording path layer (shown in red during recording)
+      map.addLayer({
+        id: 'current-recording-path',
+        type: 'line',
+        source: 'current-recording-path',
+        paint: {
+          'line-color': '#EF4444',
+          'line-width': 10,
+          'line-opacity': 0.9
         }
       });
     });
@@ -205,19 +225,21 @@ export default function MapboxMap({
 
       console.log('🧭 Movement detected - bearing:', bearing.toFixed(1), '°, distance:', distance.toFixed(1), 'm');
 
-      // Rotate map if significant movement and bearing change
-      if (distance > 25 && timeSinceLastRotation > 4000) {
-        const bearingDiff = Math.abs(bearing - (currentBearingRef.current || 0));
+      // Rotate map if significant movement and bearing change - only during recording
+      if (isRecording && distance > 15 && timeSinceLastRotation > 3000) {
+        const currentMapBearing = map.getBearing();
+        const bearingDiff = Math.abs(bearing - currentMapBearing);
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
 
-        if (normalizedBearingDiff > 20) {
-          console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '°');
+        if (normalizedBearingDiff > 15) {
+          console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           
-          // Rotate map so driving direction faces up
+          // Rotate map so driving direction faces up, keep vehicle centered
           map.easeTo({
-            bearing: bearing,
+            bearing: -bearing, // Negative bearing so forward direction faces up
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 2000
+            duration: 1500,
+            essential: true
           });
 
           currentBearingRef.current = bearing;
@@ -409,6 +431,35 @@ export default function MapboxMap({
       console.log('✅ Updated persistent paths:', features.length, 'paths');
     }
   }, [persistentPaths, mapReady]);
+
+  // Update current recording path in real-time
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+
+    const map = mapRef.current;
+    const source = map.getSource('current-recording-path') as mapboxgl.GeoJSONSource;
+    
+    if (source) {
+      if (isRecording && currentRecordingPath.length > 1) {
+        const feature = {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: currentRecordingPath.map(coord => [coord.lng, coord.lat])
+          },
+          properties: {
+            name: 'Current Recording'
+          }
+        };
+
+        source.setData({ type: 'FeatureCollection', features: [feature] });
+        console.log('🔴 Updated current recording path:', currentRecordingPath.length, 'points');
+      } else {
+        // Clear the recording path when not recording
+        source.setData({ type: 'FeatureCollection', features: [] });
+      }
+    }
+  }, [currentRecordingPath, isRecording, mapReady]);
 
   // Map controls
   const toggleZoom = () => {

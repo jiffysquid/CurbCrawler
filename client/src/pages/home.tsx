@@ -63,6 +63,7 @@ export default function Home() {
 
       // Production mode: Start continuous GPS tracking immediately
       console.log("Production mode: Starting continuous GPS tracking");
+      console.log("Production mode: Checking location permissions for mobile device");
       startWatching();
       
       // Load persistent paths from localStorage
@@ -114,7 +115,7 @@ export default function Home() {
               setRealTimeDistance(prev => prev + segmentDistance);
               console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
               
-              // Add to persistent path tracking
+              // Add to recording path tracking for real-time display
               setRecordingPath(prev => {
                 const newPath = [...prev, { lat: gpsLocation.lat, lng: gpsLocation.lng }];
                 console.log(`🗺️ Recording path updated: ${newPath.length} points`);
@@ -560,12 +561,10 @@ export default function Home() {
       console.log('🗺️ Path coordinates preview:', persistentPath.coordinates.slice(0, 3), '...');
       
       savePersistentPath(persistentPath);
-      // Trigger storage event to update the map
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'persistentPaths',
-        newValue: JSON.stringify(loadPersistentPaths()),
-        storageArea: localStorage
-      }));
+      
+      // Immediately update the persistentPaths state
+      const updatedPaths = loadPersistentPaths();
+      setPersistentPaths(updatedPaths);
       console.log('✅ Saved persistent path:', persistentPath.name, persistentPath.coordinates.length, 'points');
     } else {
       console.log('⚠️ Cannot save path - recordingPath length:', recordingPath.length, 'recordingStartTime:', recordingStartTime);
@@ -645,6 +644,7 @@ export default function Home() {
           isRecording={isRecording}
           onLocationUpdate={handleKMLLocationUpdate}
           persistentPaths={persistentPaths}
+          currentRecordingPath={recordingPath}
           focusArea="imax-van"
           showSuburbs={showSuburbBoundaries}
           showToilets={showToilets}
