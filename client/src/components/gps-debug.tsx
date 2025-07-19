@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MapPin, RefreshCw, Play, Square, Upload } from "lucide-react";
+import { MapPin, RefreshCw, Play, Square, Upload, Copy } from "lucide-react";
 import { kmlSimulator } from "@/utils/kmlParser";
 import debugRouteKML from "@assets/debugRoute_1751599142866.kml?raw";
 
@@ -17,6 +17,7 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
   const [kmlLoaded, setKmlLoaded] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState({ current: 0, total: 0, percentage: 0 });
   const [permissionRequested, setPermissionRequested] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   
   useEffect(() => {
     // Load KML file on component mount
@@ -89,6 +90,16 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
     }
   };
 
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+    }
+  };
+
   if (!isVisible) {
     return (
       <div className="fixed top-20 right-4 z-[1001]">
@@ -125,6 +136,24 @@ export default function GPSDebug({ location, error, isWatching, onTestGPS, onLoc
         
         <div>
           <strong>Permission:</strong> {!location || location.lat === -27.4445 ? 'Test coordinates - Need real GPS' : 'Real GPS active'}
+        </div>
+        
+        <div className="text-xs text-gray-600 mt-2 p-2 bg-yellow-50 rounded border">
+          <strong>Replit App GPS Issue:</strong> The Replit mobile app may not support GPS permissions. Try opening this in your phone's browser instead:
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 break-all text-blue-600 text-xs">
+              {window.location.href}
+            </div>
+            <Button
+              onClick={copyUrl}
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs"
+            >
+              <Copy size={10} />
+              {urlCopied ? 'Copied!' : 'Copy'}
+            </Button>
+          </div>
         </div>
         
         {location && (
