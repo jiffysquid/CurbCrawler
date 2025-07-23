@@ -228,10 +228,10 @@ export default function MapboxMap({
       const timeSinceLastRotation = now - lastRotationTime.current;
 
       console.log('🧭 Movement detected - bearing:', bearing.toFixed(1), '°, distance:', distance.toFixed(1), 'm');
-      console.log('🧭 Debug - distance check:', distance > 1, 'time check:', timeSinceLastRotation > 500, 'timeSince:', timeSinceLastRotation);
+      console.log('🧭 Debug - distance check:', distance > 5, 'time check:', timeSinceLastRotation > 1500, 'timeSince:', timeSinceLastRotation);
 
-      // Rotate map if ANY movement - make it very responsive
-      if (distance > 1 && timeSinceLastRotation > 500) { // Very low thresholds for immediate rotation
+      // Rotate map based on significant movement
+      if (distance > 5 && timeSinceLastRotation > 1500) { // Smooth, less aggressive rotation
         const currentMapBearing = map.getBearing();
         
         // Calculate the target navigation bearing 
@@ -248,24 +248,24 @@ export default function MapboxMap({
 
         console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, travel bearing:', bearing.toFixed(1), '°, target navigation bearing:', navigationBearing.toFixed(1), '°, diff:', bearingDiff.toFixed(1), '°');
 
-        if (bearingDiff > 5) { // Very low threshold for immediate rotation response
+        if (bearingDiff > 15) { // Higher threshold for smoother rotation
           console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           console.log('🔄 Executing map rotation - travel bearing:', bearing.toFixed(1), '°, map bearing:', navigationBearing.toFixed(1), '°');
           
           map.easeTo({
             bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 500,
+            duration: 2000, // Longer, smoother animation
             essential: true
           });
 
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
         } else {
-          console.log('🧭 Bearing diff too small:', bearingDiff.toFixed(1), '° < 5°');
+          console.log('🧭 Bearing diff too small:', bearingDiff.toFixed(1), '° < 15°');
         }
       } else {
-        console.log('🧭 Conditions not met - distance:', distance.toFixed(1), 'm, timeSince:', timeSinceLastRotation, 'ms');
+        console.log('🧭 Conditions not met - distance:', distance.toFixed(1), 'm (need >5m), timeSince:', timeSinceLastRotation, 'ms (need >1500ms)');
       }
     }
 
