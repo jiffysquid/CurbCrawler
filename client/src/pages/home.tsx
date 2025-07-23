@@ -661,13 +661,7 @@ export default function Home() {
           recordingStats={recordingStats}
         />
         
-        <GPSDebug
-          location={location}
-          error={gpsError}
-          isWatching={isWatching}
-          onTestGPS={handleTestGPS}
-          onLocationUpdate={handleKMLLocationUpdate}
-        />
+
 
         {/* Mobile Menu Button */}
         <div className="fixed top-4 right-4 z-[1001] md:hidden">
