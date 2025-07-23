@@ -664,6 +664,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           medianAge: 43,
           clearoutStatus: currentSuburbs.includes("MOGGILL") ? "current" : nextSuburbs.includes("MOGGILL") ? "next" : null,
           dataSource: "abs-census-2021"
+        },
+        // Next week suburbs
+        {
+          name: "KENMORE",
+          population: 8245,
+          populationDensity: 520,
+          area: 15.86,
+          medianHousePrice: 1150000,
+          medianIncome: 85000,
+          medianAge: 38,
+          clearoutStatus: currentSuburbs.includes("KENMORE") ? "current" : nextSuburbs.includes("KENMORE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "BROOKFIELD",
+          population: 4567,
+          populationDensity: 285,
+          area: 16.02,
+          medianHousePrice: 1350000,
+          medianIncome: 95000,
+          medianAge: 41,
+          clearoutStatus: currentSuburbs.includes("BROOKFIELD") ? "current" : nextSuburbs.includes("BROOKFIELD") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "UPPER BROOKFIELD",
+          population: 1845,
+          populationDensity: 125,
+          area: 14.76,
+          medianHousePrice: 1650000,
+          medianIncome: 115000,
+          medianAge: 44,
+          clearoutStatus: currentSuburbs.includes("UPPER BROOKFIELD") ? "current" : nextSuburbs.includes("UPPER BROOKFIELD") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "KENMORE HILLS",
+          population: 3245,
+          populationDensity: 195,
+          area: 16.64,
+          medianHousePrice: 1280000,
+          medianIncome: 92000,
+          medianAge: 40,
+          clearoutStatus: currentSuburbs.includes("KENMORE HILLS") ? "current" : nextSuburbs.includes("KENMORE HILLS") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "PULLENVALE",
+          population: 2156,
+          populationDensity: 145,
+          area: 14.87,
+          medianHousePrice: 1450000,
+          medianIncome: 105000,
+          medianAge: 43,
+          clearoutStatus: currentSuburbs.includes("PULLENVALE") ? "current" : nextSuburbs.includes("PULLENVALE") ? "next" : null,
+          dataSource: "abs-census-2021"
         }
       ];
 
