@@ -648,6 +648,7 @@ export default function Home() {
           focusArea="imax-van"
           showSuburbs={showSuburbBoundaries}
           showToilets={showToilets}
+          currentSuburb={{ suburb: currentSuburb }}
         />
         
         {/* Simple Controls */}
