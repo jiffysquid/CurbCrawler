@@ -461,7 +461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return [];
     }
 
-    // 1. Normalize
+    // 1. Normalize (both price and density should be higher = better)
     const minP = Math.min(...price);
     const maxP = Math.max(...price);
     const minD = Math.min(...density);
@@ -474,14 +474,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const NP = price.map(p => priceRange === 0 ? 0.5 : (p - minP) / priceRange);
     const ND = density.map(d => densityRange === 0 ? 0.5 : (d - minD) / densityRange);
 
-    // 2. Distance from center (0.5, 0.5)
-    const D_max = Math.sqrt(0.5 * 0.5 + 0.5 * 0.5);
-    const dists = NP.map((np, i) => Math.sqrt(Math.pow(np - 0.5, 2) + Math.pow(ND[i] - 0.5, 2)));
+    // 2. Calculate goodness: reward high price AND high density
+    // Optimal point is now (1, 1) - high price, high density
+    const D_max = Math.sqrt(1 * 1 + 1 * 1); // Distance from (0,0) to (1,1)
+    const dists = NP.map((np, i) => Math.sqrt(Math.pow(np - 1, 2) + Math.pow(ND[i] - 1, 2)));
 
-    // 3. Goodness
+    // 3. Goodness: closer to (1,1) = better
     const goods = dists.map(d => Math.max(0, Math.min(1, 1 - (d / D_max))));
 
-    // 4. Stars
+    // 4. Stars: scale from 1-5
     const stars = goods.map(g => Math.round(g * 4) + 1);
 
     return stars;
