@@ -529,7 +529,8 @@ export default function MapboxMap({
                 console.log('🔍 Demographics array length:', demographicsArray?.length);
                 console.log('🔍 Clearout schedule:', clearoutSchedule);
                 console.log('🔍 Current suburb info:', currentSuburb);
-                console.log('🔍 Window condition check:', showDemographics && demographicsArray && demographicsArray.length > 0);
+                console.log('🔍 All suburbs window condition:', !showDemographics && demographicsArray && demographicsArray.length > 0);
+                console.log('🔍 Individual suburb condition:', !showDemographics && demographics[currentSuburb.suburb]);
                 setShowDemographics(!showDemographics);
               }}
               size="sm"
