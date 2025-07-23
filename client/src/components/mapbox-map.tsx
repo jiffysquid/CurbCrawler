@@ -17,6 +17,7 @@ interface MapboxMapProps {
   focusArea?: string;
   showSuburbs?: boolean;
   showToilets?: boolean;
+  currentSuburb?: { suburb: string } | null;
 }
 
 interface SuburbInfo {
@@ -37,7 +38,8 @@ export default function MapboxMap({
   currentRecordingPath = [],
   focusArea = 'imax-van',
   showSuburbs = true,
-  showToilets = false
+  showToilets = false,
+  currentSuburb: propCurrentSuburb
 }: MapboxMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -49,6 +51,7 @@ export default function MapboxMap({
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
   const [showDemographics, setShowDemographics] = useState(false);
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
+  const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
 
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
@@ -334,12 +337,14 @@ export default function MapboxMap({
     }
   });
 
-  // Debug suburb info
+  // Update stable current suburb (prefer prop over query)
   useEffect(() => {
-    if (currentSuburb) {
-      console.log('🏘️ Current suburb detected:', currentSuburb.suburb);
+    const suburbToUse = propCurrentSuburb || currentSuburb;
+    if (suburbToUse && suburbToUse.suburb && suburbToUse.suburb !== 'Unknown') {
+      setStableCurrentSuburb(suburbToUse);
+      console.log('🏘️ Current suburb detected:', suburbToUse.suburb);
     }
-  }, [currentSuburb]);
+  }, [propCurrentSuburb, currentSuburb]);
 
   // Update current suburb info with clearout type
   useEffect(() => {
@@ -511,12 +516,12 @@ export default function MapboxMap({
       />
       
       {/* Current Suburb Info Window */}
-      {currentSuburb && (
+      {stableCurrentSuburb && stableCurrentSuburb.suburb && (
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border z-[1000] min-w-[280px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-lg">{currentSuburb.suburb}</span>
+              <span className="font-semibold text-lg">{stableCurrentSuburb.suburb}</span>
             </div>
             <Button
               onClick={() => {
@@ -525,9 +530,9 @@ export default function MapboxMap({
                 console.log('🔍 Demographics array:', demographicsArray);
                 console.log('🔍 Demographics array length:', demographicsArray?.length);
                 console.log('🔍 Clearout schedule:', clearoutSchedule);
-                console.log('🔍 Current suburb info:', currentSuburb);
+                console.log('🔍 Current suburb info:', stableCurrentSuburb);
                 console.log('🔍 All suburbs window condition:', !showDemographics && demographicsArray && demographicsArray.length > 0);
-                console.log('🔍 Individual suburb condition:', !showDemographics && demographics[currentSuburb.suburb]);
+                console.log('🔍 Individual suburb condition:', !showDemographics && demographics[stableCurrentSuburb?.suburb]);
                 setShowDemographics(!showDemographics);
               }}
               size="sm"
@@ -542,21 +547,21 @@ export default function MapboxMap({
 
 
           {/* Demographics overlay showing individual suburb info */}
-          {showDemographics && demographics[currentSuburb.suburb] && (
+          {showDemographics && stableCurrentSuburb && demographics[stableCurrentSuburb.suburb] && (
             <div className="mt-4 pt-3 border-t border-gray-200">
               <div className="text-sm text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  <span>Population: {demographics[currentSuburb.suburb]?.population?.toLocaleString() || 'N/A'}</span>
+                  <span>Population: {demographics[stableCurrentSuburb.suburb]?.population?.toLocaleString() || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="h-4 w-4" />
-                  <span>Median Price: ${demographics[currentSuburb.suburb]?.medianHousePrice?.toLocaleString() || 'N/A'}</span>
+                  <span>Median Price: ${demographics[stableCurrentSuburb.suburb]?.medianHousePrice?.toLocaleString() || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
-                      <span key={i} className={`text-sm ${i < (demographics[currentSuburb.suburb]?.starRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
+                      <span key={i} className={`text-sm ${i < (demographics[stableCurrentSuburb.suburb]?.starRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
                         ★
                       </span>
                     ))}
