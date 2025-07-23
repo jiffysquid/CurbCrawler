@@ -224,27 +224,34 @@ export default function MapboxMap({
       const timeSinceLastRotation = now - lastRotationTime.current;
 
       console.log('🧭 Movement detected - bearing:', bearing.toFixed(1), '°, distance:', distance.toFixed(1), 'm');
+      console.log('🧭 Debug - distance check:', distance > 1, 'time check:', timeSinceLastRotation > 500, 'timeSince:', timeSinceLastRotation);
 
-      // Rotate map if significant movement - works during recording or KML simulation
-      if (distance > 5 && timeSinceLastRotation > 1000) { // Reduced thresholds for more responsive rotation
+      // Rotate map if ANY movement - make it very responsive
+      if (distance > 1 && timeSinceLastRotation > 500) { // Very low thresholds for immediate rotation
         const currentMapBearing = map.getBearing();
         const bearingDiff = Math.abs(bearing - currentMapBearing);
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
 
-        if (normalizedBearingDiff > 10) { // Reduced from 15° to 10° for more responsive rotation
+        console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, new bearing:', bearing.toFixed(1), '°, diff:', normalizedBearingDiff.toFixed(1), '°');
+
+        if (normalizedBearingDiff > 5) { // Very low threshold for immediate rotation response
           console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           
           // Rotate map so driving direction faces up, keep vehicle centered
           map.easeTo({
             bearing: -bearing, // Negative bearing so forward direction faces up
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 1000, // Reduced from 1500ms for smoother feel
+            duration: 500, // Very fast rotation for immediate response
             essential: true
           });
 
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
+        } else {
+          console.log('🧭 Bearing diff too small:', normalizedBearingDiff.toFixed(1), '° < 5°');
         }
+      } else {
+        console.log('🧭 Conditions not met - distance:', distance.toFixed(1), 'm, timeSince:', timeSinceLastRotation, 'ms');
       }
     }
 
