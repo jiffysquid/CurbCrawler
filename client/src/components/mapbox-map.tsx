@@ -225,20 +225,20 @@ export default function MapboxMap({
 
       console.log('🧭 Movement detected - bearing:', bearing.toFixed(1), '°, distance:', distance.toFixed(1), 'm');
 
-      // Rotate map if significant movement and bearing change - only during recording
-      if (isRecording && distance > 15 && timeSinceLastRotation > 3000) {
+      // Rotate map if significant movement - works during recording or KML simulation
+      if (distance > 5 && timeSinceLastRotation > 1000) { // Reduced thresholds for more responsive rotation
         const currentMapBearing = map.getBearing();
         const bearingDiff = Math.abs(bearing - currentMapBearing);
         const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
 
-        if (normalizedBearingDiff > 15) {
+        if (normalizedBearingDiff > 10) { // Reduced from 15° to 10° for more responsive rotation
           console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           
           // Rotate map so driving direction faces up, keep vehicle centered
           map.easeTo({
             bearing: -bearing, // Negative bearing so forward direction faces up
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 1500,
+            duration: 1000, // Reduced from 1500ms for smoother feel
             essential: true
           });
 
