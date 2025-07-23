@@ -206,6 +206,10 @@ export default function MapboxMap({
 
     // Handle rotation based on movement
     if (previousLocationRef.current) {
+      console.log('🔄 Previous location found, calculating movement...');
+      console.log('🔄 Previous:', previousLocationRef.current.lat.toFixed(6), previousLocationRef.current.lng.toFixed(6));
+      console.log('🔄 Current:', currentLocation.lat.toFixed(6), currentLocation.lng.toFixed(6));
+      
       const distance = calculateDistance(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -230,8 +234,9 @@ export default function MapboxMap({
       if (distance > 1 && timeSinceLastRotation > 500) { // Very low thresholds for immediate rotation
         const currentMapBearing = map.getBearing();
         
-        // Calculate the target navigation bearing (opposite of travel direction)
-        const navigationBearing = (360 - bearing) % 360;
+        // Calculate the target navigation bearing 
+        // Try direct bearing first (not opposite) to see if this matches user's expectation
+        const navigationBearing = bearing;
         
         // Properly calculate bearing difference, handling negative and wrap-around
         let bearingDiff = Math.abs(navigationBearing - currentMapBearing);
