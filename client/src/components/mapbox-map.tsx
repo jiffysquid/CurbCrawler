@@ -229,19 +229,22 @@ export default function MapboxMap({
       // Rotate map if ANY movement - make it very responsive
       if (distance > 1 && timeSinceLastRotation > 500) { // Very low thresholds for immediate rotation
         const currentMapBearing = map.getBearing();
-        const bearingDiff = Math.abs(bearing - currentMapBearing);
-        const normalizedBearingDiff = Math.min(bearingDiff, 360 - bearingDiff);
+        
+        // Calculate the target navigation bearing (opposite of travel direction)
+        const navigationBearing = (360 - bearing) % 360;
+        
+        // Properly calculate bearing difference, handling negative and wrap-around
+        let bearingDiff = Math.abs(navigationBearing - currentMapBearing);
+        if (bearingDiff > 180) {
+          bearingDiff = 360 - bearingDiff;
+        }
 
-        console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, new bearing:', bearing.toFixed(1), '°, diff:', normalizedBearingDiff.toFixed(1), '°');
+        console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, travel bearing:', bearing.toFixed(1), '°, target navigation bearing:', navigationBearing.toFixed(1), '°, diff:', bearingDiff.toFixed(1), '°');
 
-        if (normalizedBearingDiff > 5) { // Very low threshold for immediate rotation response
-          console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
-          
-          // Rotate map so driving direction faces up, keep vehicle centered
-          // For navigation, we want the direction of travel to point "up" (north on screen)
-          // This means rotating the map by the OPPOSITE of the travel direction
-          const navigationBearing = 360 - bearing; // Opposite direction
+        if (bearingDiff > 5) { // Very low threshold for immediate rotation response
+          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           console.log('🔄 Executing map rotation - travel bearing:', bearing.toFixed(1), '°, map bearing:', navigationBearing.toFixed(1), '°');
+          
           map.easeTo({
             bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
@@ -252,7 +255,7 @@ export default function MapboxMap({
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
         } else {
-          console.log('🧭 Bearing diff too small:', normalizedBearingDiff.toFixed(1), '° < 5°');
+          console.log('🧭 Bearing diff too small:', bearingDiff.toFixed(1), '° < 5°');
         }
       } else {
         console.log('🧭 Conditions not met - distance:', distance.toFixed(1), 'm, timeSince:', timeSinceLastRotation, 'ms');
