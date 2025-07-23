@@ -243,6 +243,8 @@ export default function MapboxMap({
         if (bearingDiff > 180) {
           bearingDiff = 360 - bearingDiff;
         }
+        // Ensure we always get a positive difference
+        bearingDiff = Math.abs(bearingDiff);
 
         console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, travel bearing:', bearing.toFixed(1), '°, target navigation bearing:', navigationBearing.toFixed(1), '°, diff:', bearingDiff.toFixed(1), '°');
 
