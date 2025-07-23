@@ -188,9 +188,6 @@ export default function MapboxMap({
       background-repeat: no-repeat;
       background-position: center;
       cursor: pointer;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     `;
 
     // Create and add vehicle marker
@@ -650,7 +647,7 @@ export default function MapboxMap({
       )}
 
       {/* Map Controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
+      <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2 z-[1000]">
         <Button
           onClick={toggleZoom}
           size="sm"
