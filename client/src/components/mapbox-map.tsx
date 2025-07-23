@@ -238,10 +238,14 @@ export default function MapboxMap({
           console.log('🔄 Rotating map to bearing:', bearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
           
           // Rotate map so driving direction faces up, keep vehicle centered
+          // For navigation, we want the direction of travel to point "up" (north on screen)
+          // This means rotating the map by the OPPOSITE of the travel direction
+          const navigationBearing = 360 - bearing; // Opposite direction
+          console.log('🔄 Executing map rotation - travel bearing:', bearing.toFixed(1), '°, map bearing:', navigationBearing.toFixed(1), '°');
           map.easeTo({
-            bearing: -bearing, // Negative bearing so forward direction faces up
+            bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 500, // Very fast rotation for immediate response
+            duration: 500,
             essential: true
           });
 
