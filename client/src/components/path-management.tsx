@@ -5,13 +5,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Route, AlertTriangle } from "lucide-react";
-import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
+import { Route, AlertTriangle, Clock, MapPin, Calendar } from "lucide-react";
+import { clearAllPersistentPaths, loadPersistentPaths, PersistentPath } from "@/lib/utils";
 
 export default function PathManagement() {
   const [pathColorScheme, setPathColorScheme] = useState<string>("bright");
-  const [savedPaths, setSavedPaths] = useState<any[]>([]);
+  const [savedPaths, setSavedPaths] = useState<PersistentPath[]>([]);
   const { toast } = useToast();
+
+  // Helper function to format date and time
+  const formatDateTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return {
+      date: date.toLocaleDateString('en-AU', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('en-AU', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+      })
+    };
+  };
+
+  // Helper function to format duration
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) {
+      return `${Math.round(minutes)}m`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const mins = Math.round(minutes % 60);
+      return `${hours}h ${mins}m`;
+    }
+  };
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -20,6 +48,33 @@ export default function PathManagement() {
     
     // Load saved paths
     setSavedPaths(loadPersistentPaths());
+  }, []);
+
+  // Listen for storage changes to update saved paths when new ones are added
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'persistentPaths') {
+        console.log('📍 PathManagement: Persistent paths updated, refreshing list');
+        setSavedPaths(loadPersistentPaths());
+      }
+    };
+
+    // Listen for custom events from same tab
+    const handleCustomStorageEvent = (e: Event) => {
+      const storageEvent = e as CustomEvent;
+      if (storageEvent.detail?.key === 'persistentPaths') {
+        console.log('📍 PathManagement: Same-tab persistent paths updated, refreshing list');
+        setSavedPaths(loadPersistentPaths());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('customStorageEvent', handleCustomStorageEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('customStorageEvent', handleCustomStorageEvent);
+    };
   }, []);
 
   // Save path color scheme to localStorage when it changes
@@ -88,25 +143,58 @@ export default function PathManagement() {
             
             {/* Saved Paths List */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium">Saved Paths ({savedPaths.length})</Label>
+              <Label className="text-xs font-medium">Recent Sessions ({savedPaths.length})</Label>
               {savedPaths.length === 0 ? (
-                <div className="text-xs text-gray-500 italic">No saved paths yet</div>
+                <div className="text-xs text-gray-500 italic">No recorded sessions yet</div>
               ) : (
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {savedPaths.map((path, index) => (
-                    <div key={path.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                      <div className="flex-1">
-                        <div className="font-medium">{path.name}</div>
-                        <div className="text-gray-500">
-                          {path.date} • {path.distance ? (path.distance / 1000).toFixed(1) : '0.0'}km
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {savedPaths.slice().reverse().map((path, index) => {
+                    const { date, time } = formatDateTime(path.date);
+                    const distanceKm = path.distance ? path.distance.toFixed(1) : '0.0';
+                    const duration = formatDuration(path.duration || 0);
+                    
+                    return (
+                      <div key={path.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                              {path.name}
+                            </div>
+                            <div className="flex items-center space-x-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{date}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{time}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div 
+                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                            style={{ backgroundColor: path.color }}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
+                              <MapPin className="h-3 w-3" />
+                              <span>{distanceKm} km</span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
+                              <Clock className="h-3 w-3" />
+                              <span>{duration}</span>
+                            </div>
+                          </div>
+                          <div className="text-gray-500 dark:text-gray-400">
+                            {path.coordinates?.length || 0} points
+                          </div>
                         </div>
                       </div>
-                      <div 
-                        className="w-3 h-3 rounded-full border border-gray-300"
-                        style={{ backgroundColor: path.color }}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

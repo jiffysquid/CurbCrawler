@@ -206,6 +206,11 @@ export function savePersistentPath(path: PersistentPath): void {
   }
   existingPaths.push(path);
   localStorage.setItem('persistentPaths', JSON.stringify(existingPaths));
+  
+  // Dispatch custom event for same-tab communication
+  window.dispatchEvent(new CustomEvent('customStorageEvent', {
+    detail: { key: 'persistentPaths', action: 'add', path }
+  }));
 }
 
 export function loadPersistentPaths(): PersistentPath[] {
@@ -228,4 +233,9 @@ export function deletePersistentPath(id: string): void {
 
 export function clearAllPersistentPaths(): void {
   localStorage.removeItem('persistentPaths');
+  
+  // Dispatch custom event for same-tab communication
+  window.dispatchEvent(new CustomEvent('customStorageEvent', {
+    detail: { key: 'persistentPaths', action: 'clear' }
+  }));
 }
