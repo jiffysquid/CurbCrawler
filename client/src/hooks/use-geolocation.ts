@@ -165,11 +165,32 @@ export function useGeolocation() {
                   }
                 }, 5000);
               },
-              {
-                enableHighAccuracy: true,
-                timeout: 30000, // Longer timeout for mobile
-                maximumAge: 2000, // Allow slightly older data
-              }
+              (() => {
+                const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+                let maxAge = 2000;
+                let timeout = 30000;
+                
+                switch (gpsAccuracy) {
+                  case 'high':
+                    maxAge = 500; // 0.5s updates
+                    timeout = 15000;
+                    break;
+                  case 'medium':
+                    maxAge = 1000; // 1s updates
+                    timeout = 30000;
+                    break;
+                  case 'low':
+                    maxAge = 2500; // 2.5s updates
+                    timeout = 45000;
+                    break;
+                }
+                
+                return {
+                  enableHighAccuracy: true,
+                  timeout,
+                  maximumAge: maxAge,
+                };
+              })()
             );
             
             watchIdRef.current = id;
@@ -179,11 +200,36 @@ export function useGeolocation() {
             console.error('Initial GPS position failed:', error);
             updateError(error);
           },
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0, // Force fresh location
-          }
+          (() => {
+            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+            
+            switch (gpsAccuracy) {
+              case 'high':
+                return {
+                  enableHighAccuracy: true,
+                  timeout: 15000,
+                  maximumAge: 0,
+                };
+              case 'medium':
+                return {
+                  enableHighAccuracy: true,
+                  timeout: 20000,
+                  maximumAge: 1000,
+                };
+              case 'low':
+                return {
+                  enableHighAccuracy: false,
+                  timeout: 30000,
+                  maximumAge: 5000,
+                };
+              default:
+                return {
+                  enableHighAccuracy: true,
+                  timeout: 20000,
+                  maximumAge: 1000,
+                };
+            }
+          })()
         );
         
       } catch (error) {
@@ -201,11 +247,36 @@ export function useGeolocation() {
             console.error('Fallback GPS error:', error);
             updateError(error);
           },
-          {
-            enableHighAccuracy: true,
-            timeout: 30000,
-            maximumAge: 2000,
-          }
+          (() => {
+            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+            let maxAge = 2000;
+            let timeout = 30000;
+            let highAccuracy = true;
+            
+            switch (gpsAccuracy) {
+              case 'high':
+                maxAge = 500;
+                timeout = 15000;
+                highAccuracy = true;
+                break;
+              case 'medium':
+                maxAge = 1000;
+                timeout = 30000;
+                highAccuracy = true;
+                break;
+              case 'low':
+                maxAge = 2500;
+                timeout = 45000;
+                highAccuracy = false;
+                break;
+            }
+            
+            return {
+              enableHighAccuracy: highAccuracy,
+              timeout,
+              maximumAge: maxAge,
+            };
+          })()
         );
         
         watchIdRef.current = id;
@@ -230,6 +301,23 @@ export function useGeolocation() {
     }
     setState(prev => ({ ...prev, isWatching: false }));
   }, []);
+
+  // Listen for GPS accuracy changes and restart GPS with new settings
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'gpsAccuracy' && state.isWatching) {
+        console.log('GPS accuracy setting changed, restarting GPS with new settings:', e.newValue);
+        stopWatching();
+        setTimeout(() => startWatching(), 1000); // Restart after 1 second
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [state.isWatching, startWatching, stopWatching]);
 
   // Cleanup on unmount
   useEffect(() => {

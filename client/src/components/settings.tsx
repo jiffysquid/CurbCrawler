@@ -231,7 +231,7 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[9999]">
                 <SelectItem value="high">High (0.5s updates, Battery intensive)</SelectItem>
                 <SelectItem value="medium">Medium (1s updates, Recommended)</SelectItem>
                 <SelectItem value="low">Low (2.5s updates, Battery saving)</SelectItem>
