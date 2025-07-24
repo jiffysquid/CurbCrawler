@@ -52,6 +52,21 @@ export default function MapboxMap({
   const [showDemographics, setShowDemographics] = useState(false);
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
   const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
+  
+  // Smooth interpolation state
+  const interpolationRef = useRef<{
+    isAnimating: boolean;
+    startLocation: { lat: number; lng: number } | null;
+    targetLocation: { lat: number; lng: number } | null;
+    startTime: number;
+    duration: number;
+  }>({
+    isAnimating: false,
+    startLocation: null,
+    targetLocation: null,
+    startTime: 0,
+    duration: 2000 // 2 seconds for smooth animation
+  });
 
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
@@ -169,54 +184,132 @@ export default function MapboxMap({
     };
   }, []);
 
-  // Handle vehicle marker and rotation
+  // Smooth interpolation function
+  const lerp = (start: number, end: number, progress: number) => {
+    return start + (end - start) * progress;
+  };
+
+  const easeInOutQuad = (t: number) => {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  };
+
+  // Smooth vehicle marker animation
+  const animateVehicle = useCallback(() => {
+    if (!mapRef.current || !vehicleMarkerRef.current || !interpolationRef.current.isAnimating) return;
+
+    const now = Date.now();
+    const elapsed = now - interpolationRef.current.startTime;
+    const progress = Math.min(elapsed / interpolationRef.current.duration, 1);
+    const easedProgress = easeInOutQuad(progress);
+
+    if (interpolationRef.current.startLocation && interpolationRef.current.targetLocation) {
+      const currentLat = lerp(
+        interpolationRef.current.startLocation.lat,
+        interpolationRef.current.targetLocation.lat,
+        easedProgress
+      );
+      const currentLng = lerp(
+        interpolationRef.current.startLocation.lng,
+        interpolationRef.current.targetLocation.lng,
+        easedProgress
+      );
+
+      // Update vehicle marker position
+      vehicleMarkerRef.current.setLngLat([currentLng, currentLat]);
+
+      // Update map center during recording for smooth following
+      if (isRecording) {
+        mapRef.current.easeTo({
+          center: [currentLng, currentLat],
+          duration: 100,
+          essential: true
+        });
+      }
+
+      // Add to recording path in real-time during animation (for concurrent path updates)
+      // Throttle path updates to every 200ms to avoid overwhelming the system
+      const throttleKey = `${currentLat.toFixed(5)}-${currentLng.toFixed(5)}`;
+      const lastThrottleTime = (animateVehicle as any).lastThrottleTime || 0;
+      const lastThrottleKey = (animateVehicle as any).lastThrottleKey || '';
+      
+      if (isRecording && onLocationUpdate && (now - lastThrottleTime > 200 || throttleKey !== lastThrottleKey)) {
+        onLocationUpdate({ lat: currentLat, lng: currentLng });
+        (animateVehicle as any).lastThrottleTime = now;
+        (animateVehicle as any).lastThrottleKey = throttleKey;
+      }
+    }
+
+    if (progress < 1) {
+      requestAnimationFrame(animateVehicle);
+    } else {
+      interpolationRef.current.isAnimating = false;
+      console.log('🎯 Vehicle animation completed');
+    }
+  }, [isRecording, onLocationUpdate]);
+
+  // Handle vehicle marker and smooth movement
   useEffect(() => {
     if (!mapRef.current || !mapReady || !currentLocation) return;
 
     const map = mapRef.current;
 
-    // Remove existing vehicle marker
-    if (vehicleMarkerRef.current) {
-      vehicleMarkerRef.current.remove();
+    // Create vehicle marker if it doesn't exist
+    if (!vehicleMarkerRef.current) {
+      const vehicleElement = document.createElement('div');
+      vehicleElement.className = 'vehicle-marker';
+      vehicleElement.style.cssText = `
+        width: 30px;
+        height: 30px;
+        background-image: url(${iMaxVanPath});
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      `;
+
+      vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
+        .setLngLat([currentLocation.lng, currentLocation.lat])
+        .addTo(map);
+
+      console.log('🚐 Vehicle marker created at:', currentLocation.lat, currentLocation.lng);
     }
 
-    // Create vehicle marker element
-    const vehicleElement = document.createElement('div');
-    vehicleElement.className = 'vehicle-marker';
-    vehicleElement.style.cssText = `
-      width: 30px;
-      height: 30px;
-      background-image: url(${iMaxVanPath});
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      cursor: pointer;
-    `;
+    // Start smooth interpolation to new location
+    const startLocation = previousLocationRef.current || currentLocation;
+    
+    // Calculate movement distance for validation
+    const distance = previousLocationRef.current ? calculateDistance(
+      previousLocationRef.current.lat,
+      previousLocationRef.current.lng,
+      currentLocation.lat,
+      currentLocation.lng
+    ) * 1000 : 0;
 
-    // Create and add vehicle marker
-    vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
-      .setLngLat([currentLocation.lng, currentLocation.lat])
-      .addTo(map);
+    // Only animate if there's meaningful movement (> 1 meter)
+    if (distance > 1 || !previousLocationRef.current) {
+      // If already animating, update the target location for smooth continuation
+      if (interpolationRef.current.isAnimating) {
+        console.log('🎯 Updating animation target mid-flight');
+        interpolationRef.current.targetLocation = currentLocation;
+      } else {
+        // Start new animation
+        interpolationRef.current = {
+          isAnimating: true,
+          startLocation,
+          targetLocation: currentLocation,
+          startTime: Date.now(),
+          duration: distance > 50 ? 2000 : 1000 // Longer animation for larger movements
+        };
 
-    // Center map on vehicle
-    map.easeTo({
-      center: [currentLocation.lng, currentLocation.lat],
-      duration: 1000
-    });
+        console.log('🎯 Starting smooth vehicle animation from', startLocation.lat.toFixed(6), startLocation.lng.toFixed(6), 'to', currentLocation.lat.toFixed(6), currentLocation.lng.toFixed(6), `(${distance.toFixed(1)}m)`);
+        
+        animateVehicle();
+      }
+    }
 
-    // Handle rotation based on movement
-    if (previousLocationRef.current) {
-      console.log('🔄 Previous location found, calculating movement...');
-      console.log('🔄 Previous:', previousLocationRef.current.lat.toFixed(6), previousLocationRef.current.lng.toFixed(6));
-      console.log('🔄 Current:', currentLocation.lat.toFixed(6), currentLocation.lng.toFixed(6));
-      
-      const distance = calculateDistance(
-        previousLocationRef.current.lat,
-        previousLocationRef.current.lng,
-        currentLocation.lat,
-        currentLocation.lng
-      ) * 1000; // Convert to meters
-
+    // Handle rotation based on movement (unchanged logic)
+    if (previousLocationRef.current && distance > 5) {
       const bearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -227,50 +320,34 @@ export default function MapboxMap({
       const now = Date.now();
       const timeSinceLastRotation = now - lastRotationTime.current;
 
-      console.log('🧭 Movement detected - bearing:', bearing.toFixed(1), '°, distance:', distance.toFixed(1), 'm');
-      console.log('🧭 Debug - distance check:', distance > 5, 'time check:', timeSinceLastRotation > 1500, 'timeSince:', timeSinceLastRotation);
-
-      // Rotate map based on significant movement
-      if (distance > 5 && timeSinceLastRotation > 1500) { // Smooth, less aggressive rotation
+      if (timeSinceLastRotation > 1500) {
         const currentMapBearing = map.getBearing();
-        
-        // Calculate the target navigation bearing 
-        // Try direct bearing first (not opposite) to see if this matches user's expectation
         const navigationBearing = bearing;
         
-        // Properly calculate bearing difference, handling negative and wrap-around
         let bearingDiff = Math.abs(navigationBearing - currentMapBearing);
         if (bearingDiff > 180) {
           bearingDiff = 360 - bearingDiff;
         }
-        // Ensure we always get a positive difference
         bearingDiff = Math.abs(bearingDiff);
 
-        console.log('🧭 Debug - current map bearing:', currentMapBearing.toFixed(1), '°, travel bearing:', bearing.toFixed(1), '°, target navigation bearing:', navigationBearing.toFixed(1), '°, diff:', bearingDiff.toFixed(1), '°');
-
-        if (bearingDiff > 15) { // Higher threshold for smoother rotation
-          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (was:', currentMapBearing.toFixed(1), '°)');
-          console.log('🔄 Executing map rotation - travel bearing:', bearing.toFixed(1), '°, map bearing:', navigationBearing.toFixed(1), '°');
+        if (bearingDiff > 15) {
+          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '°');
           
           map.easeTo({
             bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 2000, // Longer, smoother animation
+            duration: 2000,
             essential: true
           });
 
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
-        } else {
-          console.log('🧭 Bearing diff too small:', bearingDiff.toFixed(1), '° < 15°');
         }
-      } else {
-        console.log('🧭 Conditions not met - distance:', distance.toFixed(1), 'm (need >5m), timeSince:', timeSinceLastRotation, 'ms (need >1500ms)');
       }
     }
 
     previousLocationRef.current = currentLocation;
-  }, [currentLocation, mapReady]);
+  }, [currentLocation, mapReady, animateVehicle]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({

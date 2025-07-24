@@ -90,49 +90,14 @@ export default function Home() {
     }
   }, [toast, startWatching]);
 
-  // Update location state when GPS location changes with throttling to prevent UI freeze
+  // Update location state when GPS location changes - optimized for smooth interpolation
   useEffect(() => {
     if (gpsLocation) {
       setLocation(gpsLocation);
       console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
       
-      // Throttle expensive operations during recording to prevent UI freeze
-      if (isRecording) {
-        // Only update distance every 2 seconds to prevent constant calculations
-        const now = Date.now();
-        const lastUpdate = lastRecordingLocation?.timestamp || 0;
-        
-        if (now - lastUpdate > 2000) { // 2 second throttle
-          if (lastRecordingLocation) {
-            const segmentDistance = calculateDistance(
-              lastRecordingLocation.lat, 
-              lastRecordingLocation.lng, 
-              gpsLocation.lat, 
-              gpsLocation.lng
-            );
-            // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
-            if (segmentDistance > 0.001) { // 0.001 km = 1 meter
-              setRealTimeDistance(prev => prev + segmentDistance);
-              console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
-              
-              // Add to recording path tracking for real-time display
-              setRecordingPath(prev => {
-                const newPath = [...prev, { lat: gpsLocation.lat, lng: gpsLocation.lng }];
-                console.log(`🗺️ Recording path updated: ${newPath.length} points`);
-                return newPath;
-              });
-            }
-          }
-          
-          // Update last recording location with timestamp
-          setLastRecordingLocation({ 
-            lat: gpsLocation.lat, 
-            lng: gpsLocation.lng, 
-            timestamp: now 
-          });
-        }
-      } else {
-        // When not recording, update suburb lookup (throttled)
+      // When not recording, update suburb lookup (throttled)
+      if (!isRecording) {
         setTimeout(() => {
           updateCurrentSuburb(gpsLocation).catch(error => {
             console.log('Suburb lookup failed, continuing with GPS tracking:', error);
@@ -141,6 +106,49 @@ export default function Home() {
       }
     }
   }, [gpsLocation, isRecording]);
+
+  // Handle concurrent path updates from map animation
+  const handleLocationUpdate = useCallback((animatedLocation: { lat: number; lng: number }) => {
+    if (!isRecording) return;
+
+    // Add to recording path for real-time display
+    setRecordingPath(prev => {
+      // Avoid duplicate points
+      const lastPoint = prev[prev.length - 1];
+      if (lastPoint && 
+          Math.abs(lastPoint.lat - animatedLocation.lat) < 0.00001 && 
+          Math.abs(lastPoint.lng - animatedLocation.lng) < 0.00001) {
+        return prev;
+      }
+      
+      const newPath = [...prev, animatedLocation];
+      console.log(`🗺️ Recording path updated from animation: ${newPath.length} points`);
+      return newPath;
+    });
+
+    // Update distance calculation
+    if (lastRecordingLocation) {
+      const segmentDistance = calculateDistance(
+        lastRecordingLocation.lat, 
+        lastRecordingLocation.lng, 
+        animatedLocation.lat, 
+        animatedLocation.lng
+      );
+      
+      // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
+      if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+        setRealTimeDistance(prev => prev + segmentDistance);
+        console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
+      }
+    }
+    
+    // Update last recording location
+    setLastRecordingLocation({ 
+      lat: animatedLocation.lat, 
+      lng: animatedLocation.lng, 
+      timestamp: Date.now() 
+    });
+  }, [isRecording, lastRecordingLocation, realTimeDistance]);
 
   // GPS monitoring and auto-restart during recording - prevents crashes with reduced frequency
   useEffect(() => {
@@ -642,7 +650,7 @@ export default function Home() {
         <MapboxMap
           currentLocation={location}
           isRecording={isRecording}
-          onLocationUpdate={handleKMLLocationUpdate}
+          onLocationUpdate={handleLocationUpdate}
           persistentPaths={persistentPaths}
           currentRecordingPath={recordingPath}
           focusArea="imax-van"
