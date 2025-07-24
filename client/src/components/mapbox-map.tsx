@@ -428,7 +428,7 @@ export default function MapboxMap({
         type: 'Feature',
         geometry: {
           type: 'LineString',
-          coordinates: path.coordinates.map(coord => [coord[1], coord[0]])
+          coordinates: path.coordinates.map(coord => [coord.lng, coord.lat])
         },
         properties: {
           name: path.name,
