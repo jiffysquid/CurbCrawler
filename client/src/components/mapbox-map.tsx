@@ -161,6 +161,32 @@ export default function MapboxMap({
         }
       });
 
+      // Add source for path arrows
+      map.addSource('persistent-path-arrows', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      // Add layer for path arrows using text symbols
+      map.addLayer({
+        id: 'persistent-path-arrows',
+        type: 'symbol',
+        source: 'persistent-path-arrows',
+        layout: {
+          'text-field': '▲',
+          'text-size': 12,
+          'text-rotation-alignment': 'map',
+          'text-rotate': ['get', 'rotation'],
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+          'text-offset': [0, 0]
+        },
+        paint: {
+          'text-color': ['get', 'color'],
+          'text-opacity': 0.9
+        }
+      });
+
       // Add current recording path layer (shown in red during recording)
       map.addLayer({
         id: 'current-recording-path',
@@ -493,15 +519,56 @@ export default function MapboxMap({
     }
   }, [toilets, showToilets, mapReady]);
 
-  // Update persistent paths
+  // Helper function to calculate arrow positions along a path
+  const calculateArrowPositions = (coordinates: {lat: number, lng: number}[]) => {
+    const arrows = [];
+    const arrowSpacing = 4; // 1 arrow followed by 3 blank spaces
+    
+    for (let i = 0; i < coordinates.length - 1; i += arrowSpacing) {
+      if (i + 1 < coordinates.length) {
+        const current = coordinates[i];
+        const next = coordinates[i + 1];
+        
+        // Calculate direction (bearing) from current to next point
+        const deltaLng = next.lng - current.lng;
+        const deltaLat = next.lat - current.lat;
+        const bearing = Math.atan2(deltaLng, deltaLat) * (180 / Math.PI);
+        
+        arrows.push({
+          position: [current.lng, current.lat],
+          rotation: bearing
+        });
+      }
+    }
+    
+    return arrows;
+  };
+
+  // Helper function to create darker version of path color
+  const darkenColor = (color: string) => {
+    // If it's an HSL color, reduce lightness
+    const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    if (hslMatch) {
+      const h = hslMatch[1];
+      const s = hslMatch[2];
+      const l = Math.max(20, parseInt(hslMatch[3]) - 30); // Darken by reducing lightness
+      return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+    
+    // Default fallback for other color formats
+    return '#333333';
+  };
+
+  // Update persistent paths and arrows
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
 
     const map = mapRef.current;
-    const source = map.getSource('persistent-paths') as mapboxgl.GeoJSONSource;
+    const pathSource = map.getSource('persistent-paths') as mapboxgl.GeoJSONSource;
+    const arrowSource = map.getSource('persistent-path-arrows') as mapboxgl.GeoJSONSource;
     
-    if (source) {
-      const features = persistentPaths.map((path, index) => ({
+    if (pathSource) {
+      const pathFeatures = persistentPaths.map((path, index) => ({
         type: 'Feature',
         geometry: {
           type: 'LineString',
@@ -509,12 +576,43 @@ export default function MapboxMap({
         },
         properties: {
           name: path.name,
-          color: path.color || `hsl(${index * 45}, 70%, 50%)`
+          color: path.color || `hsl(${index * 45}, 70%, 50%)`,
+          pathIndex: index
         }
       }));
 
-      source.setData({ type: 'FeatureCollection', features });
-      console.log('✅ Updated persistent paths:', features.length, 'paths');
+      pathSource.setData({ type: 'FeatureCollection', features: pathFeatures });
+      console.log('✅ Updated persistent paths:', pathFeatures.length, 'paths');
+    }
+    
+    if (arrowSource) {
+      const arrowFeatures = [];
+      
+      persistentPaths.forEach((path, pathIndex) => {
+        if (path.coordinates && path.coordinates.length > 1) {
+          const pathColor = path.color || `hsl(${pathIndex * 45}, 70%, 50%)`;
+          const arrows = calculateArrowPositions(path.coordinates);
+          
+          arrows.forEach((arrow, arrowIndex) => {
+            arrowFeatures.push({
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: arrow.position
+              },
+              properties: {
+                pathIndex: pathIndex,
+                arrowIndex: arrowIndex,
+                rotation: arrow.rotation,
+                color: darkenColor(pathColor)
+              }
+            });
+          });
+        }
+      });
+      
+      arrowSource.setData({ type: 'FeatureCollection', features: arrowFeatures });
+      console.log('🏹 Updated path arrows:', arrowFeatures.length, 'arrows for', persistentPaths.length, 'paths');
     }
   }, [persistentPaths, mapReady]);
 
