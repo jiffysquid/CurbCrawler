@@ -32,12 +32,28 @@ export default function PathManagement() {
 
   // Helper function to format duration
   const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${Math.round(minutes)}m`;
+    if (minutes < 1) {
+      // Less than 1 minute - show seconds
+      const seconds = Math.round(minutes * 60);
+      return `${seconds}s`;
+    } else if (minutes < 60) {
+      // Less than 1 hour - show minutes and seconds
+      const mins = Math.floor(minutes);
+      const secs = Math.round((minutes - mins) * 60);
+      if (secs > 0) {
+        return `${mins}m ${secs}s`;
+      } else {
+        return `${mins}m`;
+      }
     } else {
+      // 1 hour or more - show hours and minutes
       const hours = Math.floor(minutes / 60);
       const mins = Math.round(minutes % 60);
-      return `${hours}h ${mins}m`;
+      if (mins > 0) {
+        return `${hours}h ${mins}m`;
+      } else {
+        return `${hours}h`;
+      }
     }
   };
 
