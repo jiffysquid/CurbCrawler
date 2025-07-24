@@ -582,9 +582,12 @@ export default function MapboxMap({
       {stableCurrentSuburb && stableCurrentSuburb.suburb && (
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border z-[1000] min-w-[280px]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-lg">{stableCurrentSuburb.suburb}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">Current Location</span>
+              </div>
+              <span className="font-semibold text-lg ml-6">{stableCurrentSuburb.suburb}</span>
             </div>
             <Button
               onClick={() => {
