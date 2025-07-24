@@ -322,34 +322,20 @@ export default function MapboxMap({
     }, {});
   }, [demographicsArray]);
 
-  // Load current suburb info
-  const { data: currentSuburb } = useQuery({
-    queryKey: ['/api/suburbs/lookup', currentLocation?.lat, currentLocation?.lng],
-    enabled: Boolean(currentLocation && mapReady && currentLocation?.lat && currentLocation?.lng),
-    queryFn: async () => {
-      if (!currentLocation?.lat || !currentLocation?.lng) return null;
-      
-      const response = await fetch(`/api/suburbs/lookup?lat=${currentLocation.lat}&lng=${currentLocation.lng}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch suburb');
-      }
-      return response.json();
-    }
-  });
+  // Use prop-based current suburb only (remove internal query to prevent conflicts)
 
-  // Update stable current suburb (prefer prop over query)
+  // Update stable current suburb from prop only
   useEffect(() => {
-    const suburbToUse = propCurrentSuburb || currentSuburb;
-    if (suburbToUse && suburbToUse.suburb && suburbToUse.suburb !== 'Unknown') {
-      setStableCurrentSuburb(suburbToUse);
-      console.log('🏘️ Current suburb detected:', suburbToUse.suburb);
+    if (propCurrentSuburb && propCurrentSuburb.suburb && propCurrentSuburb.suburb !== 'Unknown') {
+      setStableCurrentSuburb(propCurrentSuburb);
+      console.log('🏘️ Current suburb detected:', propCurrentSuburb.suburb);
     }
-  }, [propCurrentSuburb, currentSuburb]);
+  }, [propCurrentSuburb]);
 
   // Update current suburb info with clearout type
   useEffect(() => {
-    if (currentSuburb && suburbs) {
-      const suburbData = suburbs.find((s: any) => s.name === currentSuburb.suburb);
+    if (stableCurrentSuburb && suburbs) {
+      const suburbData = suburbs.find((s: any) => s.name === stableCurrentSuburb.suburb);
       if (suburbData) {
         setCurrentSuburbInfo({
           name: suburbData.name,
@@ -357,12 +343,12 @@ export default function MapboxMap({
         });
       } else {
         setCurrentSuburbInfo({
-          name: currentSuburb.suburb,
+          name: stableCurrentSuburb.suburb,
           clearoutType: 'none'
         });
       }
     }
-  }, [currentSuburb, suburbs]);
+  }, [stableCurrentSuburb, suburbs]);
 
   // Update suburb boundaries - only show current and next week clearouts
   useEffect(() => {
