@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Square, Monitor, MonitorOff } from "lucide-react";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface SimpleControlsProps {
   isRecording: boolean;
@@ -22,6 +23,28 @@ export default function SimpleControls({
 }: SimpleControlsProps) {
   const { toast } = useToast();
   const { isSupported: wakeLockSupported, isActive: wakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
+
+  // Periodic wake lock check during recording to ensure it stays active
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const wakeLockCheckInterval = setInterval(() => {
+      if (wakeLockSupported && !wakeLockActive) {
+        console.log('Wake lock lost during recording, attempting to reacquire...');
+        requestWakeLock().then(success => {
+          if (success) {
+            console.log('Successfully reacquired wake lock during recording');
+          } else {
+            console.log('Failed to reacquire wake lock during recording');
+          }
+        });
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => {
+      clearInterval(wakeLockCheckInterval);
+    };
+  }, [isRecording, wakeLockSupported, wakeLockActive, requestWakeLock]);
 
   const handleStartRecording = async () => {
     onStartRecording();
