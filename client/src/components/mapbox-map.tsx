@@ -276,6 +276,32 @@ export default function MapboxMap({
         }
       });
 
+      // Add source for current recording arrows
+      map.addSource('current-recording-arrows', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      // Add layer for current recording arrows
+      map.addLayer({
+        id: 'current-recording-arrows',
+        type: 'symbol',
+        source: 'current-recording-arrows',
+        layout: {
+          'text-field': '▲',
+          'text-size': 12,
+          'text-rotation-alignment': 'map',
+          'text-rotate': ['get', 'rotation'],
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+          'text-offset': [0, 0]
+        },
+        paint: {
+          'text-color': ['get', 'color'],
+          'text-opacity': 0.9
+        }
+      });
+
       // Add map pins as numbered circles
       map.addLayer({
         id: 'map-pins-circle',
@@ -467,8 +493,8 @@ export default function MapboxMap({
       }
     }
 
-    // Handle rotation based on movement (unchanged logic)
-    if (previousLocationRef.current && distance > 5) {
+    // Handle rotation based on movement - more responsive settings
+    if (previousLocationRef.current && distance > 2) { // Reduced from 5m to 2m for more responsive rotation
       const bearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -479,7 +505,8 @@ export default function MapboxMap({
       const now = Date.now();
       const timeSinceLastRotation = now - lastRotationTime.current;
 
-      if (timeSinceLastRotation > 1500) {
+      // Reduced time threshold for more responsive rotation
+      if (timeSinceLastRotation > 1000) { // Reduced from 1500ms to 1000ms
         const currentMapBearing = map.getBearing();
         const navigationBearing = bearing;
         
@@ -489,13 +516,14 @@ export default function MapboxMap({
         }
         bearingDiff = Math.abs(bearingDiff);
 
-        if (bearingDiff > 15) {
-          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '°');
+        // Reduced bearing threshold for more sensitive rotation
+        if (bearingDiff > 10) { // Reduced from 15° to 10°
+          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
           
           map.easeTo({
             bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 2000,
+            duration: 1500, // Faster rotation animation
             essential: true
           });
 
@@ -749,14 +777,15 @@ export default function MapboxMap({
     }
   }, [persistentPaths, mapReady]);
 
-  // Update current recording path in real-time
+  // Update current recording path and arrows in real-time
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
 
     const map = mapRef.current;
-    const source = map.getSource('current-recording-path') as mapboxgl.GeoJSONSource;
+    const pathSource = map.getSource('current-recording-path') as mapboxgl.GeoJSONSource;
+    const arrowSource = map.getSource('current-recording-arrows') as mapboxgl.GeoJSONSource;
     
-    if (source) {
+    if (pathSource) {
       if (isRecording && currentRecordingPath.length > 1) {
         const feature = {
           type: 'Feature',
@@ -769,11 +798,37 @@ export default function MapboxMap({
           }
         };
 
-        source.setData({ type: 'FeatureCollection', features: [feature] });
+        pathSource.setData({ type: 'FeatureCollection', features: [feature] });
         console.log('🔴 Updated current recording path:', currentRecordingPath.length, 'points');
       } else {
         // Clear the recording path when not recording
-        source.setData({ type: 'FeatureCollection', features: [] });
+        pathSource.setData({ type: 'FeatureCollection', features: [] });
+      }
+    }
+    
+    // Update current recording arrows
+    if (arrowSource) {
+      if (isRecording && currentRecordingPath.length > 1) {
+        const arrows = calculateArrowPositions(currentRecordingPath);
+        const arrowFeatures = arrows.map((arrow, index) => ({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: arrow.position
+          },
+          properties: {
+            pathIndex: -1, // Special index for current recording
+            arrowIndex: index,
+            rotation: arrow.rotation,
+            color: '#dc2626' // Red color for current recording arrows
+          }
+        }));
+        
+        arrowSource.setData({ type: 'FeatureCollection', features: arrowFeatures });
+        console.log('🏹 Updated current recording arrows:', arrowFeatures.length, 'arrows');
+      } else {
+        // Clear arrows when not recording
+        arrowSource.setData({ type: 'FeatureCollection', features: [] });
       }
     }
   }, [currentRecordingPath, isRecording, mapReady]);
