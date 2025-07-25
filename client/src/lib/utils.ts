@@ -239,3 +239,122 @@ export function clearAllPersistentPaths(): void {
     detail: { key: 'persistentPaths', action: 'clear' }
   }));
 }
+
+// Pin management types and functions
+export interface MapPin {
+  id: string;
+  number: number;
+  lat: number;
+  lng: number;
+  createdAt: string;
+  info?: string;
+}
+
+export function loadMapPins(): MapPin[] {
+  try {
+    const stored = localStorage.getItem('mapPins');
+    if (!stored) return [];
+    
+    const pins = JSON.parse(stored) as MapPin[];
+    // Validate structure and ensure max 9 pins
+    const validPins = pins.filter(pin => 
+      pin && 
+      typeof pin.id === 'string' && 
+      typeof pin.number === 'number' &&
+      typeof pin.lat === 'number' &&
+      typeof pin.lng === 'number' &&
+      typeof pin.createdAt === 'string' &&
+      pin.number >= 1 && pin.number <= 9
+    );
+    
+    // Sort by number and return max 9
+    return validPins.sort((a, b) => a.number - b.number).slice(0, 9);
+  } catch (error) {
+    console.error('Error loading map pins:', error);
+    return [];
+  }
+}
+
+export function saveMapPins(pins: MapPin[]): void {
+  try {
+    // Ensure max 9 pins and valid numbers
+    const validPins = pins
+      .filter(pin => pin.number >= 1 && pin.number <= 9)
+      .sort((a, b) => a.number - b.number)
+      .slice(0, 9);
+    
+    localStorage.setItem('mapPins', JSON.stringify(validPins));
+    
+    // Dispatch custom event for same-tab communication
+    window.dispatchEvent(new CustomEvent('customStorageEvent', {
+      detail: { key: 'mapPins', action: 'update', pins: validPins }
+    }));
+  } catch (error) {
+    console.error('Error saving map pins:', error);
+  }
+}
+
+export function addMapPin(lat: number, lng: number, info?: string): MapPin | null {
+  try {
+    const existingPins = loadMapPins();
+    
+    // Check if we already have 9 pins
+    if (existingPins.length >= 9) {
+      console.warn('Maximum of 9 pins allowed');
+      return null;
+    }
+    
+    // Find the next available number
+    const usedNumbers = existingPins.map(pin => pin.number);
+    let nextNumber = 1;
+    while (usedNumbers.includes(nextNumber) && nextNumber <= 9) {
+      nextNumber++;
+    }
+    
+    if (nextNumber > 9) {
+      console.warn('No available pin numbers');
+      return null;
+    }
+    
+    const newPin: MapPin = {
+      id: `pin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      number: nextNumber,
+      lat,
+      lng,
+      createdAt: new Date().toISOString(),
+      info: info || ''
+    };
+    
+    const updatedPins = [...existingPins, newPin];
+    saveMapPins(updatedPins);
+    
+    return newPin;
+  } catch (error) {
+    console.error('Error adding map pin:', error);
+    return null;
+  }
+}
+
+export function deleteMapPin(pinId: string): boolean {
+  try {
+    const existingPins = loadMapPins();
+    const updatedPins = existingPins.filter(pin => pin.id !== pinId);
+    saveMapPins(updatedPins);
+    return true;
+  } catch (error) {
+    console.error('Error deleting map pin:', error);
+    return false;
+  }
+}
+
+export function clearAllMapPins(): void {
+  try {
+    localStorage.removeItem('mapPins');
+    // Dispatch custom event for same-tab communication
+    window.dispatchEvent(new CustomEvent('customStorageEvent', {
+      detail: { key: 'mapPins', action: 'clear' }
+    }));
+  } catch (error) {
+    console.error('Error clearing map pins:', error);
+  }
+}

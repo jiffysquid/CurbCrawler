@@ -7,8 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Battery, AlertTriangle, Focus, DollarSign, Route } from "lucide-react";
-import { clearAllPersistentPaths, loadPersistentPaths } from "@/lib/utils";
+import { Map, Battery, AlertTriangle, Focus, DollarSign, Route, MapPin, Trash2 } from "lucide-react";
+import { clearAllPersistentPaths, loadPersistentPaths, loadMapPins, clearAllMapPins, MapPin as Pin } from "@/lib/utils";
 
 interface SettingsProps {
   showSuburbBoundaries: boolean;
@@ -25,6 +25,7 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
   const [pathColorScheme, setPathColorScheme] = useState<string>("bright");
   const [savedPaths, setSavedPaths] = useState<any[]>([]);
+  const [mapPins, setMapPins] = useState<Pin[]>([]);
   const { toast } = useToast();
 
   // Load settings from localStorage on mount
@@ -46,8 +47,23 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
     if (savedFuelPrice) setFuelPrice(savedFuelPrice);
     if (savedPathColorScheme) setPathColorScheme(savedPathColorScheme);
     
-    // Load saved paths
+    // Load saved paths and pins
     setSavedPaths(loadPersistentPaths());
+    setMapPins(loadMapPins());
+    
+    // Listen for storage changes to update pins
+    const handleStorageChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.key === 'mapPins') {
+        setMapPins(loadMapPins());
+      }
+    };
+    
+    window.addEventListener('customStorageEvent', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('customStorageEvent', handleStorageChange);
+    };
   }, []);
 
   // Save settings to localStorage when they change
@@ -149,6 +165,15 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
     toast({
       title: "Paths Cleared",
       description: "All recorded paths have been cleared successfully.",
+    });
+  };
+
+  const handleClearPins = () => {
+    clearAllMapPins();
+    setMapPins([]);
+    toast({
+      title: "Pins Cleared",
+      description: "All map pins have been deleted.",
     });
   };
 
@@ -271,6 +296,74 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
               Used to calculate fuel costs during recording sessions. Average car fuel consumption assumed at 8L/100km.
             </CardDescription>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pin Management */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center space-x-2">
+            <MapPin className="h-4 w-4" />
+            <span>Map Pins ({mapPins.length}/9)</span>
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Manage your dropped pins on the map. Maximum 9 pins allowed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {mapPins.length > 0 ? (
+            <div className="space-y-2">
+              {mapPins.map((pin) => (
+                <div key={pin.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">
+                      {pin.number}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Pin {pin.number}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(pin.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No pins dropped yet</p>
+              <p className="text-xs text-gray-400">Use the pin button on the map to drop pins</p>
+            </div>
+          )}
+          
+          {mapPins.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full text-red-600 hover:text-red-700">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All Pins
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear All Pins</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete all {mapPins.length} pins? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearPins} className="bg-red-600 hover:bg-red-700">
+                    Delete All Pins
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </CardContent>
       </Card>
 

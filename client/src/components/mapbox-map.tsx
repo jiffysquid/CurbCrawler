@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
-import { calculateBearing, calculateDistance } from '../lib/utils';
+import { calculateBearing, calculateDistance, loadMapPins, addMapPin, deleteMapPin, MapPin as Pin } from '../lib/utils';
 import { PathData } from '../lib/path-storage';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Info, Users, Car, Building, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { MapPin, Navigation, Info, Users, Car, Building, X, Plus, Trash2 } from 'lucide-react';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -52,6 +53,9 @@ export default function MapboxMap({
   const [showDemographics, setShowDemographics] = useState(false);
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
   const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
+  const [mapPins, setMapPins] = useState<Pin[]>([]);
+  const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
+  const { toast } = useToast();
   
   // Smooth interpolation state
   const interpolationRef = useRef<{
@@ -71,6 +75,73 @@ export default function MapboxMap({
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
   mapboxgl.accessToken = mapboxToken;
+
+  // Load pins on component mount and listen for changes
+  useEffect(() => {
+    const loadPins = () => {
+      const pins = loadMapPins();
+      setMapPins(pins);
+      console.log('📍 Loaded map pins:', pins.length);
+    };
+    
+    loadPins();
+    
+    // Listen for storage events to sync pins across tabs/components
+    const handleStorageEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.key === 'mapPins') {
+        loadPins();
+      }
+    };
+    
+    window.addEventListener('customStorageEvent', handleStorageEvent);
+    
+    return () => {
+      window.removeEventListener('customStorageEvent', handleStorageEvent);
+    };
+  }, []);
+
+  // Handle dropping a new pin
+  const handleDropPin = useCallback(() => {
+    if (!currentLocation) {
+      toast({
+        title: "No Location",
+        description: "Cannot drop pin - current location not available",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const newPin = addMapPin(currentLocation.lat, currentLocation.lng);
+    if (newPin) {
+      setMapPins(prev => [...prev, newPin]);
+      toast({
+        title: "Pin Dropped",
+        description: `Pin ${newPin.number} dropped at current location`,
+      });
+      console.log('📍 Pin dropped:', newPin);
+    } else {
+      toast({
+        title: "Cannot Drop Pin",
+        description: "Maximum of 9 pins allowed",
+        variant: "destructive"
+      });
+    }
+  }, [currentLocation, toast]);
+
+  // Handle deleting a pin
+  const handleDeletePin = useCallback((pinId: string) => {
+    const success = deleteMapPin(pinId);
+    if (success) {
+      setMapPins(prev => prev.filter(pin => pin.id !== pinId));
+      setSelectedPin(null);
+      toast({
+        title: "Pin Deleted",
+        description: "Pin removed from map",
+      });
+      console.log('📍 Pin deleted:', pinId);
+    }
+  }, [toast]);
 
   // Initialize map
   useEffect(() => {
@@ -111,6 +182,12 @@ export default function MapboxMap({
 
       // Add current recording path source
       map.addSource('current-recording-path', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      // Add map pins source
+      map.addSource('map-pins', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] }
       });
@@ -197,6 +274,62 @@ export default function MapboxMap({
           'line-width': 10,
           'line-opacity': 0.9
         }
+      });
+
+      // Add map pins as numbered circles
+      map.addLayer({
+        id: 'map-pins-circle',
+        type: 'circle',
+        source: 'map-pins',
+        paint: {
+          'circle-radius': 20,
+          'circle-color': '#3B82F6',
+          'circle-stroke-width': 3,
+          'circle-stroke-color': '#FFFFFF'
+        }
+      });
+
+      // Add pin numbers as text symbols
+      map.addLayer({
+        id: 'map-pins-text',
+        type: 'symbol',
+        source: 'map-pins',
+        layout: {
+          'text-field': ['get', 'number'],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 14,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true
+        },
+        paint: {
+          'text-color': '#FFFFFF',
+          'text-halo-color': '#3B82F6',
+          'text-halo-width': 1
+        }
+      });
+
+      // Handle pin clicks to show popup
+      map.on('click', 'map-pins-circle', (e) => {
+        if (e.features && e.features[0]) {
+          const feature = e.features[0];
+          const pinData = feature.properties as any;
+          const coordinates = (e.lngLat);
+          
+          // Find the full pin data
+          const pin = mapPins.find(p => p.id === pinData.id);
+          if (pin) {
+            setSelectedPin(pin);
+          }
+        }
+      });
+
+      // Change cursor to pointer when hovering over pins
+      map.on('mouseenter', 'map-pins-circle', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+
+      map.on('mouseleave', 'map-pins-circle', () => {
+        map.getCanvas().style.cursor = '';
       });
     });
 
@@ -668,6 +801,37 @@ export default function MapboxMap({
     }
   };
 
+  // Update pins on map when pins change
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+
+    const map = mapRef.current;
+    const source = map.getSource('map-pins') as mapboxgl.GeoJSONSource;
+    
+    if (source) {
+      const features = mapPins.map(pin => ({
+        type: 'Feature' as const,
+        properties: {
+          id: pin.id,
+          number: pin.number.toString(),
+          info: pin.info || '',
+          createdAt: pin.createdAt
+        },
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [pin.lng, pin.lat]
+        }
+      }));
+
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+      
+      console.log('📍 Updated map pins display:', mapPins.length, 'pins');
+    }
+  }, [mapPins, mapReady]);
+
   return (
     <div className="relative w-full h-full">
       <div
@@ -818,6 +982,17 @@ export default function MapboxMap({
       {/* Map Controls */}
       <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2 z-[1000]">
         <Button
+          onClick={handleDropPin}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg hover:bg-blue-50 hover:border-blue-300"
+          title={`Drop Pin (${mapPins.length}/9)`}
+          disabled={mapPins.length >= 9 || !currentLocation}
+        >
+          <MapPin className="h-4 w-4" />
+        </Button>
+        
+        <Button
           onClick={toggleZoom}
           size="sm"
           variant="outline"
@@ -833,6 +1008,61 @@ export default function MapboxMap({
           )}
         </Button>
       </div>
+
+      {/* Pin Info Popup */}
+      {selectedPin && (
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] min-w-[250px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center">
+                {selectedPin.number}
+              </div>
+              Pin {selectedPin.number}
+            </h3>
+            <Button
+              onClick={() => setSelectedPin(null)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              title="Close"
+            >
+              <X className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
+          
+          <div className="space-y-2 text-sm text-gray-600">
+            <div>
+              <span className="font-medium">Location:</span> 
+              <br />
+              {selectedPin.lat.toFixed(6)}, {selectedPin.lng.toFixed(6)}
+            </div>
+            <div>
+              <span className="font-medium">Created:</span> 
+              <br />
+              {new Date(selectedPin.createdAt).toLocaleString()}
+            </div>
+            {selectedPin.info && (
+              <div>
+                <span className="font-medium">Info:</span> 
+                <br />
+                {selectedPin.info}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <Button
+              onClick={() => handleDeletePin(selectedPin.id)}
+              size="sm"
+              variant="destructive"
+              className="w-full flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Pin
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
