@@ -217,6 +217,11 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 18, 2025: Added proper clearout schedule integration for authentic Brisbane Council data display
 - July 19, 2025: Implemented GPS permission solution for Replit app limitation - added copy URL function to access app in phone browser for real GPS functionality
 - July 19, 2025: Fixed suburb boundary color display issue - green areas now correctly show current week clearouts, blue areas show next week clearouts with proper color assignment logic
+- July 25, 2025: Implemented "Smart Rate" GPS system that automatically adjusts refresh rate based on vehicle speed for battery optimization
+- July 25, 2025: Added speed-based GPS settings: >80kph=low rate (2.5s), >50kph=medium rate (1s), <50kph=high rate (0.5s) 
+- July 25, 2025: Made Smart Rate the default GPS setting for optimal battery life during van field work
+- July 25, 2025: Enhanced wake lock system with periodic checks every 5 seconds during recording sessions
+- July 25, 2025: Fixed app switching issues - wake lock automatically reactivates when returning to app during recording
 
 ## User Preferences
 

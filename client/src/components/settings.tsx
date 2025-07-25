@@ -19,7 +19,7 @@ interface SettingsProps {
 
 export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries, showToilets, setShowToilets }: SettingsProps) {
   // Removed map style selection - only using custom Mapbox style
-  const [gpsAccuracy, setGpsAccuracy] = useState<string>("medium");
+  const [gpsAccuracy, setGpsAccuracy] = useState<string>("smart");
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [focusArea, setFocusArea] = useState<string>("imax-van");
   const [fuelPrice, setFuelPrice] = useState<string>("2.00");
@@ -232,13 +232,14 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="z-[9999]">
+                <SelectItem value="smart">Smart Rate (Auto-adjusts by speed, Default)</SelectItem>
                 <SelectItem value="high">High (0.5s updates, Battery intensive)</SelectItem>
-                <SelectItem value="medium">Medium (1s updates, Recommended)</SelectItem>
+                <SelectItem value="medium">Medium (1s updates, Balanced)</SelectItem>
                 <SelectItem value="low">Low (2.5s updates, Battery saving)</SelectItem>
               </SelectContent>
             </Select>
             <CardDescription className="text-xs">
-              Higher accuracy uses more battery but provides better tracking
+              Smart Rate automatically adjusts GPS refresh based on speed: {'>'}80kph=low rate, {'>'}50kph=medium rate, {'<'}50kph=high rate
             </CardDescription>
           </div>
         </CardContent>

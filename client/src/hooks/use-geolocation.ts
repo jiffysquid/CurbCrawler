@@ -7,6 +7,11 @@ interface GeolocationState {
   isWatching: boolean;
 }
 
+interface SpeedBasedSettings {
+  maxAge: number;
+  timeout: number;
+}
+
 export function useGeolocation() {
   const [state, setState] = useState<GeolocationState>({
     location: null,
@@ -16,12 +21,65 @@ export function useGeolocation() {
   });
 
   const watchIdRef = useRef<number | null>(null);
+  const lastSpeedRef = useRef<number | null>(null);
+  const currentWatchOptionsRef = useRef<PositionOptions | null>(null);
+
+  // Calculate GPS settings based on speed (Smart Rate)
+  const getSpeedBasedSettings = useCallback((speedMps: number | null): SpeedBasedSettings => {
+    if (speedMps === null) {
+      // Default to medium settings when speed is unknown
+      return { maxAge: 1000, timeout: 15000 };
+    }
+
+    // Convert m/s to km/h
+    const speedKmh = speedMps * 3.6;
+    
+    if (speedKmh > 80) {
+      // High speed (>80 km/h): Low refresh rate to save battery
+      return { maxAge: 2500, timeout: 30000 };
+    } else if (speedKmh > 50) {
+      // Medium speed (50-80 km/h): Medium refresh rate
+      return { maxAge: 1000, timeout: 15000 };
+    } else {
+      // Low speed (<50 km/h): High refresh rate for detailed tracking
+      return { maxAge: 500, timeout: 10000 };
+    }
+  }, []);
 
   const updateLocation = useCallback((position: GeolocationPosition) => {
     try {
       console.log('GPS update:', position.coords.latitude, position.coords.longitude, 'accuracy:', position.coords.accuracy + 'm');
       console.log('GPS timestamp:', new Date(position.timestamp).toISOString());
       console.log('GPS heading:', position.coords.heading, 'speed:', position.coords.speed);
+      
+      // Check if we should adjust GPS settings based on speed (Smart Rate only)
+      const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'smart';
+      if (gpsAccuracy === 'smart' && position.coords.speed !== null) {
+        const lastSpeed = lastSpeedRef.current;
+        const newSpeed = position.coords.speed;
+        
+        // Only trigger restart if speed changed significantly (>18 km/h change)
+        if (lastSpeed === null || Math.abs(newSpeed - lastSpeed) > 5) {
+          const speedKmh = newSpeed * 3.6;
+          const newSettings = getSpeedBasedSettings(newSpeed);
+          const currentSettings = currentWatchOptionsRef.current;
+          
+          // Only restart if settings actually changed
+          if (!currentSettings || currentSettings.maximumAge !== newSettings.maxAge) {
+            console.log(`Smart Rate: Speed ${speedKmh.toFixed(1)} km/h, adjusting GPS rate to ${newSettings.maxAge}ms`);
+            lastSpeedRef.current = newSpeed;
+            
+            // Schedule GPS restart to avoid circular dependency
+            setTimeout(() => {
+              if (watchIdRef.current !== null) {
+                console.log('Smart Rate: Restarting GPS with new settings');
+                stopWatching();
+                setTimeout(() => startWatching(), 100);
+              }
+            }, 0);
+          }
+        }
+      }
       
       // Validate coordinates
       if (isNaN(position.coords.latitude) || isNaN(position.coords.longitude)) {
@@ -166,7 +224,7 @@ export function useGeolocation() {
                 }, 5000);
               },
               (() => {
-                const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+                const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'smart';
                 let maxAge = 2000;
                 let timeout = 30000;
                 
@@ -183,13 +241,23 @@ export function useGeolocation() {
                     maxAge = 2500; // 2.5s updates
                     timeout = 45000;
                     break;
+                  case 'smart':
+                    // Smart rate starts with medium settings, adjusts based on speed
+                    maxAge = 1000; // Default to 1s updates
+                    timeout = 15000;
+                    break;
                 }
                 
-                return {
+                const options = {
                   enableHighAccuracy: true,
                   timeout,
                   maximumAge: maxAge,
                 };
+                
+                // Store current options for smart rate comparison
+                currentWatchOptionsRef.current = options;
+                
+                return options;
               })()
             );
             
@@ -201,7 +269,7 @@ export function useGeolocation() {
             updateError(error);
           },
           (() => {
-            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'smart';
             
             switch (gpsAccuracy) {
               case 'high':
@@ -221,6 +289,12 @@ export function useGeolocation() {
                   enableHighAccuracy: false,
                   timeout: 30000,
                   maximumAge: 5000,
+                };
+              case 'smart':
+                return {
+                  enableHighAccuracy: true,
+                  timeout: 15000,
+                  maximumAge: 1000, // Start with medium settings
                 };
               default:
                 return {
@@ -248,7 +322,7 @@ export function useGeolocation() {
             updateError(error);
           },
           (() => {
-            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'medium';
+            const gpsAccuracy = localStorage.getItem('gpsAccuracy') || 'smart';
             let maxAge = 2000;
             let timeout = 30000;
             let highAccuracy = true;
@@ -268,6 +342,11 @@ export function useGeolocation() {
                 maxAge = 2500;
                 timeout = 45000;
                 highAccuracy = false;
+                break;
+              case 'smart':
+                maxAge = 1000; // Start with medium settings
+                timeout = 15000;
+                highAccuracy = true;
                 break;
             }
             
