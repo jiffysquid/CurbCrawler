@@ -248,6 +248,7 @@ export interface MapPin {
   lng: number;
   createdAt: string;
   info?: string;
+  color: string;
 }
 
 export function loadMapPins(): MapPin[] {
@@ -265,7 +266,10 @@ export function loadMapPins(): MapPin[] {
       typeof pin.lng === 'number' &&
       typeof pin.createdAt === 'string' &&
       pin.number >= 1 && pin.number <= 9
-    );
+    ).map(pin => ({
+      ...pin,
+      color: pin.color || generateRandomPinColor() // Add color if missing for backward compatibility
+    }));
     
     // Sort by number and return max 9
     return validPins.sort((a, b) => a.number - b.number).slice(0, 9);
@@ -292,6 +296,25 @@ export function saveMapPins(pins: MapPin[]): void {
   } catch (error) {
     console.error('Error saving map pins:', error);
   }
+}
+
+// Generate random bright color for pins
+function generateRandomPinColor(): string {
+  const colors = [
+    '#E53E3E', // Red
+    '#3182CE', // Blue
+    '#38A169', // Green
+    '#D69E2E', // Yellow
+    '#805AD5', // Purple
+    '#DD6B20', // Orange
+    '#319795', // Teal
+    '#E91E63', // Pink
+    '#5C6BC0', // Indigo
+    '#26C6DA', // Cyan
+    '#66BB6A', // Light Green
+    '#FF7043'  // Deep Orange
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 export function addMapPin(lat: number, lng: number, info?: string): MapPin | null {
@@ -322,7 +345,8 @@ export function addMapPin(lat: number, lng: number, info?: string): MapPin | nul
       lat,
       lng,
       createdAt: new Date().toISOString(),
-      info: info || ''
+      info: info || '',
+      color: generateRandomPinColor()
     };
     
     const updatedPins = [...existingPins, newPin];

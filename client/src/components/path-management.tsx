@@ -107,11 +107,14 @@ export default function PathManagement() {
   const handleClearPaths = () => {
     clearAllPersistentPaths();
     setSavedPaths([]);
-    // Trigger storage event to update the map
+    // Trigger both storage events for comprehensive updating
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'persistentPaths',
-      newValue: null,
+      newValue: '[]',
       storageArea: localStorage
+    }));
+    window.dispatchEvent(new CustomEvent('customStorageEvent', {
+      detail: { key: 'persistentPaths', action: 'clear' }
     }));
     toast({
       title: "Paths Cleared",

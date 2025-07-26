@@ -302,14 +302,14 @@ export default function MapboxMap({
         }
       });
 
-      // Add map pins as numbered circles
+      // Add map pins as numbered circles with random colors
       map.addLayer({
         id: 'map-pins-circle',
         type: 'circle',
         source: 'map-pins',
         paint: {
           'circle-radius': 20,
-          'circle-color': '#3B82F6',
+          'circle-color': ['get', 'color'],
           'circle-stroke-width': 3,
           'circle-stroke-color': '#FFFFFF'
         }
@@ -329,7 +329,7 @@ export default function MapboxMap({
         },
         paint: {
           'text-color': '#FFFFFF',
-          'text-halo-color': '#3B82F6',
+          'text-halo-color': ['get', 'color'],
           'text-halo-width': 1
         }
       });
@@ -820,7 +820,7 @@ export default function MapboxMap({
             pathIndex: -1, // Special index for current recording
             arrowIndex: index,
             rotation: arrow.rotation,
-            color: '#dc2626' // Red color for current recording arrows
+            color: '#ffffff' // White arrows to contrast with red path
           }
         }));
         
@@ -870,7 +870,8 @@ export default function MapboxMap({
           id: pin.id,
           number: pin.number.toString(),
           info: pin.info || '',
-          createdAt: pin.createdAt
+          createdAt: pin.createdAt,
+          color: pin.color || '#3B82F6' // Fallback to blue if no color
         },
         geometry: {
           type: 'Point' as const,

@@ -316,7 +316,10 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
               {mapPins.map((pin) => (
                 <div key={pin.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">
+                    <div 
+                      className="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                      style={{ backgroundColor: pin.color || '#3B82F6' }}
+                    >
                       {pin.number}
                     </div>
                     <div>
