@@ -106,7 +106,10 @@ export default function PathManagement() {
 
   const handleClearPaths = () => {
     clearAllPersistentPaths();
+    // Also clear all map pins
+    localStorage.removeItem('mapPins');  
     setSavedPaths([]);
+    
     // Trigger both storage events for comprehensive updating
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'persistentPaths',
@@ -116,9 +119,15 @@ export default function PathManagement() {
     window.dispatchEvent(new CustomEvent('customStorageEvent', {
       detail: { key: 'persistentPaths', action: 'clear' }
     }));
+    
+    // Trigger pin clearing events
+    window.dispatchEvent(new CustomEvent('customStorageEvent', {
+      detail: { key: 'mapPins', action: 'clear' }
+    }));
+    
     toast({
-      title: "Paths Cleared",
-      description: "All recorded paths have been cleared successfully.",
+      title: "Paths & Pins Cleared",
+      description: "All recorded paths and dropped pins have been cleared successfully.",
     });
   };
 

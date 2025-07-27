@@ -611,8 +611,10 @@ export default function Home() {
     setRealTimeDistance(0);
     setLastRecordingLocation(null);
     setRecordingPath([]);
+    setCurrentRecordingPath([]); // Reset the current recording path
+    setCurrentDistance(0); // Reset the current distance for next session
     releaseWakeLock();
-    console.log("Stopped recording clearout search path");
+    console.log("Stopped recording clearout search path - path and distance reset for next session");
   };
 
   const handleTestGPS = () => {
