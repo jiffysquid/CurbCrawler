@@ -555,6 +555,11 @@ export default function Home() {
       const duration = (endTime.getTime() - recordingStartTime.getTime()) / 1000 / 60; // minutes
       const pathDistance = realTimeDistance / 1000; // km
       
+      // Get the next color for the new path
+      const existingPaths = loadPersistentPaths();
+      const nextColorIndex = existingPaths.length % 8; // Cycle through 8 colors
+      const pathColorInfo = getPathColor(nextColorIndex);
+      
       const persistentPath: PersistentPath = {
         id: `path-${Date.now()}`,
         name: `Route ${new Date().toLocaleDateString()}`,
@@ -562,7 +567,7 @@ export default function Home() {
         date: recordingStartTime.toISOString(),
         distance: pathDistance,
         duration: duration,
-        color: PATH_COLORS[0] // Will be dynamically colored based on index
+        color: pathColorInfo.color
       };
       
       console.log('🗺️ Saving persistent path:', persistentPath.name, 'with', persistentPath.coordinates.length, 'points');

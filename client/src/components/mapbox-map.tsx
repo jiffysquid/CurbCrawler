@@ -680,15 +680,34 @@ export default function MapboxMap({
     }
   }, [toilets, showToilets, mapReady]);
 
-  // Helper function to calculate arrow positions along a path
+  // Helper function to calculate arrow positions along a path with consistent spacing
   const calculateArrowPositions = (coordinates: {lat: number, lng: number}[]) => {
     const arrows = [];
-    const arrowSpacing = 4; // 1 arrow followed by 3 blank spaces
+    const targetDistance = 50; // Place arrow every 50 meters
     
-    for (let i = 0; i < coordinates.length - 1; i += arrowSpacing) {
-      if (i + 1 < coordinates.length) {
-        const current = coordinates[i];
-        const next = coordinates[i + 1];
+    if (coordinates.length < 2) return arrows;
+    
+    let cumulativeDistance = 0;
+    let nextArrowDistance = targetDistance;
+    
+    for (let i = 0; i < coordinates.length - 1; i++) {
+      const current = coordinates[i];
+      const next = coordinates[i + 1];
+      
+      // Calculate distance between current and next point
+      const segmentDistance = calculateDistance(
+        current.lat, current.lng,
+        next.lat, next.lng
+      ) * 1000; // Convert to meters
+      
+      // Check if we should place an arrow in this segment
+      if (cumulativeDistance + segmentDistance >= nextArrowDistance) {
+        // Calculate exact position for the arrow along this segment
+        const distanceIntoSegment = nextArrowDistance - cumulativeDistance;
+        const ratio = distanceIntoSegment / segmentDistance;
+        
+        const arrowLat = current.lat + (next.lat - current.lat) * ratio;
+        const arrowLng = current.lng + (next.lng - current.lng) * ratio;
         
         // Calculate direction (bearing) from current to next point
         const deltaLng = next.lng - current.lng;
@@ -696,10 +715,15 @@ export default function MapboxMap({
         const bearing = Math.atan2(deltaLng, deltaLat) * (180 / Math.PI);
         
         arrows.push({
-          position: [current.lng, current.lat],
+          position: [arrowLng, arrowLat],
           rotation: bearing
         });
+        
+        // Set next arrow distance
+        nextArrowDistance += targetDistance * 4; // 1 arrow followed by 3 blank spaces = 4x spacing
       }
+      
+      cumulativeDistance += segmentDistance;
     }
     
     return arrows;
