@@ -62,34 +62,42 @@ export function useWakeLock() {
     }
   };
 
-  // Auto-reactivate wake lock when page becomes visible (handles when user switches apps)
+  // Enhanced wake lock management for app focus changes and background operation
   useEffect(() => {
     const handleVisibilityChange = () => {
       console.log('Visibility changed:', document.visibilityState, 'isActive:', isActive, 'wakeLock exists:', !!wakeLockRef.current);
       
-      if (document.visibilityState === 'visible' && isActive) {
-        // Always try to reacquire wake lock when becoming visible during active session
-        console.log('Document visible again, re-requesting wake lock');
-        requestWakeLock();
+      if (document.visibilityState === 'visible') {
+        console.log('App state changed, visibility:', document.visibilityState);
+        
+        // When app becomes visible, check if we should have an active wake lock
+        if (isActive || (wakeLockRef.current && !wakeLockRef.current.released)) {
+          console.log('Document visible again, re-requesting wake lock to maintain screen lock');
+          requestWakeLock();
+        }
+      } else if (document.visibilityState === 'hidden') {
+        console.log('App lost focus but maintaining wake lock state for background operation');
+        // Don't release wake lock when app goes to background during recording
+        // Wake lock should persist in background to keep screen on
       }
     };
 
     const handlePageFocus = () => {
-      console.log('Page focused, isActive:', isActive, 'wakeLock exists:', !!wakeLockRef.current);
-      
+      console.log('Page gained focus, checking wake lock status');
+      // Always try to reacquire wake lock when page regains focus during active session
       if (isActive) {
-        // Always try to reacquire wake lock when page gets focus during active session
-        console.log('Page focused again, re-requesting wake lock');
-        requestWakeLock();
+        setTimeout(() => {
+          console.log('Page focus restored, re-requesting wake lock after delay');
+          requestWakeLock();
+        }, 100); // Small delay to ensure proper reacquisition
       }
     };
 
     const handlePageBlur = () => {
-      console.log('Page lost focus');
-      // Don't release wake lock on blur, just log it
+      console.log('Page lost focus but keeping wake lock active for recording');
+      // Don't release wake lock on blur - maintain for background recording
     };
 
-    // Listen for app becoming active/inactive (mobile specific)
     const handleAppStateChange = () => {
       console.log('App state changed, visibility:', document.visibilityState);
       if (document.visibilityState === 'visible' && isActive) {
@@ -101,20 +109,40 @@ export function useWakeLock() {
       }
     };
 
+    // Add multiple event listeners for comprehensive focus management
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handlePageFocus);
     window.addEventListener('blur', handlePageBlur);
-    
-    // Listen for page show event (handles when returning from other apps)
     window.addEventListener('pageshow', handleAppStateChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handlePageFocus);
       window.removeEventListener('blur', handlePageBlur);
       window.removeEventListener('pageshow', handleAppStateChange);
     };
-  }, [isActive]);
+  }, [isActive, requestWakeLock]);
+
+  // Additional effect to monitor and maintain wake lock during active sessions
+  useEffect(() => {
+    let wakeLockMonitor: NodeJS.Timeout;
+    
+    if (isActive) {
+      // Monitor wake lock every 5 seconds during active sessions
+      wakeLockMonitor = setInterval(() => {
+        if (!wakeLockRef.current || wakeLockRef.current.released) {
+          console.log('Wake lock lost during active session, attempting to reacquire...');
+          requestWakeLock();
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (wakeLockMonitor) {
+        clearInterval(wakeLockMonitor);
+      }
+    };
+  }, [isActive, requestWakeLock]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -129,6 +157,6 @@ export function useWakeLock() {
     isSupported,
     isActive,
     requestWakeLock,
-    releaseWakeLock
+    releaseWakeLock,
   };
 }
