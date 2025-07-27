@@ -575,7 +575,9 @@ export default function Home() {
   };
 
   const handleStopRecording = () => {
+    console.log('🛑 Stop recording button clicked');
     const activeSession = sessions.find(s => s.isActive);
+    console.log('🛑 Active session found:', !!activeSession);
     
     // Save persistent path
     if (recordingPath.length > 1 && recordingStartTime) {
@@ -585,8 +587,8 @@ export default function Home() {
       
       // Get the next color for the new path
       const existingPaths = loadPersistentPaths();
-      const nextColorIndex = existingPaths.length % 8; // Cycle through 8 colors
-      const pathColorInfo = getPathColor(nextColorIndex);
+      const nextColorIndex = existingPaths.length % PATH_COLORS.length; // Cycle through colors
+      const pathColor = PATH_COLORS[nextColorIndex];
       
       const persistentPath: PersistentPath = {
         id: `path-${Date.now()}`,
@@ -595,7 +597,7 @@ export default function Home() {
         date: recordingStartTime.toISOString(),
         distance: pathDistance,
         duration: duration,
-        color: pathColorInfo.color
+        color: pathColor
       };
       
       console.log('🗺️ Saving persistent path:', persistentPath.name, 'with', persistentPath.coordinates.length, 'points');
@@ -638,16 +640,15 @@ export default function Home() {
       );
     }
     
+    console.log('🛑 Stopping recording - clearing all recording state');
     setIsRecording(false);
     setRecordingStartTime(null);
     setRecordingStats({ duration: '0m', distance: '0.0km', cost: '0.00' });
     setRealTimeDistance(0);
     setLastRecordingLocation(null);
-    setRecordingPath([]);
-    setCurrentRecordingPath([]); // Reset the current recording path
-    setCurrentDistance(0); // Reset the current distance for next session
+    setRecordingPath([]); // Clear recording path for next session
     releaseWakeLock();
-    console.log("Stopped recording clearout search path - path and distance reset for next session");
+    console.log("✅ Recording stopped successfully - ready for next session");
   };
 
   const handleTestGPS = () => {
