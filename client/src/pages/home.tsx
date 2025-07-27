@@ -71,6 +71,34 @@ export default function Home() {
       setPersistentPaths(paths);
       console.log('🗺️ Loaded persistent paths:', paths.length);
       
+      // Listen for storage events to update persistent paths when cleared
+      const handleStorageEvent = (e: StorageEvent) => {
+        if (e.key === 'persistentPaths') {
+          console.log('📍 Home: Persistent paths storage changed, reloading...');
+          const updatedPaths = loadPersistentPaths();
+          setPersistentPaths(updatedPaths);
+          console.log('✅ Updated persistent paths:', updatedPaths.length, 'paths');
+        }
+      };
+      
+      const handleCustomStorageEvent = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (customEvent.detail?.key === 'persistentPaths') {
+          console.log('📍 Home: Custom storage event for persistent paths, reloading...');
+          const updatedPaths = loadPersistentPaths();
+          setPersistentPaths(updatedPaths);
+          console.log('✅ Updated persistent paths:', updatedPaths.length, 'paths');
+        }
+      };
+      
+      window.addEventListener('storage', handleStorageEvent);
+      window.addEventListener('customStorageEvent', handleCustomStorageEvent);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageEvent);
+        window.removeEventListener('customStorageEvent', handleCustomStorageEvent);
+      };
+      
       // Load settings from localStorage
       const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
       const savedShowToilets = localStorage.getItem('showToilets');

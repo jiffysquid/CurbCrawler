@@ -105,17 +105,24 @@ export default function PathManagement() {
   }, [pathColorScheme]);
 
   const handleClearPaths = () => {
-    clearAllPersistentPaths();
+    console.log('🗑️ PathManagement: Clearing all paths and pins...');
+    
+    // Clear paths from localStorage
+    localStorage.removeItem('persistentPaths');
     // Also clear all map pins
     localStorage.removeItem('mapPins');  
+    
+    // Update local state immediately
     setSavedPaths([]);
     
     // Trigger both storage events for comprehensive updating
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'persistentPaths',
-      newValue: '[]',
+      newValue: null,
+      oldValue: localStorage.getItem('persistentPaths'),
       storageArea: localStorage
     }));
+    
     window.dispatchEvent(new CustomEvent('customStorageEvent', {
       detail: { key: 'persistentPaths', action: 'clear' }
     }));
@@ -124,6 +131,8 @@ export default function PathManagement() {
     window.dispatchEvent(new CustomEvent('customStorageEvent', {
       detail: { key: 'mapPins', action: 'clear' }
     }));
+    
+    console.log('✅ PathManagement: All paths and pins cleared successfully');
     
     toast({
       title: "Paths & Pins Cleared",
@@ -234,7 +243,7 @@ export default function PathManagement() {
                   Clear All Recorded Paths
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="z-[10001]">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Clear All Recorded Paths</AlertDialogTitle>
                   <AlertDialogDescription>

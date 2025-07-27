@@ -202,3 +202,16 @@
 [data-radix-alert-dialog-content] {
   z-index: 10001 !important;
 }
+
+/* Additional specificity for alert dialogs to ensure they appear above everything */
+.mobile-menu + [data-radix-portal] {
+  z-index: 10002 !important;
+}
+
+.mobile-menu + [data-radix-portal] [data-radix-alert-dialog-overlay] {
+  z-index: 10002 !important;
+}
+
+.mobile-menu + [data-radix-portal] [data-radix-alert-dialog-content] {
+  z-index: 10003 !important;
+}
