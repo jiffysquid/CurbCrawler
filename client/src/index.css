@@ -172,3 +172,33 @@
     gap: 1rem;
   }
 }
+
+/* Enhanced z-index management for dialogs */
+.menu-button {
+  z-index: 9999 !important;
+}
+
+.mobile-menu {
+  z-index: 9998 !important;
+}
+
+/* Ensure dialogs appear above everything including menus */
+[data-radix-portal] {
+  z-index: 10000 !important;
+}
+
+[data-radix-dialog-overlay] {
+  z-index: 10000 !important;
+}
+
+[data-radix-dialog-content] {
+  z-index: 10001 !important;
+}
+
+[data-radix-alert-dialog-overlay] {
+  z-index: 10000 !important;
+}
+
+[data-radix-alert-dialog-content] {
+  z-index: 10001 !important;
+}
