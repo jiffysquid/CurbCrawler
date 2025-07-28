@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
 import { calculateBearing, calculateDistance, loadMapPins, addMapPin, deleteMapPin, MapPin as Pin } from '../lib/utils';
-import { PathData } from '../lib/path-storage';
+import { PersistentPath } from '../lib/utils';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
   isRecording: boolean;
   onLocationUpdate: (location: { lat: number; lng: number }) => void;
-  persistentPaths: PathData[];
+  persistentPaths: PersistentPath[];
   currentRecordingPath?: { lat: number; lng: number }[];
   focusArea?: string;
   showSuburbs?: boolean;
@@ -302,20 +302,20 @@ export default function MapboxMap({
         }
       });
 
-      // Add map pins as numbered circles with random colors
+      // Add map pins as numbered circles with random colors (50% smaller)
       map.addLayer({
         id: 'map-pins-circle',
         type: 'circle',
         source: 'map-pins',
         paint: {
-          'circle-radius': 20,
+          'circle-radius': 10, // Reduced from 20 to 10 (50% smaller)
           'circle-color': ['get', 'color'],
-          'circle-stroke-width': 3,
+          'circle-stroke-width': 2, // Reduced from 3 to 2
           'circle-stroke-color': '#FFFFFF'
         }
       });
 
-      // Add pin numbers as text symbols
+      // Add pin numbers as text symbols (50% smaller)
       map.addLayer({
         id: 'map-pins-text',
         type: 'symbol',
@@ -323,7 +323,7 @@ export default function MapboxMap({
         layout: {
           'text-field': ['get', 'number'],
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': 14,
+          'text-size': 10, // Reduced from 14 to 10 (50% smaller)
           'text-allow-overlap': true,
           'text-ignore-placement': true
         },

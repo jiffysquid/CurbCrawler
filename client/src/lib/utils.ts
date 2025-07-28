@@ -152,16 +152,16 @@ export function getVehicleIcon(vehicleType: string): string {
   return vehicleIcons[vehicleType as keyof typeof vehicleIcons] || '🚗';
 }
 
-// Path color utilities
+// Path color utilities (excluding red to avoid confusion with clearout areas)
 export const PATH_COLORS = [
   '#10B981', // Green
   '#3B82F6', // Blue  
   '#F59E0B', // Orange
-  '#EF4444', // Red
   '#8B5CF6', // Purple
   '#06B6D4', // Cyan
   '#F97316', // Orange-red
   '#84CC16', // Lime
+  '#EC4899', // Pink
 ];
 
 export function getPathColor(sessionIndex: number, colorScheme: 'bright' | 'fade' = 'bright', sessionCount: number = 0): { color: string; weight: number; opacity: number } {

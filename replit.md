@@ -222,6 +222,11 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 25, 2025: Made Smart Rate the default GPS setting for optimal battery life during van field work
 - July 25, 2025: Enhanced wake lock system with periodic checks every 5 seconds during recording sessions
 - July 25, 2025: Fixed app switching issues - wake lock automatically reactivates when returning to app during recording
+- July 28, 2025: Removed red color from PATH_COLORS array to avoid confusion with clearout areas (replaced with pink #EC4899)
+- July 28, 2025: Reduced map pin size by 50% - circle radius from 20px to 10px, text size from 14px to 10px for better visibility
+- July 28, 2025: Fixed stop recording button functionality - resolved TypeScript compilation errors and proper state management
+- July 28, 2025: Enhanced wake lock system for background operation - maintains screen lock even when app loses focus during recording sessions
+- July 28, 2025: Confirmed map rotation functionality working - bearing rotation with 1000ms time threshold and 10° bearing threshold for responsive navigation
 
 ## User Preferences
 
