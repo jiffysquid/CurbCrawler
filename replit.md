@@ -226,7 +226,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 28, 2025: Reduced map pin size by 50% - circle radius from 20px to 10px, text size from 14px to 10px for better visibility
 - July 28, 2025: Fixed stop recording button functionality - resolved TypeScript compilation errors and proper state management
 - July 28, 2025: Enhanced wake lock system for background operation - maintains screen lock even when app loses focus during recording sessions
-- July 28, 2025: Confirmed map rotation functionality working - bearing rotation with 1000ms time threshold and 10° bearing threshold for responsive navigation
+- July 28, 2025: Enhanced map rotation system with rotateTo() method and improved debugging
+- July 28, 2025: Fixed rotation parameters: 5m minimum movement, 2000ms time threshold, 10° bearing threshold with easeOutQuad animation
+- July 28, 2025: Added comprehensive rotation logging to track bearing changes and rotation commands
 
 ## User Preferences
 

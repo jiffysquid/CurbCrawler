@@ -493,8 +493,8 @@ export default function MapboxMap({
       }
     }
 
-    // Handle rotation based on movement - more responsive settings
-    if (previousLocationRef.current && distance > 2) { // Reduced from 5m to 2m for more responsive rotation
+    // Handle rotation based on movement - more responsive settings  
+    if (previousLocationRef.current && distance > 5) { // Require 5m movement to avoid noise
       const bearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -505,8 +505,8 @@ export default function MapboxMap({
       const now = Date.now();
       const timeSinceLastRotation = now - lastRotationTime.current;
 
-      // Reduced time threshold for more responsive rotation
-      if (timeSinceLastRotation > 1000) { // Reduced from 1500ms to 1000ms
+      // Time threshold to prevent excessive rotation
+      if (timeSinceLastRotation > 2000) { // 2 seconds between rotations for stability
         const currentMapBearing = map.getBearing();
         const navigationBearing = bearing;
         
@@ -519,16 +519,27 @@ export default function MapboxMap({
         // Reduced bearing threshold for more sensitive rotation
         if (bearingDiff > 10) { // Reduced from 15° to 10°
           console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
+          console.log('🗺️ Current map bearing:', currentMapBearing.toFixed(1), '° -> New bearing:', navigationBearing.toFixed(1), '°');
           
+          // Force map rotation with immediate feedback
+          map.rotateTo(navigationBearing, {
+            duration: 1500,
+            easing: (t) => t * (2 - t), // easeOutQuad for smooth rotation
+          });
+          
+          // Also ensure the map stays centered on vehicle during rotation
           map.easeTo({
-            bearing: navigationBearing,
             center: [currentLocation.lng, currentLocation.lat],
-            duration: 1500, // Faster rotation animation
+            duration: 1500,
             essential: true
           });
 
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
+          
+          console.log('✅ Map rotation command sent - bearing should now be:', navigationBearing.toFixed(1), '°');
+        } else {
+          console.log('🔄 Bearing change too small:', bearingDiff.toFixed(1), '° (threshold: 10°) - no rotation');
         }
       }
     }
