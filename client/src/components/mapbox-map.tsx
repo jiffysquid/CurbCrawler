@@ -521,18 +521,26 @@ export default function MapboxMap({
           console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
           console.log('🗺️ Current map bearing:', currentMapBearing.toFixed(1), '° -> New bearing:', navigationBearing.toFixed(1), '°');
           
-          // Force map rotation with immediate feedback
-          map.rotateTo(navigationBearing, {
-            duration: 1500,
-            easing: (t) => t * (2 - t), // easeOutQuad for smooth rotation
-          });
-          
-          // Also ensure the map stays centered on vehicle during rotation
-          map.easeTo({
-            center: [currentLocation.lng, currentLocation.lat],
-            duration: 1500,
-            essential: true
-          });
+          // Force map rotation with proper bearing and centering
+          try {
+            map.easeTo({
+              bearing: navigationBearing,
+              center: [currentLocation.lng, currentLocation.lat],
+              duration: 1500,
+              easing: t => t * (2 - t), // easeOutQuad
+              essential: true
+            });
+            
+            // Verify the rotation command was applied
+            setTimeout(() => {
+              const actualBearing = map.getBearing();
+              console.log('🗺️ Rotation verification - Target:', navigationBearing.toFixed(1), '° Actual:', actualBearing.toFixed(1), '°');
+            }, 100);
+          } catch (rotationError) {
+            console.error('❌ Map rotation failed:', rotationError);
+            console.log('🔄 Fallback: Using rotateTo method');
+            map.rotateTo(navigationBearing, { duration: 1500 });
+          }
 
           currentBearingRef.current = bearing;
           lastRotationTime.current = now;
