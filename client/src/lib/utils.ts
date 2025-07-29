@@ -218,7 +218,34 @@ export function loadPersistentPaths(): PersistentPath[] {
   if (!stored) return [];
   
   try {
-    return JSON.parse(stored);
+    const paths = JSON.parse(stored) as PersistentPath[];
+    
+    // Ensure all paths have distances calculated (backward compatibility)
+    let hasUpdates = false;
+    const updatedPaths = paths.map(path => {
+      if ((!path.distance || path.distance === 0) && path.coordinates && path.coordinates.length > 1) {
+        let totalDistance = 0;
+        for (let i = 1; i < path.coordinates.length; i++) {
+          totalDistance += calculateDistance(
+            path.coordinates[i-1].lat,
+            path.coordinates[i-1].lng,
+            path.coordinates[i].lat,
+            path.coordinates[i].lng
+          );
+        }
+        hasUpdates = true;
+        return { ...path, distance: totalDistance };
+      }
+      return path;
+    });
+    
+    // Save updated paths back if we calculated missing distances
+    if (hasUpdates) {
+      localStorage.setItem('persistentPaths', JSON.stringify(updatedPaths));
+      console.log('✅ Updated persistent paths with calculated distances');
+    }
+    
+    return updatedPaths;
   } catch (error) {
     console.error('Error loading persistent paths:', error);
     return [];
