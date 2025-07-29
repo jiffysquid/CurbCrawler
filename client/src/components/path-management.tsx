@@ -105,38 +105,29 @@ export default function PathManagement() {
   }, [pathColorScheme]);
 
   const handleClearPaths = () => {
-    console.log('🗑️ PathManagement: Clearing all paths and pins...');
+    console.log('🗑️ PathManagement: Clearing visible paths and pins (totals preserved)...');
     
-    // Clear paths from localStorage
+    // Clear only visible paths and pins, not permanent totals
     localStorage.removeItem('persistentPaths');
-    // Also clear all map pins
     localStorage.removeItem('mapPins');  
     
     // Update local state immediately
     setSavedPaths([]);
     
-    // Trigger both storage events for comprehensive updating
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'persistentPaths',
-      newValue: null,
-      oldValue: localStorage.getItem('persistentPaths'),
-      storageArea: localStorage
-    }));
-    
+    // Trigger storage events for comprehensive updating
     window.dispatchEvent(new CustomEvent('customStorageEvent', {
       detail: { key: 'persistentPaths', action: 'clear' }
     }));
     
-    // Trigger pin clearing events
     window.dispatchEvent(new CustomEvent('customStorageEvent', {
       detail: { key: 'mapPins', action: 'clear' }
     }));
     
-    console.log('✅ PathManagement: All paths and pins cleared successfully');
+    console.log('✅ PathManagement: Visible paths and pins cleared (totals preserved)');
     
     toast({
       title: "Paths & Pins Cleared",
-      description: "All recorded paths and dropped pins have been cleared successfully.",
+      description: "All visible paths and pins cleared. Total statistics preserved.",
     });
   };
 
@@ -240,21 +231,21 @@ export default function PathManagement() {
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm" className="w-full">
                   <AlertTriangle className="h-4 w-4 mr-2" />
-                  Clear All Recorded Paths
+                  Clear Visible Paths & Pins
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="z-[10001]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Clear All Recorded Paths</AlertDialogTitle>
+                  <AlertDialogTitle>Clear Visible Paths & Pins</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete all recorded paths from your device. 
-                    This action cannot be undone.
+                    This will remove all visible paths and pins from the map and recent sessions list. 
+                    Your total statistics will be preserved. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleClearPaths} className="bg-red-600 hover:bg-red-700">
-                    Delete All Paths
+                    Clear Paths & Pins
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

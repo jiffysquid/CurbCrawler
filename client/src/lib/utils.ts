@@ -189,6 +189,14 @@ export interface PersistentPath {
   color: string;
 }
 
+// Permanent totals storage (separate from paths for permanent tracking)
+export interface PermanentTotals {
+  allTimeDistance: number;
+  allTimeDuration: number;
+  allTimeSessions: number;
+  lastUpdated: string;
+}
+
 export function savePersistentPath(path: PersistentPath): void {
   const existingPaths = loadPersistentPaths();
   // Calculate correct distance from coordinates if missing
@@ -206,6 +214,9 @@ export function savePersistentPath(path: PersistentPath): void {
   }
   existingPaths.push(path);
   localStorage.setItem('persistentPaths', JSON.stringify(existingPaths));
+  
+  // Update permanent totals with this new path
+  updatePermanentTotals(path.distance, path.duration);
   
   // Dispatch custom event for same-tab communication
   window.dispatchEvent(new CustomEvent('customStorageEvent', {
@@ -264,6 +275,72 @@ export function clearAllPersistentPaths(): void {
   // Dispatch custom event for same-tab communication
   window.dispatchEvent(new CustomEvent('customStorageEvent', {
     detail: { key: 'persistentPaths', action: 'clear' }
+  }));
+}
+
+// Permanent totals management (separate from paths)
+export function loadPermanentTotals(): PermanentTotals {
+  const stored = localStorage.getItem('permanentTotals');
+  if (!stored) {
+    // Initialize with existing paths data if available
+    const existingPaths = loadPersistentPaths();
+    if (existingPaths.length > 0) {
+      const totals = {
+        allTimeDistance: existingPaths.reduce((total, path) => total + (path.distance || 0), 0),
+        allTimeDuration: existingPaths.reduce((total, path) => total + (path.duration || 0), 0),
+        allTimeSessions: existingPaths.length,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('permanentTotals', JSON.stringify(totals));
+      return totals;
+    }
+    return {
+      allTimeDistance: 0,
+      allTimeDuration: 0,
+      allTimeSessions: 0,
+      lastUpdated: new Date().toISOString()
+    };
+  }
+  
+  try {
+    return JSON.parse(stored);
+  } catch (error) {
+    console.error('Error loading permanent totals:', error);
+    return {
+      allTimeDistance: 0,
+      allTimeDuration: 0,
+      allTimeSessions: 0,
+      lastUpdated: new Date().toISOString()
+    };
+  }
+}
+
+export function updatePermanentTotals(distance: number, duration: number): void {
+  const currentTotals = loadPermanentTotals();
+  const updatedTotals = {
+    allTimeDistance: currentTotals.allTimeDistance + distance,
+    allTimeDuration: currentTotals.allTimeDuration + duration,
+    allTimeSessions: currentTotals.allTimeSessions + 1,
+    lastUpdated: new Date().toISOString()
+  };
+  localStorage.setItem('permanentTotals', JSON.stringify(updatedTotals));
+}
+
+export function eraseAllData(): void {
+  // Clear everything - paths, pins, and permanent totals
+  localStorage.removeItem('persistentPaths');
+  localStorage.removeItem('mapPins');
+  localStorage.removeItem('permanentTotals');
+  
+  // Dispatch events for comprehensive updating
+  window.dispatchEvent(new CustomEvent('customStorageEvent', {
+    detail: { key: 'persistentPaths', action: 'clear' }
+  }));
+  window.dispatchEvent(new CustomEvent('customStorageEvent', {
+    detail: { key: 'mapPins', action: 'clear' }
+  }));
+  window.dispatchEvent(new CustomEvent('customStorageEvent', {
+    detail: { key: 'permanentTotals', action: 'clear' }
   }));
 }
 

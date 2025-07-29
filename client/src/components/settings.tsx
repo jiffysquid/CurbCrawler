@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Map, Battery, AlertTriangle, Focus, DollarSign, Route, MapPin, Trash2 } from "lucide-react";
-import { clearAllPersistentPaths, loadPersistentPaths, loadMapPins, clearAllMapPins, MapPin as Pin } from "@/lib/utils";
+import { clearAllPersistentPaths, loadPersistentPaths, loadMapPins, clearAllMapPins, MapPin as Pin, eraseAllData } from "@/lib/utils";
 
 interface SettingsProps {
   showSuburbBoundaries: boolean;
@@ -174,6 +174,39 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
     toast({
       title: "Pins Cleared",
       description: "All map pins have been deleted.",
+    });
+  };
+
+  const handleEraseAllData = () => {
+    console.log('🗑️ Settings: Erasing all data (paths, pins, totals, settings)...');
+    
+    // Erase everything using the utility function
+    eraseAllData();
+    
+    // Reset local state
+    setSavedPaths([]);
+    setMapPins([]);
+    
+    // Reset all settings to defaults
+    setGpsAccuracy("smart");
+    setShowLabels(true);
+    setFocusArea("imax-van");
+    setFuelPrice("2.00");
+    setPathColorScheme("bright");
+    
+    // Clear settings from localStorage
+    localStorage.removeItem('focusArea');
+    localStorage.removeItem('gpsAccuracy');
+    localStorage.removeItem('showLabels');
+    localStorage.removeItem('fuelPrice');
+    localStorage.removeItem('pathColorScheme');
+    
+    console.log('✅ Settings: All data and settings erased successfully');
+    
+    toast({
+      title: "All Data Erased",
+      description: "All data and settings have been permanently deleted.",
+      variant: "destructive",
     });
   };
 
@@ -367,6 +400,59 @@ export default function Settings({ showSuburbBoundaries, setShowSuburbBoundaries
               </AlertDialogContent>
             </AlertDialog>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center space-x-2">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <span>Data Management</span>
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Permanently erase all data including total statistics
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="text-xs text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="font-medium text-yellow-800 mb-1">⚠️ Warning</div>
+              <div className="text-yellow-700">
+                This will permanently delete all recorded paths, dropped pins, and total statistics. 
+                This action cannot be undone and will reset the app to factory settings.
+              </div>
+            </div>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="w-full">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Erase All Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="z-[10001]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Erase All Data</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete:
+                    <br />• All recorded paths and routes
+                    <br />• All dropped map pins
+                    <br />• All total statistics (this week and all-time)
+                    <br />• All app settings and preferences
+                    <br /><br />
+                    <strong>This action cannot be undone.</strong> Are you absolutely sure?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleEraseAllData} className="bg-red-600 hover:bg-red-700">
+                    Erase Everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardContent>
       </Card>
 

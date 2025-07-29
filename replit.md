@@ -239,6 +239,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 29, 2025: Fixed suburb info dropdown positioning - moved to below current location window and reduced current location window height
 - July 29, 2025: Fixed pin color cycling - replaced random color assignment with deterministic cycling based on pin number to prevent consecutive colors
 - July 29, 2025: Fixed missing distances in recent sessions list - added backward compatibility to calculate distances for existing paths without distance data
+- July 29, 2025: Separated path clearing from permanent totals - totals now persist when clearing visible paths, added "Erase All Data" option in settings to permanently delete everything including totals
 
 ## User Preferences
 

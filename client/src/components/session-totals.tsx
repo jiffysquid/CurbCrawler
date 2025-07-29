@@ -1,34 +1,61 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { SessionWithStats } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, Route, TrendingUp } from "lucide-react";
-import { loadPersistentPaths } from "@/lib/utils";
+import { loadPersistentPaths, loadPermanentTotals, PermanentTotals } from "@/lib/utils";
 
 interface SessionTotalsProps {
   sessions: SessionWithStats[];
 }
 
 export default function SessionTotals({ sessions }: SessionTotalsProps) {
+  const [permanentTotals, setPermanentTotals] = useState<PermanentTotals | null>(null);
+
+  // Load permanent totals on mount and listen for updates
+  useEffect(() => {
+    const loadTotals = () => {
+      setPermanentTotals(loadPermanentTotals());
+    };
+    
+    loadTotals();
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'permanentTotals' || e.key === 'persistentPaths') {
+        loadTotals();
+      }
+    };
+
+    // Listen for custom events from same tab
+    const handleCustomStorageEvent = (e: Event) => {
+      const storageEvent = e as CustomEvent;
+      if (storageEvent.detail?.key === 'permanentTotals' || storageEvent.detail?.key === 'persistentPaths') {
+        loadTotals();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('customStorageEvent', handleCustomStorageEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('customStorageEvent', handleCustomStorageEvent);
+    };
+  }, []);
+
   const stats = useMemo(() => {
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // Calculate stats from persistent paths (more accurate than sessions)
+    // Calculate this week stats from current paths (these can be cleared)
     const persistentPaths = loadPersistentPaths();
-    
-    // Filter paths for this week
     const thisWeekPaths = persistentPaths.filter(path => {
       const pathDate = new Date(path.date);
       return pathDate >= startOfWeek;
     });
 
-    // All time stats from persistent paths
-    const allTimeDistance = persistentPaths.reduce((total, path) => total + (path.distance || 0), 0);
-    const allTimeDuration = persistentPaths.reduce((total, path) => total + (path.duration || 0), 0);
-
-    // This week stats
     const thisWeekDistance = thisWeekPaths.reduce((total, path) => total + (path.distance || 0), 0);
     const thisWeekDuration = thisWeekPaths.reduce((total, path) => total + (path.duration || 0), 0);
 
@@ -39,12 +66,12 @@ export default function SessionTotals({ sessions }: SessionTotalsProps) {
         duration: thisWeekDuration
       },
       allTime: {
-        sessions: persistentPaths.length,
-        distance: allTimeDistance,
-        duration: allTimeDuration
+        sessions: permanentTotals?.allTimeSessions || 0,
+        distance: permanentTotals?.allTimeDistance || 0,
+        duration: permanentTotals?.allTimeDuration || 0
       }
     };
-  }, [sessions]);
+  }, [sessions, permanentTotals]);
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) {
