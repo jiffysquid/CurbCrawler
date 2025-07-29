@@ -229,6 +229,9 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 28, 2025: Enhanced map rotation system with rotateTo() method and improved debugging
 - July 28, 2025: Fixed rotation parameters: 5m minimum movement, 2000ms time threshold, 10° bearing threshold with easeOutQuad animation
 - July 28, 2025: Added comprehensive rotation logging to track bearing changes and rotation commands
+- July 29, 2025: Fixed suburb info dropdown positioning - moved to bottom-right above map controls
+- July 29, 2025: Added demographics data for current next week suburbs to fix empty menu section  
+- July 29, 2025: Halved arrow spacing distance from 50m to 25m for denser directional indicators on recorded paths
 
 ## User Preferences
 

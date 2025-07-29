@@ -694,7 +694,7 @@ export default function MapboxMap({
   // Helper function to calculate arrow positions along a path with consistent spacing
   const calculateArrowPositions = (coordinates: {lat: number, lng: number}[]) => {
     const arrows = [];
-    const targetDistance = 50; // Place arrow every 50 meters
+    const targetDistance = 25; // Place arrow every 25 meters (halved from 50m)
     
     if (coordinates.length < 2) return arrows;
     
