@@ -237,6 +237,7 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 29, 2025: Fixed map rotation issue - replaced rotateTo with easeTo using bearing parameter for proper Mapbox GL JS navigation rotation
 - July 29, 2025: Added rotation verification logging to debug map bearing changes and ensure rotation commands take effect
 - July 29, 2025: Fixed suburb info dropdown positioning - moved to below current location window and reduced current location window height
+- July 29, 2025: Fixed pin color cycling - replaced random color assignment with deterministic cycling based on pin number to prevent consecutive colors
 
 ## User Preferences
 

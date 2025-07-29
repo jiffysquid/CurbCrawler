@@ -268,7 +268,7 @@ export function loadMapPins(): MapPin[] {
       pin.number >= 1 && pin.number <= 9
     ).map(pin => ({
       ...pin,
-      color: pin.color || generateRandomPinColor() // Add color if missing for backward compatibility
+      color: pin.color || generatePinColor(pin.number) // Add color if missing for backward compatibility
     }));
     
     // Sort by number and return max 9
@@ -298,23 +298,25 @@ export function saveMapPins(pins: MapPin[]): void {
   }
 }
 
-// Generate random bright color for pins
-function generateRandomPinColor(): string {
-  const colors = [
-    '#E53E3E', // Red
-    '#3182CE', // Blue
-    '#38A169', // Green
-    '#D69E2E', // Yellow
-    '#805AD5', // Purple
-    '#DD6B20', // Orange
-    '#319795', // Teal
-    '#E91E63', // Pink
-    '#5C6BC0', // Indigo
-    '#26C6DA', // Cyan
-    '#66BB6A', // Light Green
-    '#FF7043'  // Deep Orange
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
+// Pin color array (avoiding red to prevent confusion with clearout areas)
+const PIN_COLORS = [
+  '#3182CE', // Blue
+  '#38A169', // Green
+  '#D69E2E', // Yellow
+  '#805AD5', // Purple
+  '#DD6B20', // Orange
+  '#319795', // Teal
+  '#E91E63', // Pink
+  '#5C6BC0', // Indigo
+  '#26C6DA', // Cyan
+  '#66BB6A', // Light Green
+  '#FF7043', // Deep Orange
+  '#EC4899'  // Bright Pink
+];
+
+// Generate pin color based on pin number to ensure proper cycling
+function generatePinColor(pinNumber: number): string {
+  return PIN_COLORS[(pinNumber - 1) % PIN_COLORS.length];
 }
 
 export function addMapPin(lat: number, lng: number, info?: string): MapPin | null {
@@ -346,7 +348,7 @@ export function addMapPin(lat: number, lng: number, info?: string): MapPin | nul
       lng,
       createdAt: new Date().toISOString(),
       info: info || '',
-      color: generateRandomPinColor()
+      color: generatePinColor(nextNumber)
     };
     
     const updatedPins = [...existingPins, newPin];
