@@ -232,6 +232,8 @@ The application is configured for deployment on Replit's autoscale platform:
 - July 29, 2025: Fixed suburb info dropdown positioning - moved to bottom-right above map controls
 - July 29, 2025: Added demographics data for current next week suburbs to fix empty menu section  
 - July 29, 2025: Halved arrow spacing distance from 50m to 25m for denser directional indicators on recorded paths
+- July 29, 2025: Removed unused recent sessions area from sessions tab, added totals section showing this week and all time distance/time statistics
+- July 29, 2025: Reorganized sessions tab to show recording totals at top with path management below containing recent sessions list
 
 ## User Preferences
 

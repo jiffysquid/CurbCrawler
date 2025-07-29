@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import MapboxMap from "@/components/mapbox-map";
 import SimpleControls from "@/components/simple-controls";
-import SessionHistory from "@/components/session-history";
+import SessionTotals from "@/components/session-totals";
 import Settings from "@/components/settings";
 import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
@@ -754,7 +754,10 @@ export default function Home() {
           {/* Tab Content */}
           <div className="flex-1 overflow-hidden">
             {activeTab === 'sessions' && (
-              <SessionHistory sessions={sessions} isLoading={false} />
+              <div className="h-full flex flex-col">
+                <SessionTotals sessions={sessions} />
+                <PathManagement />
+              </div>
             )}
             {activeTab === 'settings' && (
               <Settings 
@@ -813,7 +816,7 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto min-h-0">
                 {activeTab === 'sessions' && (
                   <div className="h-full flex flex-col">
-                    <SessionHistory sessions={sessions} isLoading={false} isMobile />
+                    <SessionTotals sessions={sessions} />
                     <PathManagement />
                   </div>
                 )}
