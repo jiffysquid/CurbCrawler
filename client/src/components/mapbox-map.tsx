@@ -993,9 +993,9 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* All Clearout Suburbs Demographics Window */}
+      {/* All Clearout Suburbs Demographics Window - positioned above menu button */}
       {showDemographics && demographicsArray && demographicsArray.length > 0 && (
-        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
+        <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Building className="h-5 w-5" />

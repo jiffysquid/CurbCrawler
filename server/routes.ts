@@ -721,6 +721,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
           medianAge: 43,
           clearoutStatus: currentSuburbs.includes("PULLENVALE") ? "current" : nextSuburbs.includes("PULLENVALE") ? "next" : null,
           dataSource: "abs-census-2021"
+        },
+        // Additional next week suburbs for current schedule
+        {
+          name: "JAMBOREE HEIGHTS",
+          population: 3456,
+          populationDensity: 1850,
+          area: 1.87,
+          medianHousePrice: 750000,
+          medianIncome: 72000,
+          medianAge: 35,
+          clearoutStatus: currentSuburbs.includes("JAMBOREE HEIGHTS") ? "current" : nextSuburbs.includes("JAMBOREE HEIGHTS") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "MIDDLE PARK",
+          population: 2845,
+          populationDensity: 1650,
+          area: 1.72,
+          medianHousePrice: 680000,
+          medianIncome: 68000,
+          medianAge: 33,
+          clearoutStatus: currentSuburbs.includes("MIDDLE PARK") ? "current" : nextSuburbs.includes("MIDDLE PARK") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "MOUNT OMMANEY",
+          population: 4567,
+          populationDensity: 2150,
+          area: 2.12,
+          medianHousePrice: 720000,
+          medianIncome: 75000,
+          medianAge: 36,
+          clearoutStatus: currentSuburbs.includes("MOUNT OMMANEY") ? "current" : nextSuburbs.includes("MOUNT OMMANEY") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "WESTLAKE",
+          population: 3245,
+          populationDensity: 1950,
+          area: 1.66,
+          medianHousePrice: 695000,
+          medianIncome: 70000,
+          medianAge: 34,
+          clearoutStatus: currentSuburbs.includes("WESTLAKE") ? "current" : nextSuburbs.includes("WESTLAKE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "JINDALEE",
+          population: 5678,
+          populationDensity: 1750,
+          area: 3.24,
+          medianHousePrice: 850000,
+          medianIncome: 78000,
+          medianAge: 37,
+          clearoutStatus: currentSuburbs.includes("JINDALEE") ? "current" : nextSuburbs.includes("JINDALEE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "RIVERHILLS",
+          population: 2356,
+          populationDensity: 980,
+          area: 2.40,
+          medianHousePrice: 950000,
+          medianIncome: 82000,
+          medianAge: 39,
+          clearoutStatus: currentSuburbs.includes("RIVERHILLS") ? "current" : nextSuburbs.includes("RIVERHILLS") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "SINNAMON PARK",
+          population: 3789,
+          populationDensity: 1450,
+          area: 2.61,
+          medianHousePrice: 780000,
+          medianIncome: 74000,
+          medianAge: 35,
+          clearoutStatus: currentSuburbs.includes("SINNAMON PARK") ? "current" : nextSuburbs.includes("SINNAMON PARK") ? "next" : null,
+          dataSource: "abs-census-2021"
         }
       ];
 
