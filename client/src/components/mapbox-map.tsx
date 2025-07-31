@@ -155,7 +155,7 @@ export default function MapboxMap({
       style: 'mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2',
       center: currentLocation ? [currentLocation.lng, currentLocation.lat] : [153.0281, -27.4698],
       zoom: 16,
-      pitch: 0,
+      pitch: 20, // 20-degree tilt for 3D perspective
       bearing: 0
     });
 
@@ -493,8 +493,8 @@ export default function MapboxMap({
       }
     }
 
-    // Handle rotation based on movement - more responsive settings  
-    if (previousLocationRef.current && distance > 5) { // Require 5m movement to avoid noise
+    // Handle rotation based on movement during recording sessions
+    if (isRecording && previousLocationRef.current && distance > 10) { // Require 10m movement and recording to avoid noise
       const bearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -506,48 +506,37 @@ export default function MapboxMap({
       const timeSinceLastRotation = now - lastRotationTime.current;
 
       // Time threshold to prevent excessive rotation
-      if (timeSinceLastRotation > 2000) { // 2 seconds between rotations for stability
+      if (timeSinceLastRotation > 3000) { // 3 seconds between rotations for smoother experience
         const currentMapBearing = map.getBearing();
-        const navigationBearing = bearing;
         
-        let bearingDiff = Math.abs(navigationBearing - currentMapBearing);
+        // Normalize bearing to 0-360 range
+        const normalizedBearing = ((bearing % 360) + 360) % 360;
+        const normalizedCurrentBearing = ((currentMapBearing % 360) + 360) % 360;
+        
+        // Calculate shortest angular distance
+        let bearingDiff = Math.abs(normalizedBearing - normalizedCurrentBearing);
         if (bearingDiff > 180) {
           bearingDiff = 360 - bearingDiff;
         }
-        bearingDiff = Math.abs(bearingDiff);
 
-        // Reduced bearing threshold for more sensitive rotation
-        if (bearingDiff > 10) { // Reduced from 15° to 10°
-          console.log('🔄 Rotating map to navigation bearing:', navigationBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
-          console.log('🗺️ Current map bearing:', currentMapBearing.toFixed(1), '° -> New bearing:', navigationBearing.toFixed(1), '°');
+        // Only rotate if the bearing change is significant
+        if (bearingDiff > 15) { // Increased threshold for more stable rotation
+          console.log('🔄 Rotating map during recording - bearing:', normalizedBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
           
-          // Force map rotation with proper bearing and centering
-          try {
-            map.easeTo({
-              bearing: navigationBearing,
-              center: [currentLocation.lng, currentLocation.lat],
-              duration: 1500,
-              easing: t => t * (2 - t), // easeOutQuad
-              essential: true
-            });
-            
-            // Verify the rotation command was applied
-            setTimeout(() => {
-              const actualBearing = map.getBearing();
-              console.log('🗺️ Rotation verification - Target:', navigationBearing.toFixed(1), '° Actual:', actualBearing.toFixed(1), '°');
-            }, 100);
-          } catch (rotationError) {
-            console.error('❌ Map rotation failed:', rotationError);
-            console.log('🔄 Fallback: Using rotateTo method');
-            map.rotateTo(navigationBearing, { duration: 1500 });
-          }
+          map.easeTo({
+            bearing: normalizedBearing,
+            center: [currentLocation.lng, currentLocation.lat],
+            pitch: 20, // Maintain 20-degree tilt
+            duration: 2000, // Slower, smoother rotation
+            easing: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t // easeInOutQuad
+          });
 
-          currentBearingRef.current = bearing;
+          currentBearingRef.current = normalizedBearing;
           lastRotationTime.current = now;
           
-          console.log('✅ Map rotation command sent - bearing should now be:', navigationBearing.toFixed(1), '°');
+          console.log('✅ Map rotation applied - new bearing:', normalizedBearing.toFixed(1), '°');
         } else {
-          console.log('🔄 Bearing change too small:', bearingDiff.toFixed(1), '° (threshold: 10°) - no rotation');
+          console.log('🔄 Bearing change too small:', bearingDiff.toFixed(1), '° (threshold: 15°) - no rotation');
         }
       }
     }
@@ -884,6 +873,7 @@ export default function MapboxMap({
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
           zoom: 13,
+          pitch: 20, // Maintain 20-degree tilt
           duration: 1000
         });
         setIsZoomedToVan(false);
@@ -892,6 +882,7 @@ export default function MapboxMap({
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
           zoom: 18,
+          pitch: 20, // Maintain 20-degree tilt
           duration: 1000
         });
         setIsZoomedToVan(true);
