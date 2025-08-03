@@ -58,3 +58,4 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - August 3, 2025: Fixed map rotation logic - vehicle now always points "up" on screen with proper bearing calculation so the road appears aligned with travel direction
 - August 3, 2025: Fixed current location window to update continuously during recording sessions with 2-second suburb lookup intervals
 - August 3, 2025: Adjusted van zoom level from 18 to 16.5 to show 50% more surrounding area for better context
+- August 3, 2025: Changed path arrows from triangles (▲) to arrows with tails (↑) for clearer direction recognition

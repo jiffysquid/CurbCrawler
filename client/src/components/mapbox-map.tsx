@@ -250,8 +250,8 @@ export default function MapboxMap({
         type: 'symbol',
         source: 'persistent-path-arrows',
         layout: {
-          'text-field': '▲',
-          'text-size': 12,
+          'text-field': '↑',
+          'text-size': 14,
           'text-rotation-alignment': 'map',
           'text-rotate': ['get', 'rotation'],
           'text-allow-overlap': true,
@@ -288,8 +288,8 @@ export default function MapboxMap({
         type: 'symbol',
         source: 'current-recording-arrows',
         layout: {
-          'text-field': '▲',
-          'text-size': 12,
+          'text-field': '↑',
+          'text-size': 14,
           'text-rotation-alignment': 'map',
           'text-rotate': ['get', 'rotation'],
           'text-allow-overlap': true,
