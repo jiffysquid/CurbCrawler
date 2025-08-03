@@ -493,9 +493,9 @@ export default function MapboxMap({
       }
     }
 
-    // Handle rotation based on movement during recording sessions - more responsive
-    if (isRecording && previousLocationRef.current && distance > 5) { // Reduced to 5m movement for more responsive rotation
-      const bearing = calculateBearing(
+    // Handle rotation based on movement during recording sessions - van always points up
+    if (isRecording && previousLocationRef.current && distance > 5) { // Require 5m movement during recording
+      const travelBearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
         currentLocation.lat,
@@ -505,38 +505,39 @@ export default function MapboxMap({
       const now = Date.now();
       const timeSinceLastRotation = now - lastRotationTime.current;
 
-      // Reduced time threshold for more responsive rotation
-      if (timeSinceLastRotation > 1500) { // 1.5 seconds between rotations
+      // More responsive rotation timing
+      if (timeSinceLastRotation > 1000) { // 1 second between rotations for immediate response
         const currentMapBearing = map.getBearing();
         
-        // Normalize bearing to 0-360 range
-        const normalizedBearing = ((bearing % 360) + 360) % 360;
-        const normalizedCurrentBearing = ((currentMapBearing % 360) + 360) % 360;
+        // The map bearing should be set so the vehicle direction points "up"
+        // In Mapbox, bearing 0° = North (up), so we need to rotate the map
+        // so that the direction of travel becomes the "up" direction
+        const targetMapBearing = (360 - travelBearing) % 360;
         
-        // Calculate shortest angular distance
-        let bearingDiff = Math.abs(normalizedBearing - normalizedCurrentBearing);
+        // Calculate shortest angular distance between current and target bearing
+        let bearingDiff = Math.abs(targetMapBearing - currentMapBearing);
         if (bearingDiff > 180) {
           bearingDiff = 360 - bearingDiff;
         }
 
-        // More sensitive rotation threshold
-        if (bearingDiff > 8) { // Reduced threshold for more responsive rotation
-          console.log('🔄 Rotating map during recording - bearing:', normalizedBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
+        // More sensitive rotation for immediate response
+        if (bearingDiff > 5) { // Very sensitive threshold for immediate rotation
+          console.log('🧭 Vehicle traveling at bearing:', travelBearing.toFixed(1), '° - rotating map to:', targetMapBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
           
           map.easeTo({
-            bearing: normalizedBearing,
+            bearing: targetMapBearing,
             center: [currentLocation.lng, currentLocation.lat],
             pitch: 40, // Maintain 40-degree tilt
-            duration: 1200, // Faster rotation for better responsiveness
-            easing: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t // easeInOutQuad
+            duration: 800, // Quick rotation for immediate response
+            easing: t => t * (2 - t) // easeOutQuad for smooth but quick rotation
           });
 
-          currentBearingRef.current = normalizedBearing;
+          currentBearingRef.current = travelBearing;
           lastRotationTime.current = now;
           
-          console.log('✅ Map rotation applied - new bearing:', normalizedBearing.toFixed(1), '°');
+          console.log('✅ Map rotated so vehicle points up - map bearing now:', targetMapBearing.toFixed(1), '°');
         } else {
-          console.log('🔄 Bearing change too small:', bearingDiff.toFixed(1), '° (threshold: 8°) - no rotation');
+          console.log('🧭 Bearing change too small:', bearingDiff.toFixed(1), '° (threshold: 5°) - no rotation needed');
         }
       }
     }

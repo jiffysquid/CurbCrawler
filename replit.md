@@ -55,3 +55,4 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - July 31, 2025: Enhanced map rotation system - rotation now only occurs during recording sessions with improved bearing calculation and normalized angles
 - July 31, 2025: Added 20-degree map tilt for 3D perspective view, providing better spatial awareness during navigation  
 - August 1, 2025: Increased map tilt to 40 degrees for enhanced 3D perspective and improved rotation responsiveness - reduced movement threshold to 5m and time threshold to 1.5s with 8° bearing sensitivity
+- August 3, 2025: Fixed map rotation logic - vehicle now always points "up" on screen with proper bearing calculation so the road appears aligned with travel direction
