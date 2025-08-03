@@ -882,7 +882,7 @@ export default function MapboxMap({
         // Zoom in to van view
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
-          zoom: 18,
+          zoom: 16.5, // Reduced from 18 to show 50% more area around van
           pitch: 40, // Maintain 40-degree tilt
           duration: 1000
         });
