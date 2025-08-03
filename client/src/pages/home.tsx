@@ -124,14 +124,13 @@ export default function Home() {
       setLocation(gpsLocation);
       console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
       
-      // When not recording, update suburb lookup (throttled)
-      if (!isRecording) {
-        setTimeout(() => {
-          updateCurrentSuburb(gpsLocation).catch(error => {
-            console.log('Suburb lookup failed, continuing with GPS tracking:', error);
-          });
-        }, 500);
-      }
+      // Always update suburb lookup, but with different timing based on recording state
+      const delay = isRecording ? 2000 : 500; // Slower updates during recording to avoid overloading
+      setTimeout(() => {
+        updateCurrentSuburb(gpsLocation).catch(error => {
+          console.log('Suburb lookup failed, continuing with GPS tracking:', error);
+        });
+      }, delay);
     }
   }, [gpsLocation, isRecording]);
 
@@ -232,7 +231,11 @@ export default function Home() {
       });
       if (response.ok) {
         const data = await response.json();
-        setCurrentSuburb(data.suburb || 'Unknown');
+        const newSuburb = data.suburb || 'Unknown';
+        if (newSuburb !== currentSuburb) {
+          console.log('🏘️ Suburb updated from', currentSuburb, 'to', newSuburb);
+        }
+        setCurrentSuburb(newSuburb);
       } else {
         console.log('Suburb lookup failed with status:', response.status);
         setCurrentSuburb('Unknown');
