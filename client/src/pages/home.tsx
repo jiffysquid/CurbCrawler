@@ -708,6 +708,14 @@ export default function Home() {
           recordingStats={recordingStats}
         />
         
+        {/* GPS Debug Panel */}
+        <GPSDebug
+          location={location}
+          error={gpsError}
+          isWatching={isWatching}
+          onTestGPS={startWatching}
+          onLocationUpdate={handleKMLLocationUpdate}
+        />
 
 
         {/* Mobile Menu Button */}
