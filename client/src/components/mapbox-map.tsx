@@ -443,6 +443,7 @@ export default function MapboxMap({
 
   // Handle vehicle marker and smooth movement
   useEffect(() => {
+    console.log('🎯 MapboxMap: Location changed:', currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : 'null');
     if (!mapRef.current || !mapReady || !currentLocation) return;
 
     const map = mapRef.current;
@@ -480,6 +481,8 @@ export default function MapboxMap({
       currentLocation.lat,
       currentLocation.lng
     ) * 1000 : 0;
+    
+    console.log('🎯 MapboxMap: Movement distance:', distance.toFixed(1) + 'm', 'from', previousLocationRef.current ? `${previousLocationRef.current.lat}, ${previousLocationRef.current.lng}` : 'no previous location');
 
     // Only animate if there's meaningful movement (> 1 meter)
     if (distance > 1 || !previousLocationRef.current) {
