@@ -473,6 +473,18 @@ export default function MapboxMap({
       console.log('🚐 Vehicle marker updated to:', currentLocation.lat, currentLocation.lng);
     }
 
+    // Always follow the vehicle location (both during recording and not recording)
+    // Follow in both van view (close) and suburb view (wider)
+    if (mapRef.current) {
+      mapRef.current.easeTo({
+        center: [currentLocation.lng, currentLocation.lat],
+        duration: 1000, // Smooth 1-second transition
+        essential: true
+      });
+      const viewMode = isZoomedToVan ? 'van view' : 'suburb view';
+      console.log(`🗺️ Map following vehicle to: ${currentLocation.lat}, ${currentLocation.lng} (${viewMode})`);
+    }
+
     previousLocationRef.current = currentLocation;
   }, [currentLocation, mapReady]);
 
@@ -801,7 +813,7 @@ export default function MapboxMap({
   const toggleZoom = () => {
     if (mapRef.current && currentLocation) {
       if (isZoomedToVan) {
-        // Zoom out to suburb view
+        // Zoom out to suburb view - still follow but wider view
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
           zoom: 13,
@@ -809,8 +821,9 @@ export default function MapboxMap({
           duration: 1000
         });
         setIsZoomedToVan(false);
+        console.log('🔍 Switched to suburb view - map will still follow vehicle');
       } else {
-        // Zoom in to van view
+        // Zoom in to van view - close following
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
           zoom: 16.5, // Reduced from 18 to show 50% more area around van
@@ -818,6 +831,7 @@ export default function MapboxMap({
           duration: 1000
         });
         setIsZoomedToVan(true);
+        console.log('🔍 Switched to van view - close following enabled');
       }
     }
   };
