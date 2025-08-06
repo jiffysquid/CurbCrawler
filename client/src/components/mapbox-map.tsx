@@ -54,6 +54,8 @@ export default function MapboxMap({
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
+  const [smoothedBearing, setSmoothedBearing] = useState<number>(0);
+  const bearingBufferRef = useRef<number[]>([]);
   const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
   const [mapPins, setMapPins] = useState<Pin[]>([]);
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
@@ -142,12 +144,19 @@ export default function MapboxMap({
     return (bearing + 360) % 360; // Normalize to 0-360
   }, []);
 
+  // Helper function to normalize bearing differences
+  const normalizeBearingDiff = (diff: number): number => {
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    return diff;
+  };
+
   // Update map bearing based on device heading OR movement direction in driving mode
   useEffect(() => {
     if (!mapRef.current || !isDrivingMode) return;
 
     const map = mapRef.current;
-    let bearingToUse = deviceHeading;
+    let newBearing = deviceHeading;
 
     // If no device heading (GPS debug mode), calculate from movement
     if (deviceHeading === null && currentLocation && previousLocationRef.current) {
@@ -158,18 +167,61 @@ export default function MapboxMap({
       
       // Only calculate bearing if we've moved enough (avoid jitter)
       if (distance > 0.00001) { // ~1 meter
-        bearingToUse = calculateMovementBearing(previousLocationRef.current, currentLocation);
-        console.log('🧭 Using movement-based bearing for driving mode:', bearingToUse.toFixed(1) + '°');
+        newBearing = calculateMovementBearing(previousLocationRef.current, currentLocation);
+        console.log('🧭 Using movement-based bearing for driving mode:', newBearing.toFixed(1) + '°');
       }
     }
     
-    if (bearingToUse !== null) {
-      map.setBearing(bearingToUse);
-      if (deviceHeading !== null) {
-        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+    if (newBearing !== null) {
+      // Add to bearing buffer for smoothing
+      bearingBufferRef.current.push(newBearing);
+      
+      // Keep only last 5 readings for smoothing
+      if (bearingBufferRef.current.length > 5) {
+        bearingBufferRef.current.shift();
+      }
+      
+      // Calculate weighted average with more weight on recent readings
+      let weightedSum = 0;
+      let totalWeight = 0;
+      
+      bearingBufferRef.current.forEach((bearing, index) => {
+        const weight = Math.pow(1.5, index); // Exponential weighting favoring recent readings
+        
+        // Handle angle wrapping for averaging
+        let adjustedBearing = bearing;
+        if (bearingBufferRef.current.length > 1) {
+          const diff = normalizeBearingDiff(bearing - bearingBufferRef.current[0]);
+          adjustedBearing = bearingBufferRef.current[0] + diff;
+        }
+        
+        weightedSum += adjustedBearing * weight;
+        totalWeight += weight;
+      });
+      
+      let avgBearing = weightedSum / totalWeight;
+      avgBearing = (avgBearing + 360) % 360; // Normalize to 0-360
+      
+      // Only update if difference is significant (reduce micro-jitter)
+      const bearingDiff = Math.abs(normalizeBearingDiff(avgBearing - smoothedBearing));
+      if (bearingDiff > 2) { // 2 degree threshold
+        setSmoothedBearing(avgBearing);
+        
+        // Use smooth transition
+        map.easeTo({
+          bearing: avgBearing,
+          duration: 400, // 400ms smooth transition
+          easing: (t) => t * (2 - t) // Ease-out quadratic for natural feel
+        });
+        
+        if (deviceHeading !== null) {
+          console.log('🗺️ Smooth bearing update:', avgBearing.toFixed(1) + '°');
+        } else {
+          console.log('🗺️ Smooth movement-based bearing:', avgBearing.toFixed(1) + '°');
+        }
       }
     }
-  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
+  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, smoothedBearing]);
 
   // Load pins on component mount and listen for changes
   useEffect(() => {

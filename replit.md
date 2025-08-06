@@ -62,3 +62,5 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - August 6, 2025: REMOVED ALL ROTATION AND VAN ANIMATION - Simplified vehicle system to static marker that updates position only, no map rotation or vehicle animation due to persistent technical issues
 - August 6, 2025: FIXED demographics panel - Next week clearout suburbs now display correctly in blue section with complete population and pricing data
 - August 6, 2025: ENHANCED map following - Map now follows vehicle location in both recording and non-recording modes with smooth 1-second transitions
+- August 6, 2025: IMPLEMENTED DRIVING MODE - Added compass button toggle for "driving" view where vehicle stays fixed pointing up while map rotates beneath based on device compass or movement direction
+- August 6, 2025: ADDED SMOOTH MAP ROTATION - Implemented weighted averaging, angle normalization, and 400ms eased transitions for butter-smooth driving mode rotation without jitter
