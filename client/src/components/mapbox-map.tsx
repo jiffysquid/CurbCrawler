@@ -399,8 +399,15 @@ export default function MapboxMap({
         easedProgress
       );
 
-      // Update vehicle marker position
+      // Update vehicle marker position and rotation
       vehicleMarkerRef.current.setLngLat([currentLng, currentLat]);
+      
+      // Rotate vehicle based on travel direction if we have bearing data
+      if (currentBearingRef.current !== null) {
+        const vehicleElement = vehicleMarkerRef.current.getElement();
+        vehicleElement.style.transform = `rotate(${currentBearingRef.current}deg)`;
+        console.log('🚐 Vehicle rotated to', currentBearingRef.current.toFixed(1), '° to match travel direction');
+      }
 
       // Update map center during recording for smooth following
       if (isRecording) {
@@ -531,8 +538,8 @@ export default function MapboxMap({
         // Approach 3: Negative bearing
         const approach3 = (travelBearing + 180) % 360;
         
-        // Try approach 2 (direct bearing) - maybe the simplest approach is correct
-        const targetMapBearing = approach2;
+        // Try approach 3 (travel + 180) - opposite direction might be correct
+        const targetMapBearing = approach3;
         
         console.log('🧭 BEARING APPROACHES:', {
           travel: travelBearing.toFixed(1) + '°',
@@ -549,25 +556,20 @@ export default function MapboxMap({
           bearingDiff = 360 - bearingDiff;
         }
 
-        // Ultra-sensitive rotation for immediate response
-        if (bearingDiff > 1) { // 1-degree threshold for maximum sensitivity
-          console.log('🧭 EXECUTING ROTATION: From', currentMapBearing.toFixed(1), '° to', targetMapBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
-          console.log('🧭 TESTING: Using approach 2 (direct bearing) - vehicle travels', travelBearing.toFixed(1), '°, map will be set to', targetMapBearing.toFixed(1), '°');
-          
-          map.easeTo({
-            bearing: targetMapBearing,
-            center: [currentLocation.lng, currentLocation.lat],
-            pitch: 40, // Maintain 40-degree tilt
-            duration: 300, // Ultra-fast rotation
-            easing: t => t // Linear easing for immediate response
-          });
-
-          currentBearingRef.current = travelBearing;
-          lastRotationTime.current = now;
-          
-          console.log('✅ ROTATION EXECUTED: Map rotated to', targetMapBearing.toFixed(1), '° - vehicle should now point up');
+        // Set bearing for vehicle icon rotation instead of map rotation
+        console.log('🧭 SETTING VEHICLE BEARING: Travel bearing', travelBearing.toFixed(1), '° will be applied to vehicle icon');
+        
+        // Store bearing for vehicle icon rotation (don't rotate map)
+        currentBearingRef.current = travelBearing;
+        lastRotationTime.current = now;
+        
+        // Apply rotation immediately to vehicle if it exists
+        if (vehicleMarkerRef.current) {
+          const vehicleElement = vehicleMarkerRef.current.getElement();
+          vehicleElement.style.transform = `rotate(${travelBearing}deg)`;
+          console.log('✅ VEHICLE ICON ROTATED: Vehicle icon rotated to', travelBearing.toFixed(1), '° to match travel direction');
         } else {
-          console.log('🧭 Bearing diff too small:', bearingDiff.toFixed(1), '° (threshold: 1°) - no rotation needed');
+          console.log('⚠️ Vehicle marker not yet available for rotation');
         }
       } else {
         const waitTime = (300 - (now - lastRotationTime.current)) / 1000;
