@@ -124,6 +124,27 @@ export default function Home() {
       setLocation(gpsLocation);
       console.log('Location updated from GPS:', gpsLocation.lat, gpsLocation.lng);
       
+      // Update recording path with actual GPS location when recording
+      if (isRecording) {
+        console.log('🔴 Adding GPS location to recording path:', gpsLocation.lat, gpsLocation.lng);
+        // Add to recording path for real-time display
+        setRecordingPath(prev => {
+          // Avoid duplicate points
+          const lastPoint = prev[prev.length - 1];
+          if (lastPoint && 
+              Math.abs(lastPoint.lat - gpsLocation.lat) < 0.00001 && 
+              Math.abs(lastPoint.lng - gpsLocation.lng) < 0.00001) {
+            console.log('🎯 Skipping duplicate GPS point in recording path');
+            return prev;
+          }
+          
+          const newPath = [...prev, gpsLocation];
+          console.log(`🗺️ Recording path updated from GPS: ${newPath.length} points`);
+          console.log('🗺️ Latest path points:', newPath.slice(-3));
+          return newPath;
+        });
+      }
+      
       // Always update suburb lookup, but with different timing based on recording state
       const delay = isRecording ? 2000 : 500; // Slower updates during recording to avoid overloading
       setTimeout(() => {
@@ -136,6 +157,7 @@ export default function Home() {
 
   // Handle concurrent path updates from map animation
   const handleLocationUpdate = useCallback((animatedLocation: { lat: number; lng: number }) => {
+    console.log('🎯 handleLocationUpdate called with:', animatedLocation.lat, animatedLocation.lng, 'isRecording:', isRecording);
     if (!isRecording) return;
 
     // Add to recording path for real-time display
@@ -145,11 +167,13 @@ export default function Home() {
       if (lastPoint && 
           Math.abs(lastPoint.lat - animatedLocation.lat) < 0.00001 && 
           Math.abs(lastPoint.lng - animatedLocation.lng) < 0.00001) {
+        console.log('🎯 Skipping duplicate point in recording path');
         return prev;
       }
       
       const newPath = [...prev, animatedLocation];
       console.log(`🗺️ Recording path updated from animation: ${newPath.length} points`);
+      console.log('🗺️ Latest path points:', newPath.slice(-3));
       return newPath;
     });
 
