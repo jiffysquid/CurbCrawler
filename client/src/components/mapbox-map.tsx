@@ -161,12 +161,16 @@ export default function MapboxMap({
     const map = mapRef.current;
     let bearingToUse = deviceHeading;
 
+    console.log('🧭 Rotation check - isDrivingMode:', isDrivingMode, 'deviceHeading:', deviceHeading, 'currentLocation:', currentLocation ? 'available' : 'null', 'previousLocation:', previousLocationRef.current ? 'available' : 'null');
+
     // If no device heading (GPS debug mode), calculate from movement
     if (deviceHeading === null && currentLocation && previousLocationRef.current) {
       const distance = Math.sqrt(
         Math.pow(currentLocation.lat - previousLocationRef.current.lat, 2) +
         Math.pow(currentLocation.lng - previousLocationRef.current.lng, 2)
       );
+      
+      console.log('🧭 Movement distance calculated:', distance);
       
       // Only calculate bearing if we've moved enough (avoid jitter)
       if (distance > 0.00001) { // ~1 meter
@@ -180,8 +184,10 @@ export default function MapboxMap({
       const bearingDiff = Math.abs(bearingToUse - currentBearing);
       const normalizedDiff = Math.min(bearingDiff, 360 - bearingDiff); // Handle 360° wrap-around
       
+      console.log('🧭 Bearing change check - current:', currentBearing.toFixed(1) + '°', 'new:', bearingToUse.toFixed(1) + '°', 'diff:', normalizedDiff.toFixed(1) + '°');
+      
       if (normalizedDiff > 3) {
-        // Only update if bearing changed by more than 5 degrees to avoid jitter
+        // Only update if bearing changed by more than 3 degrees to avoid jitter
         // Use smooth bearing transition for natural rotation - but don't interfere with camera position
         map.rotateTo(bearingToUse, {
           duration: 300, // Quick but smooth 0.3-second rotation
@@ -189,7 +195,11 @@ export default function MapboxMap({
         });
         previousBearingRef.current = bearingToUse;
         console.log('🗺️ Map bearing smoothly rotated to:', bearingToUse.toFixed(1) + '°');
+      } else {
+        console.log('🧭 Bearing change too small, skipping rotation');
       }
+    } else {
+      console.log('🧭 No bearing to use for rotation');
     }
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
 
