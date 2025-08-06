@@ -166,18 +166,20 @@ export default function MapboxMap({
       }
     }
     
-    if (bearingToUse !== null && Math.abs((bearingToUse - (previousBearingRef.current || 0)) % 360) > 5) {
-      // Only update if bearing changed by more than 5 degrees to avoid jitter
-      // Use smooth bearing transition for natural rotation
-      map.easeTo({
-        bearing: bearingToUse,
-        duration: 300, // Quick but smooth 0.3-second rotation
-        easing: (t) => t // Linear easing for consistent rotation speed
-      });
-      previousBearingRef.current = bearingToUse;
+    if (bearingToUse !== null) {
+      const currentBearing = previousBearingRef.current || 0;
+      const bearingDiff = Math.abs(bearingToUse - currentBearing);
+      const normalizedDiff = Math.min(bearingDiff, 360 - bearingDiff); // Handle 360° wrap-around
       
-      if (deviceHeading !== null) {
-        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+      if (normalizedDiff > 3) {
+        // Only update if bearing changed by more than 5 degrees to avoid jitter
+        // Use smooth bearing transition for natural rotation - but don't interfere with camera position
+        map.rotateTo(bearingToUse, {
+          duration: 300, // Quick but smooth 0.3-second rotation
+          easing: (t) => t // Linear easing for consistent rotation speed
+        });
+        previousBearingRef.current = bearingToUse;
+        console.log('🗺️ Map bearing smoothly rotated to:', bearingToUse.toFixed(1) + '°');
       }
     }
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
