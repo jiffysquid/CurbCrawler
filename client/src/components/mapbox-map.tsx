@@ -80,7 +80,16 @@ export default function MapboxMap({
 
   // Device orientation/compass heading for driving mode
   useEffect(() => {
-    if (!isDrivingMode) return;
+    if (!isDrivingMode) {
+      setDeviceHeading(null);
+      return;
+    }
+
+    // Check if DeviceOrientationEvent is available
+    if (typeof DeviceOrientationEvent === 'undefined' || !window.DeviceOrientationEvent) {
+      console.log('🧭 Device orientation not supported - using movement-based bearing only');
+      return;
+    }
 
     let orientationListener: ((event: DeviceOrientationEvent) => void) | null = null;
 
@@ -130,7 +139,7 @@ export default function MapboxMap({
   }, [isDrivingMode]);
 
   // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
-  const calculateMovementBearing = useCallback((prevLoc: Location, currentLoc: Location): number => {
+  const calculateMovementBearing = useCallback((prevLoc: { lat: number; lng: number }, currentLoc: { lat: number; lng: number }): number => {
     const lat1 = prevLoc.lat * Math.PI / 180;
     const lat2 = currentLoc.lat * Math.PI / 180;
     const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
