@@ -497,12 +497,16 @@ export default function MapboxMap({
     // COMPREHENSIVE DEBUG VERSION
     console.log('🔍 ROTATION DEBUG:', {
       isRecording,
+      hasKMLCallback: !!window.kmlLocationCallback,
       hasPreviousLocation: !!previousLocationRef.current,
       distance: distance.toFixed(1) + 'm',
-      shouldRotate: isRecording && previousLocationRef.current && distance > 1
+      shouldRotate: (isRecording || window.kmlLocationCallback) && previousLocationRef.current && distance > 1
     });
 
-    if (isRecording && previousLocationRef.current && distance > 1) { // Require only 1m movement during recording
+    // Enable rotation during recording OR when using KML simulation for testing
+    const shouldRotate = (isRecording || window.kmlLocationCallback) && previousLocationRef.current && distance > 1;
+    
+    if (shouldRotate) { // Require only 1m movement during recording or KML testing
       const travelBearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -569,7 +573,11 @@ export default function MapboxMap({
         console.log('🧭 Rotation throttled - waiting', waitTime.toFixed(1), 's more');
       }
     } else if (distance > 1) {
-      console.log('🧭 ROTATION BLOCKED: Not recording or no previous location');
+      console.log('🧭 ROTATION BLOCKED: Not recording/testing or no previous location', {
+        isRecording,
+        hasKMLCallback: !!window.kmlLocationCallback,
+        hasPreviousLocation: !!previousLocationRef.current
+      });
     }
 
     previousLocationRef.current = currentLocation;
