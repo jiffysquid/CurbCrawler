@@ -275,6 +275,27 @@ export default function Home() {
     console.log('🎯 Home: KML Location Update received:', newLocation.lat, newLocation.lng);
     try {
       setLocation(newLocation);
+      
+      // Update recording path with KML location when recording
+      if (isRecording) {
+        console.log('🔴 Adding KML location to recording path:', newLocation.lat, newLocation.lng);
+        setRecordingPath(prev => {
+          // Avoid duplicate points
+          const lastPoint = prev[prev.length - 1];
+          if (lastPoint && 
+              Math.abs(lastPoint.lat - newLocation.lat) < 0.00001 && 
+              Math.abs(lastPoint.lng - newLocation.lng) < 0.00001) {
+            console.log('🎯 Skipping duplicate KML point in recording path');
+            return prev;
+          }
+          
+          const newPath = [...prev, newLocation];
+          console.log(`🗺️ Recording path updated from KML: ${newPath.length} points`);
+          console.log('🗺️ Latest KML path points:', newPath.slice(-3));
+          return newPath;
+        });
+      }
+      
       updateCurrentSuburb(newLocation).catch(error => {
         console.log('KML suburb lookup failed:', error);
       });
@@ -282,7 +303,7 @@ export default function Home() {
     } catch (error) {
       console.error('🎯 Home: Error updating location state:', error);
     }
-  }, []);
+  }, [isRecording]);
 
   // Debug: Log when handleKMLLocationUpdate is created
   console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
@@ -295,6 +316,24 @@ export default function Home() {
     (window as any).kmlLocationCallback = (newLocation: { lat: number; lng: number; accuracy?: number }) => {
       console.log('🎯 Home: Global KML callback received:', newLocation.lat, newLocation.lng);
       setLocation(newLocation);
+      
+      // Update recording path with KML location when recording
+      if (isRecording) {
+        console.log('🔴 Adding global KML location to recording path:', newLocation.lat, newLocation.lng);
+        setRecordingPath(prev => {
+          const lastPoint = prev[prev.length - 1];
+          if (lastPoint && 
+              Math.abs(lastPoint.lat - newLocation.lat) < 0.00001 && 
+              Math.abs(lastPoint.lng - newLocation.lng) < 0.00001) {
+            return prev;
+          }
+          
+          const newPath = [...prev, newLocation];
+          console.log(`🗺️ Recording path updated from global KML: ${newPath.length} points`);
+          return newPath;
+        });
+      }
+      
       updateCurrentSuburb(newLocation).catch(error => {
         console.log('Global KML suburb lookup failed:', error);
       });
@@ -306,7 +345,7 @@ export default function Home() {
       console.log('🎯 Home: Removing global KML callback');
       delete (window as any).kmlLocationCallback;
     };
-  }, []);
+  }, [isRecording]);
 
   // Handle GPS errors
   useEffect(() => {

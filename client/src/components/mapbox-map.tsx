@@ -776,7 +776,7 @@ export default function MapboxMap({
 
         pathSource.setData({ type: 'FeatureCollection', features: [feature] });
         console.log('🔴 Updated current recording path:', currentRecordingPath.length, 'points');
-        console.log('🔴 Current recording path coordinates:', currentRecordingPath.slice(-2));
+        console.log('🔴 Current recording path last 2 coordinates:', currentRecordingPath.slice(-2).map(p => `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`));
       } else {
         // Clear the recording path when not recording
         pathSource.setData({ type: 'FeatureCollection', features: [] });
