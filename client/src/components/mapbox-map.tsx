@@ -531,8 +531,8 @@ export default function MapboxMap({
         // Approach 3: Negative bearing
         const approach3 = (travelBearing + 180) % 360;
         
-        // Try approach 1 first
-        const targetMapBearing = approach1;
+        // Try approach 2 (direct bearing) - maybe the simplest approach is correct
+        const targetMapBearing = approach2;
         
         console.log('🧭 BEARING APPROACHES:', {
           travel: travelBearing.toFixed(1) + '°',
@@ -552,6 +552,7 @@ export default function MapboxMap({
         // Ultra-sensitive rotation for immediate response
         if (bearingDiff > 1) { // 1-degree threshold for maximum sensitivity
           console.log('🧭 EXECUTING ROTATION: From', currentMapBearing.toFixed(1), '° to', targetMapBearing.toFixed(1), '° (diff:', bearingDiff.toFixed(1), '°)');
+          console.log('🧭 TESTING: Using approach 2 (direct bearing) - vehicle travels', travelBearing.toFixed(1), '°, map will be set to', targetMapBearing.toFixed(1), '°');
           
           map.easeTo({
             bearing: targetMapBearing,
