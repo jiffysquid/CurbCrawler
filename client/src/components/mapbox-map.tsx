@@ -130,7 +130,7 @@ export default function MapboxMap({
   }, [isDrivingMode]);
 
   // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
-  const calculateMovementBearing = useCallback((prevLoc: LocationData, currentLoc: LocationData): number => {
+  const calculateMovementBearing = useCallback((prevLoc: Location, currentLoc: Location): number => {
     const lat1 = prevLoc.lat * Math.PI / 180;
     const lat2 = currentLoc.lat * Math.PI / 180;
     const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
@@ -141,6 +141,9 @@ export default function MapboxMap({
     let bearing = Math.atan2(y, x) * 180 / Math.PI;
     return (bearing + 360) % 360; // Normalize to 0-360
   }, []);
+
+  // Store previous bearing to avoid unnecessary updates
+  const previousBearingRef = useRef<number | null>(null);
 
   // Update map bearing based on device heading OR movement direction in driving mode
   useEffect(() => {
@@ -163,13 +166,12 @@ export default function MapboxMap({
       }
     }
     
-    if (bearingToUse !== null) {
-      // Smooth bearing transition in driving mode
-      map.easeTo({
-        bearing: bearingToUse,
-        duration: 500, // 0.5 second smooth transition
-        easing: (t) => t // Linear easing for smooth rotation
-      });
+    if (bearingToUse !== null && Math.abs((bearingToUse - (previousBearingRef.current || 0)) % 360) > 5) {
+      // Only update if bearing changed by more than 5 degrees to avoid jitter
+      // Use setBearing for immediate updates in driving mode (no easing interference)
+      map.setBearing(bearingToUse);
+      previousBearingRef.current = bearingToUse;
+      
       if (deviceHeading !== null) {
         console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
       }
