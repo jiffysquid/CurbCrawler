@@ -484,8 +484,11 @@ export default function MapboxMap({
     
     console.log('🎯 MapboxMap: Movement distance:', distance.toFixed(1) + 'm', 'from', previousLocationRef.current ? `${previousLocationRef.current.lat}, ${previousLocationRef.current.lng}` : 'no previous location');
 
-    // Only animate if there's meaningful movement (> 1 meter)
-    if (distance > 1 || !previousLocationRef.current) {
+    // ALWAYS animate location changes during KML simulation or if no previous location
+    // Remove the distance threshold that was preventing movement
+    const shouldAnimate = !previousLocationRef.current || distance > 0.1; // Very low threshold for KML simulation
+    
+    if (shouldAnimate) {
       // If already animating, update the target location for smooth continuation
       if (interpolationRef.current.isAnimating) {
         console.log('🎯 Updating animation target mid-flight');
@@ -506,20 +509,19 @@ export default function MapboxMap({
       }
     }
 
-    // Handle rotation based on movement during recording sessions - van always points up
-    // COMPREHENSIVE DEBUG VERSION
-    console.log('🔍 ROTATION DEBUG:', {
-      isRecording,
-      hasKMLCallback: !!window.kmlLocationCallback,
-      hasPreviousLocation: !!previousLocationRef.current,
-      distance: distance.toFixed(1) + 'm',
-      shouldRotate: (isRecording || window.kmlLocationCallback) && previousLocationRef.current && distance > 1
-    });
-
-    // Enable rotation during recording OR when using KML simulation for testing
-    const shouldRotate = (isRecording || window.kmlLocationCallback) && previousLocationRef.current && distance > 1;
+    // COMPLETELY REFACTORED ROTATION SYSTEM
+    // Handle rotation during recording OR KML simulation
+    const isRotationEnabled = isRecording || !!window.kmlLocationCallback;
+    const hasMovement = previousLocationRef.current && distance > 0.1; // Very low threshold
     
-    if (shouldRotate) { // Require only 1m movement during recording or KML testing
+    console.log('🧭 ROTATION SYSTEM:', {
+      enabled: isRotationEnabled,
+      hasMovement,
+      distance: distance.toFixed(1) + 'm',
+      previousLocation: previousLocationRef.current ? 'exists' : 'none'
+    });
+    
+    if (isRotationEnabled && hasMovement) {
       const travelBearing = calculateBearing(
         previousLocationRef.current.lat,
         previousLocationRef.current.lng,
@@ -530,71 +532,38 @@ export default function MapboxMap({
       const now = Date.now();
       const timeSinceLastRotation = now - lastRotationTime.current;
 
-      console.log('🧭 ROTATION CANDIDATE: Travel bearing:', travelBearing.toFixed(1), '°, Time since last rotation:', (timeSinceLastRotation / 1000).toFixed(1), 's');
+      console.log('🧭 BEARING CALCULATION: Travel direction:', travelBearing.toFixed(1), '°');
 
-      // More responsive rotation timing
-      if (timeSinceLastRotation > 300) { // Ultra-fast response - 0.3 seconds between rotations
+      // Apply rotation immediately without throttling for better responsiveness
+      if (timeSinceLastRotation > 100) { // Very fast updates
+        // SIMPLIFIED ROTATION LOGIC: Make the vehicle point UP on screen
+        // This means the map should rotate so that the travel direction faces "north" (up)
+        const targetMapBearing = -travelBearing; // Negative of travel bearing
+        
         const currentMapBearing = map.getBearing();
-        
-        // FIXED ROTATION LOGIC - TESTING ALL APPROACHES:
-        // Approach 1: Simple inversion (what we've been trying)
-        const approach1 = (360 - travelBearing) % 360;
-        // Approach 2: Direct bearing (maybe the issue is we're overcomplicating)
-        const approach2 = travelBearing;
-        // Approach 3: Negative bearing
-        const approach3 = (travelBearing + 180) % 360;
-        
-        // Try approach 3 (travel + 180) - opposite direction might be correct
-        const targetMapBearing = approach3;
-        
-        console.log('🧭 BEARING APPROACHES:', {
-          travel: travelBearing.toFixed(1) + '°',
-          current_map: currentMapBearing.toFixed(1) + '°',
-          approach1: approach1.toFixed(1) + '° (360 - travel)',
-          approach2: approach2.toFixed(1) + '° (direct)',
-          approach3: approach3.toFixed(1) + '° (travel + 180)',
-          using: targetMapBearing.toFixed(1) + '°'
-        });
-        
-        // Calculate shortest angular distance between current and target bearing
-        let bearingDiff = Math.abs(targetMapBearing - currentMapBearing);
-        if (bearingDiff > 180) {
-          bearingDiff = 360 - bearingDiff;
-        }
+        const bearingDifference = Math.abs(((targetMapBearing - currentMapBearing + 540) % 360) - 180);
 
-        // Set bearing for vehicle icon rotation instead of map rotation
-        console.log('🧭 SETTING VEHICLE BEARING: Travel bearing', travelBearing.toFixed(1), '° will be applied to vehicle icon');
-        
-        // Store bearing for vehicle icon rotation (don't rotate map)
-        currentBearingRef.current = travelBearing;
-        lastRotationTime.current = now;
-        
-        // Apply rotation immediately to vehicle if it exists
-        if (vehicleMarkerRef.current) {
-          const vehicleElement = vehicleMarkerRef.current.getElement();
-          const rotation = `rotate(${travelBearing}deg)`;
-          vehicleElement.style.transform = rotation;
-          vehicleElement.style.transformOrigin = 'center center';
-          vehicleElement.style.transition = 'transform 0.3s ease';
-          console.log('✅ BEARING CALCULATION: Vehicle icon rotated to', travelBearing.toFixed(1), '° (transform:', rotation + ')');
-          console.log('🔧 Element details:', {
-            className: vehicleElement.className,
-            hasTransform: vehicleElement.style.transform !== '',
-            computedTransform: window.getComputedStyle(vehicleElement).transform
+        console.log('🧭 ROTATION APPLY:', {
+          travelBearing: travelBearing.toFixed(1) + '°',
+          targetMapBearing: targetMapBearing.toFixed(1) + '°',
+          currentMapBearing: currentMapBearing.toFixed(1) + '°',
+          difference: bearingDifference.toFixed(1) + '°'
+        });
+
+        // Only rotate if there's a meaningful change (> 5 degrees)
+        if (bearingDifference > 5) {
+          console.log('🔄 APPLYING MAP ROTATION:', targetMapBearing.toFixed(1) + '°');
+          
+          map.rotateTo(targetMapBearing, {
+            duration: 500, // Smooth rotation
+            easing: (t) => t * (2 - t) // easeOutQuad for smooth feel
           });
+
+          lastRotationTime.current = now;
         } else {
-          console.log('⚠️ Vehicle marker not yet available for rotation');
+          console.log('⏭️ Skipping rotation - difference too small:', bearingDifference.toFixed(1) + '°');
         }
-      } else {
-        const waitTime = (300 - (now - lastRotationTime.current)) / 1000;
-        console.log('🧭 Rotation throttled - waiting', waitTime.toFixed(1), 's more');
       }
-    } else if (distance > 1) {
-      console.log('🧭 ROTATION BLOCKED: Not recording/testing or no previous location', {
-        isRecording,
-        hasKMLCallback: !!window.kmlLocationCallback,
-        hasPreviousLocation: !!previousLocationRef.current
-      });
     }
 
     previousLocationRef.current = currentLocation;
