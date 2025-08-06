@@ -132,7 +132,7 @@ export default function MapboxMap({
   }, [isDrivingMode]);
 
   // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
-  const calculateMovementBearing = useCallback((prevLoc: LocationData, currentLoc: LocationData): number => {
+  const calculateMovementBearing = useCallback((prevLoc: { lat: number; lng: number }, currentLoc: { lat: number; lng: number }): number => {
     const lat1 = prevLoc.lat * Math.PI / 180;
     const lat2 = currentLoc.lat * Math.PI / 180;
     const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
@@ -659,7 +659,10 @@ export default function MapboxMap({
   }, [currentLocation, mapReady]);
 
   // Load clearout schedule to get current and next suburbs
-  const { data: clearoutSchedule } = useQuery({
+  const { data: clearoutSchedule } = useQuery<{
+    current: string[];
+    next: string[];
+  }>({
     queryKey: ['/api/clearout-schedule'],
     enabled: Boolean(mapReady)
   });
@@ -677,7 +680,7 @@ export default function MapboxMap({
   });
 
   // Load demographics with proper current/next suburb parameters
-  const { data: demographicsArray } = useQuery({
+  const { data: demographicsArray } = useQuery<any[]>({
     queryKey: ['/api/suburbs/demographics', clearoutSchedule?.current, clearoutSchedule?.next],
     queryFn: async () => {
       if (!clearoutSchedule) return [];
