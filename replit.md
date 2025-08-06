@@ -59,4 +59,4 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - August 3, 2025: Fixed current location window to update continuously during recording sessions with 2-second suburb lookup intervals
 - August 3, 2025: Adjusted van zoom level from 18 to 16.5 to show 50% more surrounding area for better context
 - August 3, 2025: Changed path arrows from triangles (▲) to arrows with tails (↑) for clearer direction recognition
-- August 3, 2025: FIXED map rotation system - corrected bearing calculation so vehicle always points up during recording with proper math: map bearing = (-travel_bearing + 360) % 360
+- August 6, 2025: REMOVED ALL ROTATION AND VAN ANIMATION - Simplified vehicle system to static marker that updates position only, no map rotation or vehicle animation due to persistent technical issues

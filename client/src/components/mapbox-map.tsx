@@ -441,7 +441,7 @@ export default function MapboxMap({
     }
   }, [isRecording, onLocationUpdate]);
 
-  // Handle vehicle marker and smooth movement
+  // Handle location updates - simplified to just update marker position
   useEffect(() => {
     console.log('🎯 MapboxMap: Location changed:', currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : 'null');
     if (!mapRef.current || !mapReady || !currentLocation) return;
@@ -460,8 +460,6 @@ export default function MapboxMap({
         background-repeat: no-repeat;
         background-position: center;
         cursor: pointer;
-        transition: transform 0.3s ease;
-        transform-origin: center center;
       `;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
@@ -469,105 +467,14 @@ export default function MapboxMap({
         .addTo(map);
 
       console.log('🚐 Vehicle marker created at:', currentLocation.lat, currentLocation.lng);
-    }
-
-    // Start smooth interpolation to new location
-    const startLocation = previousLocationRef.current || currentLocation;
-    
-    // Calculate movement distance for validation
-    const distance = previousLocationRef.current ? calculateDistance(
-      previousLocationRef.current.lat,
-      previousLocationRef.current.lng,
-      currentLocation.lat,
-      currentLocation.lng
-    ) * 1000 : 0;
-    
-    console.log('🎯 MapboxMap: Movement distance:', distance.toFixed(1) + 'm', 'from', previousLocationRef.current ? `${previousLocationRef.current.lat}, ${previousLocationRef.current.lng}` : 'no previous location');
-
-    // ALWAYS animate location changes during KML simulation or if no previous location
-    // Remove the distance threshold that was preventing movement
-    const shouldAnimate = !previousLocationRef.current || distance > 0.1; // Very low threshold for KML simulation
-    
-    if (shouldAnimate) {
-      // If already animating, update the target location for smooth continuation
-      if (interpolationRef.current.isAnimating) {
-        console.log('🎯 Updating animation target mid-flight');
-        interpolationRef.current.targetLocation = currentLocation;
-      } else {
-        // Start new animation
-        interpolationRef.current = {
-          isAnimating: true,
-          startLocation,
-          targetLocation: currentLocation,
-          startTime: Date.now(),
-          duration: distance > 50 ? 2000 : 1000 // Longer animation for larger movements
-        };
-
-        console.log('🎯 Starting smooth vehicle animation from', startLocation.lat.toFixed(6), startLocation.lng.toFixed(6), 'to', currentLocation.lat.toFixed(6), currentLocation.lng.toFixed(6), `(${distance.toFixed(1)}m)`);
-        
-        animateVehicle();
-      }
-    }
-
-    // COMPLETELY REFACTORED ROTATION SYSTEM
-    // Handle rotation during recording OR KML simulation
-    const isRotationEnabled = isRecording || !!window.kmlLocationCallback;
-    const hasMovement = previousLocationRef.current && distance > 0.1; // Very low threshold
-    
-    console.log('🧭 ROTATION SYSTEM:', {
-      enabled: isRotationEnabled,
-      hasMovement,
-      distance: distance.toFixed(1) + 'm',
-      previousLocation: previousLocationRef.current ? 'exists' : 'none'
-    });
-    
-    if (isRotationEnabled && hasMovement) {
-      const travelBearing = calculateBearing(
-        previousLocationRef.current.lat,
-        previousLocationRef.current.lng,
-        currentLocation.lat,
-        currentLocation.lng
-      );
-
-      const now = Date.now();
-      const timeSinceLastRotation = now - lastRotationTime.current;
-
-      console.log('🧭 BEARING CALCULATION: Travel direction:', travelBearing.toFixed(1), '°');
-
-      // Apply rotation immediately without throttling for better responsiveness
-      if (timeSinceLastRotation > 100) { // Very fast updates
-        // SIMPLIFIED ROTATION LOGIC: Make the vehicle point UP on screen
-        // This means the map should rotate so that the travel direction faces "north" (up)
-        const targetMapBearing = -travelBearing; // Negative of travel bearing
-        
-        const currentMapBearing = map.getBearing();
-        const bearingDifference = Math.abs(((targetMapBearing - currentMapBearing + 540) % 360) - 180);
-
-        console.log('🧭 ROTATION APPLY:', {
-          travelBearing: travelBearing.toFixed(1) + '°',
-          targetMapBearing: targetMapBearing.toFixed(1) + '°',
-          currentMapBearing: currentMapBearing.toFixed(1) + '°',
-          difference: bearingDifference.toFixed(1) + '°'
-        });
-
-        // Only rotate if there's a meaningful change (> 5 degrees)
-        if (bearingDifference > 5) {
-          console.log('🔄 APPLYING MAP ROTATION:', targetMapBearing.toFixed(1) + '°');
-          
-          map.rotateTo(targetMapBearing, {
-            duration: 500, // Smooth rotation
-            easing: (t) => t * (2 - t) // easeOutQuad for smooth feel
-          });
-
-          lastRotationTime.current = now;
-        } else {
-          console.log('⏭️ Skipping rotation - difference too small:', bearingDifference.toFixed(1) + '°');
-        }
-      }
+    } else {
+      // Simply update marker position without animation
+      vehicleMarkerRef.current.setLngLat([currentLocation.lng, currentLocation.lat]);
+      console.log('🚐 Vehicle marker updated to:', currentLocation.lat, currentLocation.lng);
     }
 
     previousLocationRef.current = currentLocation;
-  }, [currentLocation, mapReady, animateVehicle]);
+  }, [currentLocation, mapReady]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({
