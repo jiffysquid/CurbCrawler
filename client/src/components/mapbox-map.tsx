@@ -168,8 +168,12 @@ export default function MapboxMap({
     
     if (bearingToUse !== null && Math.abs((bearingToUse - (previousBearingRef.current || 0)) % 360) > 5) {
       // Only update if bearing changed by more than 5 degrees to avoid jitter
-      // Use setBearing for immediate updates in driving mode (no easing interference)
-      map.setBearing(bearingToUse);
+      // Use smooth bearing transition for natural rotation
+      map.easeTo({
+        bearing: bearingToUse,
+        duration: 300, // Quick but smooth 0.3-second rotation
+        easing: (t) => t // Linear easing for consistent rotation speed
+      });
       previousBearingRef.current = bearingToUse;
       
       if (deviceHeading !== null) {
