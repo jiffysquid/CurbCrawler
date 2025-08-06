@@ -405,8 +405,10 @@ export default function MapboxMap({
       // Rotate vehicle based on travel direction if we have bearing data
       if (currentBearingRef.current !== null) {
         const vehicleElement = vehicleMarkerRef.current.getElement();
-        vehicleElement.style.transform = `rotate(${currentBearingRef.current}deg)`;
-        console.log('🚐 Vehicle rotated to', currentBearingRef.current.toFixed(1), '° to match travel direction');
+        const rotation = `rotate(${currentBearingRef.current}deg)`;
+        vehicleElement.style.transform = rotation;
+        vehicleElement.style.transformOrigin = 'center center';
+        console.log('🚐 ANIMATION: Vehicle rotated to', currentBearingRef.current.toFixed(1), '° (transform:', rotation + ')');
       }
 
       // Update map center during recording for smooth following
@@ -458,6 +460,7 @@ export default function MapboxMap({
         background-position: center;
         cursor: pointer;
         transition: transform 0.3s ease;
+        transform-origin: center center;
       `;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
@@ -566,8 +569,16 @@ export default function MapboxMap({
         // Apply rotation immediately to vehicle if it exists
         if (vehicleMarkerRef.current) {
           const vehicleElement = vehicleMarkerRef.current.getElement();
-          vehicleElement.style.transform = `rotate(${travelBearing}deg)`;
-          console.log('✅ VEHICLE ICON ROTATED: Vehicle icon rotated to', travelBearing.toFixed(1), '° to match travel direction');
+          const rotation = `rotate(${travelBearing}deg)`;
+          vehicleElement.style.transform = rotation;
+          vehicleElement.style.transformOrigin = 'center center';
+          vehicleElement.style.transition = 'transform 0.3s ease';
+          console.log('✅ BEARING CALCULATION: Vehicle icon rotated to', travelBearing.toFixed(1), '° (transform:', rotation + ')');
+          console.log('🔧 Element details:', {
+            className: vehicleElement.className,
+            hasTransform: vehicleElement.style.transform !== '',
+            computedTransform: window.getComputedStyle(vehicleElement).transform
+          });
         } else {
           console.log('⚠️ Vehicle marker not yet available for rotation');
         }
