@@ -164,7 +164,12 @@ export default function MapboxMap({
     }
     
     if (bearingToUse !== null) {
-      map.setBearing(bearingToUse);
+      // Smooth bearing transition in driving mode
+      map.easeTo({
+        bearing: bearingToUse,
+        duration: 500, // 0.5 second smooth transition
+        easing: (t) => t // Linear easing for smooth rotation
+      });
       if (deviceHeading !== null) {
         console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
       }
@@ -582,20 +587,22 @@ export default function MapboxMap({
     // Follow in both van view (close) and suburb view (wider)
     if (mapRef.current) {
       if (isDrivingMode) {
-        // Driving mode: vehicle stays at bottom-center of screen
+        // Driving mode: vehicle stays at bottom-center of screen with smoother following
         const padding = { bottom: window.innerHeight * 0.3 }; // Vehicle at bottom 30% of screen
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
           zoom: 16.5,
           pitch: 40,
           padding: padding,
-          duration: 1000
+          duration: 800, // Slightly faster but still smooth
+          easing: (t) => t * (2 - t) // Ease-out for natural deceleration
         });
         console.log('🗺️ Map following vehicle in driving mode - vehicle at bottom center');
       } else {
         mapRef.current.easeTo({
           center: [currentLocation.lng, currentLocation.lat],
-          duration: 1000, // Smooth 1-second transition
+          duration: 800, // Smooth 0.8-second transition
+          easing: (t) => t * (2 - t), // Ease-out for natural deceleration
           essential: true
         });
         const viewMode = isZoomedToVan ? 'van view' : 'suburb view';
