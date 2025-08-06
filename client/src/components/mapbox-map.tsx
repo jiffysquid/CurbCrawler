@@ -129,16 +129,47 @@ export default function MapboxMap({
     };
   }, [isDrivingMode]);
 
-  // Update map bearing based on device heading in driving mode
+  // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
+  const calculateMovementBearing = useCallback((prevLoc: LocationData, currentLoc: LocationData): number => {
+    const lat1 = prevLoc.lat * Math.PI / 180;
+    const lat2 = currentLoc.lat * Math.PI / 180;
+    const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
+
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360; // Normalize to 0-360
+  }, []);
+
+  // Update map bearing based on device heading OR movement direction in driving mode
   useEffect(() => {
-    if (!mapRef.current || !isDrivingMode || deviceHeading === null) return;
+    if (!mapRef.current || !isDrivingMode) return;
 
     const map = mapRef.current;
+    let bearingToUse = deviceHeading;
+
+    // If no device heading (GPS debug mode), calculate from movement
+    if (deviceHeading === null && currentLocation && previousLocationRef.current) {
+      const distance = Math.sqrt(
+        Math.pow(currentLocation.lat - previousLocationRef.current.lat, 2) +
+        Math.pow(currentLocation.lng - previousLocationRef.current.lng, 2)
+      );
+      
+      // Only calculate bearing if we've moved enough (avoid jitter)
+      if (distance > 0.00001) { // ~1 meter
+        bearingToUse = calculateMovementBearing(previousLocationRef.current, currentLocation);
+        console.log('🧭 Using movement-based bearing for driving mode:', bearingToUse.toFixed(1) + '°');
+      }
+    }
     
-    // Set map bearing to device heading so map rotates beneath fixed vehicle icon
-    map.setBearing(deviceHeading);
-    console.log('🗺️ Map bearing set to device heading:', deviceHeading.toFixed(1) + '°');
-  }, [deviceHeading, isDrivingMode]);
+    if (bearingToUse !== null) {
+      map.setBearing(bearingToUse);
+      if (deviceHeading !== null) {
+        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+      }
+    }
+  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
 
   // Load pins on component mount and listen for changes
   useEffect(() => {
