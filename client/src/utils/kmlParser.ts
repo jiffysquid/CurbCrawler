@@ -118,6 +118,12 @@ export class KMLSimulator {
       console.log(`📍 KML simulation: Point ${this.currentIndex + 1}/${this.points.length} - ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`);
       
       this.currentIndex++;
+      
+      // Debug: Log next point to verify progression
+      if (this.currentIndex < this.points.length) {
+        const nextPoint = this.points[this.currentIndex];
+        console.log(`🔜 Next KML point will be: ${nextPoint.lat.toFixed(6)}, ${nextPoint.lng.toFixed(6)}`);
+      }
     }, interval);
   }
 
