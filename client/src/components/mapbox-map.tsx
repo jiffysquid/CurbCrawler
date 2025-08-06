@@ -52,6 +52,8 @@ export default function MapboxMap({
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
   const [showDemographics, setShowDemographics] = useState(false);
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
+  const [isDrivingMode, setIsDrivingMode] = useState(false);
+  const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
   const [mapPins, setMapPins] = useState<Pin[]>([]);
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
@@ -75,6 +77,68 @@ export default function MapboxMap({
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
   mapboxgl.accessToken = mapboxToken;
+
+  // Device orientation/compass heading for driving mode
+  useEffect(() => {
+    if (!isDrivingMode) return;
+
+    let orientationListener: ((event: DeviceOrientationEvent) => void) | null = null;
+
+    const setupOrientation = async () => {
+      // Request permission for iOS 13+ devices
+      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try {
+          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          if (permission !== 'granted') {
+            console.log('⚠️ Device orientation permission denied');
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error requesting device orientation permission:', error);
+          return;
+        }
+      }
+
+      orientationListener = (event: DeviceOrientationEvent) => {
+        if (event.alpha !== null && event.alpha !== undefined) {
+          // Convert alpha (0-360° where 0° is north) to compass heading
+          // Webkitcompass heading gives us the direction the device is pointing
+          let heading = event.alpha;
+          
+          // For iOS, we might need to adjust based on webkitCompassHeading
+          if ((event as any).webkitCompassHeading !== undefined) {
+            heading = (event as any).webkitCompassHeading;
+          }
+          
+          setDeviceHeading(heading);
+          console.log('🧭 Device heading updated:', heading.toFixed(1) + '°');
+        }
+      };
+
+      window.addEventListener('deviceorientation', orientationListener);
+      console.log('🧭 Device orientation listener started for driving mode');
+    };
+
+    setupOrientation();
+
+    return () => {
+      if (orientationListener) {
+        window.removeEventListener('deviceorientation', orientationListener);
+        console.log('🧭 Device orientation listener stopped');
+      }
+    };
+  }, [isDrivingMode]);
+
+  // Update map bearing based on device heading in driving mode
+  useEffect(() => {
+    if (!mapRef.current || !isDrivingMode || deviceHeading === null) return;
+
+    const map = mapRef.current;
+    
+    // Set map bearing to device heading so map rotates beneath fixed vehicle icon
+    map.setBearing(deviceHeading);
+    console.log('🗺️ Map bearing set to device heading:', deviceHeading.toFixed(1) + '°');
+  }, [deviceHeading, isDrivingMode]);
 
   // Load pins on component mount and listen for changes
   useEffect(() => {
@@ -460,6 +524,7 @@ export default function MapboxMap({
         background-repeat: no-repeat;
         background-position: center;
         cursor: pointer;
+        ${isDrivingMode ? 'transform: rotate(0deg);' : ''}
       `;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
@@ -467,22 +532,44 @@ export default function MapboxMap({
         .addTo(map);
 
       console.log('🚐 Vehicle marker created at:', currentLocation.lat, currentLocation.lng);
+      if (isDrivingMode) {
+        console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
+      }
     } else {
       // Simply update marker position without animation
       vehicleMarkerRef.current.setLngLat([currentLocation.lng, currentLocation.lat]);
       console.log('🚐 Vehicle marker updated to:', currentLocation.lat, currentLocation.lng);
+      
+      // Ensure vehicle always points up in driving mode
+      if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
+        const element = vehicleMarkerRef.current.getElement();
+        element.style.transform = 'rotate(0deg)';
+      }
     }
 
     // Always follow the vehicle location (both during recording and not recording)
     // Follow in both van view (close) and suburb view (wider)
     if (mapRef.current) {
-      mapRef.current.easeTo({
-        center: [currentLocation.lng, currentLocation.lat],
-        duration: 1000, // Smooth 1-second transition
-        essential: true
-      });
-      const viewMode = isZoomedToVan ? 'van view' : 'suburb view';
-      console.log(`🗺️ Map following vehicle to: ${currentLocation.lat}, ${currentLocation.lng} (${viewMode})`);
+      if (isDrivingMode) {
+        // Driving mode: vehicle stays at bottom-center of screen
+        const padding = { bottom: window.innerHeight * 0.3 }; // Vehicle at bottom 30% of screen
+        mapRef.current.easeTo({
+          center: [currentLocation.lng, currentLocation.lat],
+          zoom: 16.5,
+          pitch: 40,
+          padding: padding,
+          duration: 1000
+        });
+        console.log('🗺️ Map following vehicle in driving mode - vehicle at bottom center');
+      } else {
+        mapRef.current.easeTo({
+          center: [currentLocation.lng, currentLocation.lat],
+          duration: 1000, // Smooth 1-second transition
+          essential: true
+        });
+        const viewMode = isZoomedToVan ? 'van view' : 'suburb view';
+        console.log(`🗺️ Map following vehicle to: ${currentLocation.lat}, ${currentLocation.lng} (${viewMode})`);
+      }
     }
 
     previousLocationRef.current = currentLocation;
@@ -1044,6 +1131,22 @@ export default function MapboxMap({
           ) : (
             <Car className="h-4 w-4" />
           )}
+        </Button>
+
+        {/* Driving Mode Toggle */}
+        <Button
+          onClick={() => {
+            setIsDrivingMode(!isDrivingMode);
+            console.log('🧭 Driving mode toggled:', !isDrivingMode ? 'ON' : 'OFF');
+          }}
+          size="sm"
+          variant={isDrivingMode ? "default" : "outline"}
+          className={`${
+            isDrivingMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+          title={isDrivingMode ? 'Exit driving mode' : 'Enter driving mode'}
+        >
+          🧭
         </Button>
       </div>
 
