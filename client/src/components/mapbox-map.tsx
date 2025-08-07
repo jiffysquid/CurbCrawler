@@ -242,6 +242,108 @@ export default function MapboxMap({
     };
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, animateBearing]);
 
+  // Smooth vehicle position interpolation state
+  const vehicleAnimationRef = useRef<number | null>(null);
+  const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const currentVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Smooth vehicle position animation
+  const animateVehiclePosition = useCallback((targetPosition: { lat: number; lng: number }) => {
+    if (!vehicleMarkerRef.current || !mapRef.current) return;
+    
+    const currentPosition = currentVehiclePositionRef.current || targetPosition;
+    
+    // Calculate distance to determine if we need animation
+    const distance = Math.sqrt(
+      Math.pow(targetPosition.lat - currentPosition.lat, 2) +
+      Math.pow(targetPosition.lng - currentPosition.lng, 2)
+    );
+    
+    // If distance is very small, just set position directly
+    if (distance < 0.00001) { // ~1 meter
+      vehicleMarkerRef.current.setLngLat([targetPosition.lng, targetPosition.lat]);
+      currentVehiclePositionRef.current = targetPosition;
+      return;
+    }
+    
+    // Cancel any existing animation
+    if (vehicleAnimationRef.current) {
+      cancelAnimationFrame(vehicleAnimationRef.current);
+    }
+    
+    // Animate the vehicle position
+    const startTime = performance.now();
+    const duration = 400; // 400ms for smooth vehicle movement
+    const startPosition = currentPosition;
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out function for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 2);
+      
+      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easeOut);
+      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easeOut);
+      
+      vehicleMarkerRef.current?.setLngLat([newLng, newLat]);
+      currentVehiclePositionRef.current = { lat: newLat, lng: newLng };
+      
+      if (progress < 1) {
+        vehicleAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Ensure we end exactly at target
+        vehicleMarkerRef.current?.setLngLat([targetPosition.lng, targetPosition.lat]);
+        currentVehiclePositionRef.current = targetPosition;
+        vehicleAnimationRef.current = null;
+      }
+    };
+    
+    vehicleAnimationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Smooth camera following animation  
+  const cameraAnimationRef = useRef<number | null>(null);
+  const targetCameraPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  const animateCameraFollow = useCallback((targetPosition: { lat: number; lng: number }) => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current;
+    
+    // Cancel any existing camera animation
+    if (cameraAnimationRef.current) {
+      cancelAnimationFrame(cameraAnimationRef.current);
+    }
+    
+    const startTime = performance.now();
+    const duration = 500; // 500ms for smooth camera following
+    const startCenter = map.getCenter();
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out function for smooth camera movement
+      const easeOut = 1 - Math.pow(1 - progress, 2);
+      
+      const newLng = startCenter.lng + ((targetPosition.lng - startCenter.lng) * easeOut);
+      const newLat = startCenter.lat + ((targetPosition.lat - startCenter.lat) * easeOut);
+      
+      map.setCenter([newLng, newLat]);
+      
+      if (progress < 1) {
+        cameraAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Ensure we end exactly at target
+        map.setCenter([targetPosition.lng, targetPosition.lat]);
+        cameraAnimationRef.current = null;
+      }
+    };
+    
+    cameraAnimationRef.current = requestAnimationFrame(animate);
+  }, []);
+
   // Load pins on component mount and listen for changes
   useEffect(() => {
     const loadPins = () => {
@@ -613,6 +715,7 @@ export default function MapboxMap({
     if (!mapRef.current || !mapReady || !currentLocation) return;
 
     const map = mapRef.current;
+    const { lat, lng } = currentLocation;
 
     // Create vehicle marker if it doesn't exist
     if (!vehicleMarkerRef.current) {
@@ -630,17 +733,19 @@ export default function MapboxMap({
       `;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
-        .setLngLat([currentLocation.lng, currentLocation.lat])
+        .setLngLat([lng, lat])
         .addTo(map);
 
-      console.log('🚐 Vehicle marker created at:', currentLocation.lat, currentLocation.lng);
+      currentVehiclePositionRef.current = { lat, lng };
+      console.log('🚐 Vehicle marker created at:', lat, lng);
       if (isDrivingMode) {
         console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
       }
     } else {
-      // Simply update marker position without animation
-      vehicleMarkerRef.current.setLngLat([currentLocation.lng, currentLocation.lat]);
-      console.log('🚐 Vehicle marker updated to:', currentLocation.lat, currentLocation.lng);
+      // Animate vehicle to new position smoothly
+      targetVehiclePositionRef.current = { lat, lng };
+      animateVehiclePosition({ lat, lng });
+      console.log('🚐 Vehicle marker animating to:', lat, lng);
       
       // Ensure vehicle always points up in driving mode
       if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
@@ -649,35 +754,36 @@ export default function MapboxMap({
       }
     }
 
-    // Always follow the vehicle location (both during recording and not recording)
-    // Follow in both van view (close) and suburb view (wider)
-    if (mapRef.current) {
-      if (isDrivingMode) {
-        // Driving mode: vehicle stays at bottom-center of screen with smoother following
-        const padding = { bottom: window.innerHeight * 0.3 }; // Vehicle at bottom 30% of screen
-        mapRef.current.easeTo({
-          center: [currentLocation.lng, currentLocation.lat],
-          zoom: 16.5,
-          pitch: 40,
-          padding: padding,
-          duration: 800, // Slightly faster but still smooth
-          easing: (t) => t * (2 - t) // Ease-out for natural deceleration
-        });
-        console.log('🗺️ Map following vehicle in driving mode - vehicle at bottom center');
-      } else {
-        mapRef.current.easeTo({
-          center: [currentLocation.lng, currentLocation.lat],
-          duration: 800, // Smooth 0.8-second transition
-          easing: (t) => t * (2 - t), // Ease-out for natural deceleration
-          essential: true
-        });
-        const viewMode = isZoomedToVan ? 'van view' : 'suburb view';
-        console.log(`🗺️ Map following vehicle to: ${currentLocation.lat}, ${currentLocation.lng} (${viewMode})`);
-      }
+    // Smooth camera following instead of easeTo which conflicts with rotation
+    targetCameraPositionRef.current = { lat, lng };
+    animateCameraFollow({ lat, lng });
+    
+    if (isDrivingMode) {
+      // Set zoom and pitch for driving mode without animation to avoid conflicts
+      map.setZoom(16.5);
+      map.setPitch(40);
+      
+      // Add padding for vehicle positioning at bottom-center
+      const padding = { bottom: window.innerHeight * 0.3 };
+      map.setPadding(padding);
+      
+      console.log('🗺️ Camera following vehicle in driving mode - smooth animation');
+    } else {
+      console.log(`🗺️ Camera following vehicle - smooth animation`);
     }
 
     previousLocationRef.current = currentLocation;
-  }, [currentLocation, mapReady]);
+    
+    // Cleanup animations on unmount
+    return () => {
+      if (vehicleAnimationRef.current) {
+        cancelAnimationFrame(vehicleAnimationRef.current);
+      }
+      if (cameraAnimationRef.current) {
+        cancelAnimationFrame(cameraAnimationRef.current);
+      }
+    };
+  }, [currentLocation, mapReady, isDrivingMode, animateVehiclePosition, animateCameraFollow]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({
