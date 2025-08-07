@@ -13,7 +13,7 @@ interface GPSDebugProps {
 }
 
 export default function GPSDebug({ location, error, isWatching, onTestGPS, onLocationUpdate }: GPSDebugProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [kmlLoaded, setKmlLoaded] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState({ current: 0, total: 0, percentage: 0 });
   const [permissionRequested, setPermissionRequested] = useState(false);
