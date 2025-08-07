@@ -156,7 +156,13 @@ export default function MapboxMap({
 
   // Update map bearing based on device heading OR movement direction in driving mode
   useEffect(() => {
-    if (!mapRef.current || !isDrivingMode) return;
+    console.log('🧭 Rotation useEffect triggered - mapRef.current:', !!mapRef.current, 'isDrivingMode:', isDrivingMode, 'currentLocation changed');
+    
+    if (!mapRef.current || !isDrivingMode) {
+      if (!mapRef.current) console.log('🧭 No map reference, skipping rotation');
+      if (!isDrivingMode) console.log('🧭 Driving mode not active, skipping rotation');
+      return;
+    }
 
     const map = mapRef.current;
     let bearingToUse = deviceHeading;
