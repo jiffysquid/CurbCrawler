@@ -167,15 +167,20 @@ export default function MapboxMap({
     }
     
     if (bearingToUse !== null) {
-      const currentBearing = previousBearingRef.current || 0;
-      let bearingDiff = bearingToUse - currentBearing;
+      // Always update on first bearing (when previousBearingRef.current is null)
+      // Otherwise only update if bearing changed significantly
+      const shouldUpdate = previousBearingRef.current === null || (() => {
+        const currentBearing = previousBearingRef.current!;
+        let bearingDiff = bearingToUse - currentBearing;
+        
+        // Handle wraparound (e.g., 350° to 10° should be +20°, not -340°)
+        if (bearingDiff > 180) bearingDiff -= 360;
+        if (bearingDiff < -180) bearingDiff += 360;
+        
+        return Math.abs(bearingDiff) > 2;
+      })();
       
-      // Handle wraparound (e.g., 350° to 10° should be +20°, not -340°)
-      if (bearingDiff > 180) bearingDiff -= 360;
-      if (bearingDiff < -180) bearingDiff += 360;
-      
-      // Only update if bearing changed by more than 2 degrees to avoid jitter
-      if (Math.abs(bearingDiff) > 2) {
+      if (shouldUpdate) {
         // Use short, smooth transition for responsive but smooth rotation
         map.easeTo({
           bearing: bearingToUse,
