@@ -166,14 +166,30 @@ export default function MapboxMap({
       }
     }
     
-    if (bearingToUse !== null && Math.abs((bearingToUse - (previousBearingRef.current || 0)) % 360) > 5) {
-      // Only update if bearing changed by more than 5 degrees to avoid jitter
-      // Use setBearing for immediate updates in driving mode (no easing interference)
-      map.setBearing(bearingToUse);
-      previousBearingRef.current = bearingToUse;
+    if (bearingToUse !== null) {
+      const currentBearing = previousBearingRef.current || 0;
+      let bearingDiff = bearingToUse - currentBearing;
       
-      if (deviceHeading !== null) {
-        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+      // Handle wraparound (e.g., 350° to 10° should be +20°, not -340°)
+      if (bearingDiff > 180) bearingDiff -= 360;
+      if (bearingDiff < -180) bearingDiff += 360;
+      
+      // Only update if bearing changed by more than 2 degrees to avoid jitter
+      if (Math.abs(bearingDiff) > 2) {
+        // Use short, smooth transition for responsive but smooth rotation
+        map.easeTo({
+          bearing: bearingToUse,
+          duration: 200, // Very short 0.2s transition for responsiveness
+          easing: (t) => t // Linear easing for consistent rotation speed
+        });
+        
+        previousBearingRef.current = bearingToUse;
+        
+        if (deviceHeading !== null) {
+          console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+        } else {
+          console.log('🗺️ Map bearing set to movement direction:', bearingToUse.toFixed(1) + '°');
+        }
       }
     }
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
