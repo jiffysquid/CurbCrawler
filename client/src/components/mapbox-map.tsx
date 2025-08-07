@@ -142,9 +142,6 @@ export default function MapboxMap({
     return (bearing + 360) % 360; // Normalize to 0-360
   }, []);
 
-  // Store previous bearing to avoid unnecessary updates
-  const previousBearingRef = useRef<number | null>(null);
-
   // Update map bearing based on device heading OR movement direction in driving mode
   useEffect(() => {
     if (!mapRef.current || !isDrivingMode) return;
@@ -167,34 +164,13 @@ export default function MapboxMap({
     }
     
     if (bearingToUse !== null) {
-      // Always update on first bearing (when previousBearingRef.current is null)
-      // Otherwise only update if bearing changed significantly
-      const shouldUpdate = previousBearingRef.current === null || (() => {
-        const currentBearing = previousBearingRef.current!;
-        let bearingDiff = bearingToUse - currentBearing;
-        
-        // Handle wraparound (e.g., 350° to 10° should be +20°, not -340°)
-        if (bearingDiff > 180) bearingDiff -= 360;
-        if (bearingDiff < -180) bearingDiff += 360;
-        
-        return Math.abs(bearingDiff) > 2;
-      })();
+      // Simple, direct rotation - just set the bearing immediately
+      map.setBearing(bearingToUse);
       
-      if (shouldUpdate) {
-        // Use short, smooth transition for responsive but smooth rotation
-        map.easeTo({
-          bearing: bearingToUse,
-          duration: 200, // Very short 0.2s transition for responsiveness
-          easing: (t) => t // Linear easing for consistent rotation speed
-        });
-        
-        previousBearingRef.current = bearingToUse;
-        
-        if (deviceHeading !== null) {
-          console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
-        } else {
-          console.log('🗺️ Map bearing set to movement direction:', bearingToUse.toFixed(1) + '°');
-        }
+      if (deviceHeading !== null) {
+        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+      } else {
+        console.log('🗺️ Map bearing set to movement direction:', bearingToUse.toFixed(1) + '°');
       }
     }
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
