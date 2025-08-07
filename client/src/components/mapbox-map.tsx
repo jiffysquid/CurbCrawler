@@ -186,11 +186,11 @@ export default function MapboxMap({
       
       console.log('🧭 Bearing change check - current:', currentBearing.toFixed(1) + '°', 'new:', bearingToUse.toFixed(1) + '°', 'diff:', normalizedDiff.toFixed(1) + '°');
       
-      if (normalizedDiff > 3) {
-        // Only update if bearing changed by more than 3 degrees to avoid jitter
+      if (normalizedDiff > 1) {
+        // Only update if bearing changed by more than 1 degree to avoid jitter
         // Use smooth bearing transition for natural rotation - but don't interfere with camera position
         map.rotateTo(bearingToUse, {
-          duration: 300, // Quick but smooth 0.3-second rotation
+          duration: 200, // Quick but smooth 0.2-second rotation
           easing: (t) => t // Linear easing for consistent rotation speed
         });
         previousBearingRef.current = bearingToUse;
