@@ -47,7 +47,7 @@ export default function MapboxMap({
   const vehicleMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
-  const currentBearingRef = useRef<number | null>(null);
+
   const lastRotationTime = useRef<number>(0);
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
   const [showDemographics, setShowDemographics] = useState(false);
@@ -130,7 +130,7 @@ export default function MapboxMap({
   }, [isDrivingMode]);
 
   // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
-  const calculateMovementBearing = useCallback((prevLoc: Location, currentLoc: Location): number => {
+  const calculateMovementBearing = useCallback((prevLoc: { lat: number; lng: number }, currentLoc: { lat: number; lng: number }): number => {
     const lat1 = prevLoc.lat * Math.PI / 180;
     const lat2 = currentLoc.lat * Math.PI / 180;
     const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
@@ -140,6 +140,64 @@ export default function MapboxMap({
     
     let bearing = Math.atan2(y, x) * 180 / Math.PI;
     return (bearing + 360) % 360; // Normalize to 0-360
+  }, []);
+
+  // Smooth bearing interpolation state
+  const targetBearingRef = useRef<number | null>(null);
+  const mapBearingRef = useRef<number | null>(null);
+  const bearingAnimationRef = useRef<number | null>(null);
+
+  // Smooth bearing interpolation function
+  const animateBearing = useCallback((targetBearing: number) => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current;
+    const currentBearing = mapBearingRef.current ?? map.getBearing();
+    
+    // Calculate shortest rotation path
+    let diff = targetBearing - currentBearing;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    
+    // If difference is small, just set it directly
+    if (Math.abs(diff) < 2) {
+      map.setBearing(targetBearing);
+      mapBearingRef.current = targetBearing;
+      return;
+    }
+    
+    // Cancel any existing animation
+    if (bearingAnimationRef.current) {
+      cancelAnimationFrame(bearingAnimationRef.current);
+    }
+    
+    // Animate the bearing change
+    const startTime = performance.now();
+    const duration = 300; // 300ms animation
+    const startBearing = currentBearing;
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out function for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 2);
+      
+      const newBearing = startBearing + (diff * easeOut);
+      map.setBearing(newBearing);
+      mapBearingRef.current = newBearing;
+      
+      if (progress < 1) {
+        bearingAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Ensure we end exactly at target
+        map.setBearing(targetBearing);
+        mapBearingRef.current = targetBearing;
+        bearingAnimationRef.current = null;
+      }
+    };
+    
+    bearingAnimationRef.current = requestAnimationFrame(animate);
   }, []);
 
   // Update map bearing based on device heading OR movement direction in driving mode
@@ -163,17 +221,26 @@ export default function MapboxMap({
       }
     }
     
-    if (bearingToUse !== null) {
-      // Simple, direct rotation - just set the bearing immediately
-      map.setBearing(bearingToUse);
+    if (bearingToUse !== null && bearingToUse !== targetBearingRef.current) {
+      targetBearingRef.current = bearingToUse;
+      
+      // Use smooth animation for bearing changes
+      animateBearing(bearingToUse);
       
       if (deviceHeading !== null) {
-        console.log('🗺️ Map bearing set to device heading:', bearingToUse.toFixed(1) + '°');
+        console.log('🗺️ Map bearing animating to device heading:', bearingToUse.toFixed(1) + '°');
       } else {
-        console.log('🗺️ Map bearing set to movement direction:', bearingToUse.toFixed(1) + '°');
+        console.log('🗺️ Map bearing animating to movement direction:', bearingToUse.toFixed(1) + '°');
       }
     }
-  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing]);
+    
+    // Cleanup animation on unmount
+    return () => {
+      if (bearingAnimationRef.current) {
+        cancelAnimationFrame(bearingAnimationRef.current);
+      }
+    };
+  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, animateBearing]);
 
   // Load pins on component mount and listen for changes
   useEffect(() => {
