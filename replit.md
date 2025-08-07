@@ -59,7 +59,6 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - August 3, 2025: Fixed current location window to update continuously during recording sessions with 2-second suburb lookup intervals
 - August 3, 2025: Adjusted van zoom level from 18 to 16.5 to show 50% more surrounding area for better context
 - August 3, 2025: Changed path arrows from triangles (▲) to arrows with tails (↑) for clearer direction recognition
-- August 6, 2025: RESTORED smooth rotation in driving mode - Fixed DeviceOrientationEvent type checking and method conflicts between easeTo() and rotateTo()
+- August 6, 2025: REMOVED ALL ROTATION AND VAN ANIMATION - Simplified vehicle system to static marker that updates position only, no map rotation or vehicle animation due to persistent technical issues
 - August 6, 2025: FIXED demographics panel - Next week clearout suburbs now display correctly in blue section with complete population and pricing data
 - August 6, 2025: ENHANCED map following - Map now follows vehicle location in both recording and non-recording modes with smooth 1-second transitions
-- August 7, 2025: FIXED rotation system completely - Reduced threshold to 1° and fixed driving mode activation. Map now rotates smoothly during movement with 0.2-second transitions and proper bearing calculations from GPS movement data
