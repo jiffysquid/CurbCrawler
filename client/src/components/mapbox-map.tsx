@@ -52,7 +52,8 @@ export default function MapboxMap({
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
   const [showDemographics, setShowDemographics] = useState(false);
   const [isZoomedToVan, setIsZoomedToVan] = useState(true);
-
+  const [isDrivingMode, setIsDrivingMode] = useState(false);
+  const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [stableCurrentSuburb, setStableCurrentSuburb] = useState<{ suburb: string } | null>(null);
   const [mapPins, setMapPins] = useState<Pin[]>([]);
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
@@ -77,13 +78,169 @@ export default function MapboxMap({
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
   mapboxgl.accessToken = mapboxToken;
 
+  // Device orientation/compass heading for driving mode
+  useEffect(() => {
+    if (!isDrivingMode) return;
 
+    let orientationListener: ((event: DeviceOrientationEvent) => void) | null = null;
 
+    const setupOrientation = async () => {
+      // Request permission for iOS 13+ devices
+      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try {
+          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          if (permission !== 'granted') {
+            console.log('⚠️ Device orientation permission denied');
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error requesting device orientation permission:', error);
+          return;
+        }
+      }
 
+      orientationListener = (event: DeviceOrientationEvent) => {
+        if (event.alpha !== null && event.alpha !== undefined) {
+          // Convert alpha (0-360° where 0° is north) to compass heading
+          // Webkitcompass heading gives us the direction the device is pointing
+          let heading = event.alpha;
+          
+          // For iOS, we might need to adjust based on webkitCompassHeading
+          if ((event as any).webkitCompassHeading !== undefined) {
+            heading = (event as any).webkitCompassHeading;
+          }
+          
+          setDeviceHeading(heading);
+          console.log('🧭 Device heading updated:', heading.toFixed(1) + '°');
+        }
+      };
 
+      window.addEventListener('deviceorientation', orientationListener);
+      console.log('🧭 Device orientation listener started for driving mode');
+    };
 
+    setupOrientation();
 
+    return () => {
+      if (orientationListener) {
+        window.removeEventListener('deviceorientation', orientationListener);
+        console.log('🧭 Device orientation listener stopped');
+      }
+    };
+  }, [isDrivingMode]);
 
+  // Calculate movement-based bearing for driving mode (when using GPS debug/KML simulation)
+  const calculateMovementBearing = useCallback((prevLoc: { lat: number; lng: number }, currentLoc: { lat: number; lng: number }): number => {
+    const lat1 = prevLoc.lat * Math.PI / 180;
+    const lat2 = currentLoc.lat * Math.PI / 180;
+    const deltaLng = (currentLoc.lng - prevLoc.lng) * Math.PI / 180;
+
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360; // Normalize to 0-360
+  }, []);
+
+  // Smooth bearing interpolation state
+  const targetBearingRef = useRef<number | null>(null);
+  const mapBearingRef = useRef<number | null>(null);
+  const bearingAnimationRef = useRef<number | null>(null);
+
+  // Smooth bearing interpolation function
+  const animateBearing = useCallback((targetBearing: number) => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current;
+    const currentBearing = mapBearingRef.current ?? map.getBearing();
+    
+    // Calculate shortest rotation path
+    let diff = targetBearing - currentBearing;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    
+    // If difference is small, just set it directly
+    if (Math.abs(diff) < 2) {
+      map.setBearing(targetBearing);
+      mapBearingRef.current = targetBearing;
+      return;
+    }
+    
+    // Cancel any existing animation
+    if (bearingAnimationRef.current) {
+      cancelAnimationFrame(bearingAnimationRef.current);
+    }
+    
+    // Animate the bearing change
+    const startTime = performance.now();
+    const duration = 300; // 300ms animation
+    const startBearing = currentBearing;
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out function for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 2);
+      
+      const newBearing = startBearing + (diff * easeOut);
+      map.setBearing(newBearing);
+      mapBearingRef.current = newBearing;
+      
+      if (progress < 1) {
+        bearingAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Ensure we end exactly at target
+        map.setBearing(targetBearing);
+        mapBearingRef.current = targetBearing;
+        bearingAnimationRef.current = null;
+      }
+    };
+    
+    bearingAnimationRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  // Update map bearing based on device heading OR movement direction in driving mode
+  useEffect(() => {
+    if (!mapRef.current || !isDrivingMode) return;
+
+    const map = mapRef.current;
+    let bearingToUse = deviceHeading;
+
+    // If no device heading (GPS debug mode), calculate from movement
+    if (deviceHeading === null && currentLocation && previousLocationRef.current) {
+      const distance = Math.sqrt(
+        Math.pow(currentLocation.lat - previousLocationRef.current.lat, 2) +
+        Math.pow(currentLocation.lng - previousLocationRef.current.lng, 2)
+      );
+      
+      // Only calculate bearing if we've moved enough (avoid jitter)
+      if (distance > 0.00001) { // ~1 meter
+        bearingToUse = calculateMovementBearing(previousLocationRef.current, currentLocation);
+        console.log('🧭 Using movement-based bearing for driving mode:', bearingToUse.toFixed(1) + '°');
+      }
+    }
+    
+    if (bearingToUse !== null && bearingToUse !== targetBearingRef.current) {
+      targetBearingRef.current = bearingToUse;
+      
+      // Use smooth animation for bearing changes
+      animateBearing(bearingToUse);
+      
+      if (deviceHeading !== null) {
+        console.log('🗺️ Map bearing animating to device heading:', bearingToUse.toFixed(1) + '°');
+      } else {
+        console.log('🗺️ Map bearing animating to movement direction:', bearingToUse.toFixed(1) + '°');
+      }
+    }
+    
+    // Cleanup animation on unmount
+    return () => {
+      if (bearingAnimationRef.current) {
+        cancelAnimationFrame(bearingAnimationRef.current);
+      }
+    };
+  }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, animateBearing]);
 
   // Smooth vehicle position interpolation state
   const vehicleAnimationRef = useRef<number | null>(null);
@@ -514,7 +671,13 @@ export default function MapboxMap({
       vehicleMarkerRef.current.setLngLat([currentLng, currentLat]);
       
       // Rotate vehicle based on travel direction if we have bearing data
-
+      if (currentBearingRef.current !== null) {
+        const vehicleElement = vehicleMarkerRef.current.getElement();
+        const rotation = `rotate(${currentBearingRef.current}deg)`;
+        vehicleElement.style.transform = rotation;
+        vehicleElement.style.transformOrigin = 'center center';
+        console.log('🚐 ANIMATION: Vehicle rotated to', currentBearingRef.current.toFixed(1), '° (transform:', rotation + ')');
+      }
 
       // Update map center during recording for smooth following
       if (isRecording) {
@@ -566,7 +729,7 @@ export default function MapboxMap({
         background-repeat: no-repeat;
         background-position: center;
         cursor: pointer;
-
+        ${isDrivingMode ? 'transform: rotate(0deg);' : ''}
       `;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
@@ -575,21 +738,39 @@ export default function MapboxMap({
 
       currentVehiclePositionRef.current = { lat, lng };
       console.log('🚐 Vehicle marker created at:', lat, lng);
-
+      if (isDrivingMode) {
+        console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
+      }
     } else {
       // Animate vehicle to new position smoothly
       targetVehiclePositionRef.current = { lat, lng };
       animateVehiclePosition({ lat, lng });
       console.log('🚐 Vehicle marker animating to:', lat, lng);
       
-
+      // Ensure vehicle always points up in driving mode
+      if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
+        const element = vehicleMarkerRef.current.getElement();
+        element.style.transform = 'rotate(0deg)';
+      }
     }
 
     // Smooth camera following instead of easeTo which conflicts with rotation
     targetCameraPositionRef.current = { lat, lng };
     animateCameraFollow({ lat, lng });
     
-    console.log('🗺️ Camera following vehicle - smooth animation');
+    if (isDrivingMode) {
+      // Set zoom and pitch for driving mode without animation to avoid conflicts
+      map.setZoom(16.5);
+      map.setPitch(40);
+      
+      // Add padding for vehicle positioning at bottom-center
+      const padding = { bottom: window.innerHeight * 0.3 };
+      map.setPadding(padding);
+      
+      console.log('🗺️ Camera following vehicle in driving mode - smooth animation');
+    } else {
+      console.log(`🗺️ Camera following vehicle - smooth animation`);
+    }
 
     previousLocationRef.current = currentLocation;
     
@@ -602,7 +783,7 @@ export default function MapboxMap({
         cancelAnimationFrame(cameraAnimationRef.current);
       }
     };
-  }, [currentLocation, mapReady, animateVehiclePosition, animateCameraFollow]);
+  }, [currentLocation, mapReady, isDrivingMode, animateVehiclePosition, animateCameraFollow]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({
@@ -1162,30 +1343,21 @@ export default function MapboxMap({
           )}
         </Button>
 
-        {/* Zoom Controls */}
+        {/* Driving Mode Toggle */}
         <Button
           onClick={() => {
-            if (mapRef.current) {
-              setIsZoomedToVan(!isZoomedToVan);
-              const newZoom = !isZoomedToVan ? 18 : 14;
-              mapRef.current.easeTo({
-                zoom: newZoom,
-                duration: 500,
-                easing: (t) => t * (2 - t)
-              });
-              console.log('🔍 Zoom toggled to:', !isZoomedToVan ? 'van view' : 'suburb view');
-            }
+            setIsDrivingMode(!isDrivingMode);
+            console.log('🧭 Driving mode toggled:', !isDrivingMode ? 'ON' : 'OFF');
           }}
           size="sm"
-          variant={isZoomedToVan ? "default" : "outline"}
+          variant={isDrivingMode ? "default" : "outline"}
           className={`${
-            isZoomedToVan ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+            isDrivingMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
           }`}
-          title={isZoomedToVan ? 'Zoom out to suburb view' : 'Zoom in to van view'}
+          title={isDrivingMode ? 'Exit driving mode' : 'Enter driving mode'}
         >
-          🔍
+          🧭
         </Button>
-
       </div>
 
       {/* Pin Info Popup */}
