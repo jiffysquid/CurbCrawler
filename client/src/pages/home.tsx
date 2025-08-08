@@ -188,8 +188,11 @@ export default function Home() {
       
       // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
       if (segmentDistance > 0.001) { // 0.001 km = 1 meter
-        setRealTimeDistance(prev => prev + segmentDistance);
-        console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${((realTimeDistance + segmentDistance) * 1000).toFixed(0)}m`);
+        setRealTimeDistance(prev => {
+          const newTotal = prev + segmentDistance;
+          console.log(`📊 Real-time distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
+          return newTotal;
+        });
       }
     }
     
@@ -571,9 +574,29 @@ export default function Home() {
     const activeSession = sessions.find(s => s.isActive);
     if (!activeSession || !location) return;
 
+    // Calculate total distance from session locations or use real-time distance
+    let totalDistance = realTimeDistance;
+    
+    // If we have session locations, calculate distance as backup
+    if (sessionLocations && sessionLocations.length > 1) {
+      let calculatedDistance = 0;
+      for (let i = 1; i < sessionLocations.length; i++) {
+        calculatedDistance += calculateDistance(
+          sessionLocations[i-1].lat,
+          sessionLocations[i-1].lng,
+          sessionLocations[i].lat,
+          sessionLocations[i].lng
+        );
+      }
+      
+      // Use the larger of the two distances (real-time or calculated)
+      totalDistance = Math.max(totalDistance, calculatedDistance);
+    }
+
     const updates = {
       endTime: new Date().toISOString(),
       isActive: false,
+      distance: totalDistance,
       endLocation: {
         lat: location.lat,
         lng: location.lng,
