@@ -127,6 +127,33 @@ export default function Home() {
       // Update recording path with actual GPS location when recording
       if (isRecording) {
         console.log('🔴 Adding GPS location to recording path:', gpsLocation.lat, gpsLocation.lng);
+        
+        // Calculate distance if we have a previous location
+        if (lastRecordingLocation) {
+          const segmentDistance = calculateDistance(
+            lastRecordingLocation.lat, 
+            lastRecordingLocation.lng, 
+            gpsLocation.lat, 
+            gpsLocation.lng
+          );
+          
+          // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
+          if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+            setRealTimeDistance(prev => {
+              const newTotal = prev + segmentDistance;
+              console.log(`📊 GPS distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
+              return newTotal;
+            });
+          }
+        }
+        
+        // Update last recording location for next distance calculation
+        setLastRecordingLocation({ 
+          lat: gpsLocation.lat, 
+          lng: gpsLocation.lng, 
+          timestamp: Date.now() 
+        });
+        
         // Add to recording path for real-time display
         setRecordingPath(prev => {
           // Avoid duplicate points
@@ -153,7 +180,7 @@ export default function Home() {
         });
       }, delay);
     }
-  }, [gpsLocation, isRecording]);
+  }, [gpsLocation, isRecording, lastRecordingLocation]);
 
   // Handle concurrent path updates from map animation
   const handleLocationUpdate = useCallback((animatedLocation: { lat: number; lng: number }) => {
