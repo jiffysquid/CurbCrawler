@@ -69,14 +69,9 @@ export function useGeolocation() {
             console.log(`Smart Rate: Speed ${speedKmh.toFixed(1)} km/h, adjusting GPS rate to ${newSettings.maxAge}ms`);
             lastSpeedRef.current = newSpeed;
             
-            // Schedule GPS restart to avoid circular dependency
-            setTimeout(() => {
-              if (watchIdRef.current !== null) {
-                console.log('Smart Rate: Restarting GPS with new settings');
-                stopWatching();
-                setTimeout(() => startWatching(), 100);
-              }
-            }, 0);
+            // DISABLED: GPS restart during smart rate can cause crashes during recording
+            // Instead, we'll keep the current GPS settings stable during recording sessions
+            console.log('Smart Rate: Speed change detected but GPS restart disabled during recording to prevent crashes');
           }
         }
       }

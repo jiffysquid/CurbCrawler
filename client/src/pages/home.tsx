@@ -185,120 +185,28 @@ export default function Home() {
         }
       }
       
-      // Always update suburb lookup, but with different timing based on recording state
-      const delay = isRecording ? 2000 : 500; // Slower updates during recording to avoid overloading
-      setTimeout(() => {
-        updateCurrentSuburb(gpsLocation).catch(error => {
-          console.log('Suburb lookup failed, continuing with GPS tracking:', error);
-        });
-      }, delay);
+      // Simplified suburb lookup - no delay during recording to avoid timer issues
+      updateCurrentSuburb(gpsLocation).catch(error => {
+        console.log('Suburb lookup failed, continuing with GPS tracking:', error);
+      });
     }
   }, [gpsLocation, isRecording]);
 
-  // Handle concurrent path updates from map animation
+  // DISABLED: Map animation updates can cause crashes during recording
+  // Simplified to rely only on GPS location updates for recording
   const handleLocationUpdate = useCallback((animatedLocation: { lat: number; lng: number }) => {
-    console.log('🎯 handleLocationUpdate called with:', animatedLocation.lat, animatedLocation.lng, 'isRecording:', isRecording);
-    if (!isRecording) return;
+    // Do nothing - recording now relies only on GPS updates to prevent crashes
+    console.log('🎯 handleLocationUpdate disabled to prevent crashes during recording');
+  }, []);
 
-    try {
-      // Add to recording path for real-time display
-      setRecordingPath(prev => {
-        // Avoid duplicate points
-        const lastPoint = prev[prev.length - 1];
-        if (lastPoint && 
-            Math.abs(lastPoint.lat - animatedLocation.lat) < 0.00001 && 
-            Math.abs(lastPoint.lng - animatedLocation.lng) < 0.00001) {
-          console.log('🎯 Skipping duplicate point in recording path');
-          return prev;
-        }
-        
-        const newPath = [...prev, animatedLocation];
-        
-        // Memory protection: limit path to reasonable size to prevent crashes
-        const maxPathPoints = 10000; // ~10k points should be plenty for most sessions
-        if (newPath.length > maxPathPoints) {
-          console.warn(`⚠️ Animation path too long (${newPath.length} points), trimming to prevent memory issues`);
-          return newPath.slice(-maxPathPoints); // Keep latest points
-        }
-        
-        console.log(`🗺️ Recording path updated from animation: ${newPath.length} points`);
-        console.log('🗺️ Latest path points:', newPath.slice(-3));
-        return newPath;
-      });
-
-      // Update distance calculation
-      if (lastRecordingLocation) {
-        const segmentDistance = calculateDistance(
-          lastRecordingLocation.lat, 
-          lastRecordingLocation.lng, 
-          animatedLocation.lat, 
-          animatedLocation.lng
-        );
-        
-        // Only add meaningful distance changes (> 1 meter) to avoid GPS noise
-        if (segmentDistance > 0.001) { // 0.001 km = 1 meter
-          setRealTimeDistance(prev => {
-            const newTotal = prev + segmentDistance;
-            console.log(`📊 Animation distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
-            return newTotal;
-          });
-        }
-      }
-      
-      // Update last recording location
-      setLastRecordingLocation({ 
-        lat: animatedLocation.lat, 
-        lng: animatedLocation.lng, 
-        timestamp: Date.now() 
-      });
-    } catch (error) {
-      console.error('❌ Error during animation recording update:', error);
-      // Continue recording but log the error to prevent crashes
+  // DISABLED: GPS monitoring and auto-restart can cause crashes during recording
+  // Instead, we rely on stable GPS connection without interruptions
+  useEffect(() => {
+    if (isRecording) {
+      console.log('📡 Recording started - GPS monitoring disabled to prevent crashes');
+      console.log('📡 Relying on stable GPS connection without auto-restart during recording');
     }
   }, [isRecording]);
-
-  // GPS monitoring and auto-restart during recording - prevents crashes with reduced frequency
-  useEffect(() => {
-    let gpsMonitorInterval: NodeJS.Timeout;
-    
-    if (isRecording) {
-      console.log('📡 Starting GPS monitoring to prevent recording crashes');
-      
-      gpsMonitorInterval = setInterval(() => {
-        try {
-          // Check if GPS is still active during recording
-          if (isRecording && !isWatching) {
-            console.log('⚠️ GPS stopped during recording - restarting GPS to prevent crash');
-            startWatching();
-            toast({
-              title: "GPS Auto-Restart",
-              description: "GPS was restarted to prevent recording interruption.",
-            });
-          }
-          
-          // Check if we have a stale location (no updates for too long) - reduced frequency
-          if (isRecording && location) {
-            const now = Date.now();
-            const locationAge = now - (location as any).timestamp || 0;
-            
-            // If location is older than 30 seconds, restart GPS
-            if (locationAge > 30000) {
-              console.log('⚠️ GPS location is stale - restarting GPS');
-              startWatching();
-            }
-          }
-        } catch (error) {
-          console.error('❌ GPS monitoring error:', error);
-        }
-      }, 30000); // Check every 30 seconds to reduce CPU usage
-    }
-    
-    return () => {
-      if (gpsMonitorInterval) {
-        clearInterval(gpsMonitorInterval);
-      }
-    };
-  }, [isRecording, isWatching, startWatching, location, toast]);
 
   // Function to update current suburb
   const updateCurrentSuburb = async (location: { lat: number; lng: number }) => {

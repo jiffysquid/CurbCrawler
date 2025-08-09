@@ -74,6 +74,15 @@ export default function MapboxMap({
     duration: 2000 // 2 seconds for smooth animation
   });
 
+  // Animation references for cleanup
+  const bearingAnimationRef = useRef<number | null>(null);
+  const vehicleAnimationRef = useRef<number | null>(null);
+  const cameraAnimationRef = useRef<number | null>(null);
+  const currentBearingRef = useRef<number | null>(null);
+  const targetBearingRef = useRef<number | null>(null);
+  const mapBearingRef = useRef<number | null>(null);
+  const currentVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
+
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
   mapboxgl.accessToken = mapboxToken;
@@ -142,10 +151,7 @@ export default function MapboxMap({
     return (bearing + 360) % 360; // Normalize to 0-360
   }, []);
 
-  // Smooth bearing interpolation state
-  const targetBearingRef = useRef<number | null>(null);
-  const mapBearingRef = useRef<number | null>(null);
-  const bearingAnimationRef = useRef<number | null>(null);
+
 
   // Smooth bearing interpolation function
   const animateBearing = useCallback((targetBearing: number) => {
@@ -243,9 +249,7 @@ export default function MapboxMap({
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, animateBearing]);
 
   // Smooth vehicle position interpolation state
-  const vehicleAnimationRef = useRef<number | null>(null);
   const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
-  const currentVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Smooth vehicle position animation
   const animateVehiclePosition = useCallback((targetPosition: { lat: number; lng: number }) => {
@@ -303,7 +307,6 @@ export default function MapboxMap({
   }, []);
 
   // Smooth camera following animation  
-  const cameraAnimationRef = useRef<number | null>(null);
   const targetCameraPositionRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const animateCameraFollow = useCallback((targetPosition: { lat: number; lng: number }) => {
@@ -670,14 +673,8 @@ export default function MapboxMap({
       // Update vehicle marker position and rotation
       vehicleMarkerRef.current.setLngLat([currentLng, currentLat]);
       
-      // Rotate vehicle based on travel direction if we have bearing data
-      if (currentBearingRef.current !== null) {
-        const vehicleElement = vehicleMarkerRef.current.getElement();
-        const rotation = `rotate(${currentBearingRef.current}deg)`;
-        vehicleElement.style.transform = rotation;
-        vehicleElement.style.transformOrigin = 'center center';
-        console.log('🚐 ANIMATION: Vehicle rotated to', currentBearingRef.current.toFixed(1), '° (transform:', rotation + ')');
-      }
+      // DISABLED: Vehicle rotation can cause crashes during recording
+      // Vehicle now stays fixed pointing upward for stability
 
       // Update map center during recording for smooth following
       if (isRecording) {
