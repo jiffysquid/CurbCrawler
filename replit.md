@@ -1,7 +1,7 @@
-# Location Tracking Application
+# KerbQuest
 
 ## Overview
-This is a full-stack location tracking application built with React and Express, designed as a mobile-friendly progressive web application. It allows users to track their location in real-time, visualize routes on a map, and view session history. The application focuses on tracking movement through different suburbs, integrating features like clearout schedule displays and demographic overlays for specific Brisbane suburbs. The business vision is to provide a comprehensive tool for field operations, particularly for users in vehicles needing real-time geographic and logistical information.
+KerbQuest is a comprehensive Brisbane-focused geospatial tracking application built with React and Express, designed as a mobile-friendly progressive web application for curbside clearout vehicle routes. It allows users to track their location in real-time, visualize routes on a map, and view session history while navigating through Brisbane suburbs for waste management operations. The application integrates clearout schedule displays and demographic overlays for specific Brisbane suburbs. The business vision is to enhance urban waste management navigation with intelligent mobile features for field operations.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
