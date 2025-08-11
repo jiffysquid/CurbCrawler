@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import MapboxMap from "@/components/mapbox-map";
@@ -26,6 +26,7 @@ export default function Home() {
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [recordingStats, setRecordingStats] = useState<{ duration: string; distance: string; cost: string }>({ duration: '0m', distance: '0.0km', cost: '0.00' });
   const [realTimeDistance, setRealTimeDistance] = useState<number>(0);
+  const realTimeDistanceRef = useRef<number>(0);
   const [lastRecordingLocation, setLastRecordingLocation] = useState<{ lat: number; lng: number; timestamp?: number } | null>(null);
   const [recordingPath, setRecordingPath] = useState<{ lat: number; lng: number }[]>([]);
   const [persistentPaths, setPersistentPaths] = useState<any[]>([]);
@@ -259,6 +260,7 @@ export default function Home() {
           if (segmentDistance > 0.001) { // 0.001 km = 1 meter
             setRealTimeDistance(prev => {
               const newTotal = prev + segmentDistance;
+              realTimeDistanceRef.current = newTotal; // Update ref for timer access
               console.log(`📊 KML distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
               return newTotal;
             });
@@ -315,6 +317,7 @@ export default function Home() {
       isRecording,
       lastRecordingLocation,
       setRealTimeDistance,
+      realTimeDistanceRef,
       setLastRecordingLocation,
       setRecordingPath
     });
@@ -342,6 +345,7 @@ export default function Home() {
           if (segmentDistance > 0.001) { // 0.001 km = 1 meter
             values.setRealTimeDistance(prev => {
               const newTotal = prev + segmentDistance;
+              values.realTimeDistanceRef.current = newTotal; // Update ref for timer access
               console.log(`📊 Global KML distance: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
               return newTotal;
             });
@@ -564,8 +568,8 @@ export default function Home() {
         }
         
         // Use real-time distance calculation for immediate updates
-        // Get latest realTimeDistance value to avoid closure issues
-        const distanceKm = realTimeDistance;
+        // Get current realTimeDistance from ref to avoid closure issues
+        const distanceKm = realTimeDistanceRef.current;
         
         // Format distance display
         const distanceStr = distanceKm >= 1 ? `${distanceKm.toFixed(1)}km` : `${(distanceKm * 1000).toFixed(0)}m`;
@@ -674,6 +678,7 @@ export default function Home() {
     setRecordingStartTime(startTime);
     setRecordingStats({ duration: '0s', distance: '0m', cost: '0.00' });
     setRealTimeDistance(0);
+    realTimeDistanceRef.current = 0; // Reset ref
     setLastRecordingLocation({ lat: location.lat, lng: location.lng });
     setRecordingPath([{ lat: location.lat, lng: location.lng }]); // Initialize persistent path
     
@@ -703,6 +708,7 @@ export default function Home() {
         setIsRecording(false);
         setRecordingStartTime(null);
         setRealTimeDistance(0);
+        realTimeDistanceRef.current = 0; // Reset ref
         setLastRecordingLocation(null);
         setRecordingPath([]);
         releaseWakeLock();
@@ -725,6 +731,7 @@ export default function Home() {
     setIsRecording(false);
     setRecordingStartTime(null);
     setRealTimeDistance(0);
+    realTimeDistanceRef.current = 0; // Reset ref
     setLastRecordingLocation(null);
     setRecordingPath([]);
     releaseWakeLock();
@@ -795,6 +802,7 @@ export default function Home() {
     setRecordingStartTime(null);
     setRecordingStats({ duration: '0m', distance: '0.0km', cost: '0.00' });
     setRealTimeDistance(0);
+    realTimeDistanceRef.current = 0; // Reset ref
     setLastRecordingLocation(null);
     setRecordingPath([]); // Clear recording path for next session
     releaseWakeLock();
