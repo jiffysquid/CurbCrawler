@@ -428,7 +428,7 @@ export default function MapboxMap({
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return; // Don't re-initialize if map already exists
 
     console.log('🗺️ Initializing Mapbox GL JS map');
     console.log('🗺️ Using custom Mapbox style: cmd422kxy01t601rf67tl9ra2');
@@ -437,7 +437,7 @@ export default function MapboxMap({
       container: mapContainerRef.current,
       style: 'mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2',
       center: currentLocation ? [currentLocation.lng, currentLocation.lat] : [153.0281, -27.4698],
-      zoom: 16,
+      zoom: 16.5,
       pitch: 40, // 40-degree tilt for enhanced 3D perspective
       bearing: 0
     });
@@ -647,8 +647,13 @@ export default function MapboxMap({
     return () => {
       if (vehicleMarkerRef.current) {
         vehicleMarkerRef.current.remove();
+        vehicleMarkerRef.current = null;
       }
-      map.remove();
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      setMapReady(false);
     };
   }, []);
 
@@ -728,8 +733,17 @@ export default function MapboxMap({
     const map = mapRef.current;
     const { lat, lng } = currentLocation;
 
-    // Create vehicle marker if it doesn't exist
-    if (!vehicleMarkerRef.current) {
+    // Create vehicle marker if it doesn't exist or if marker was lost
+    if (!vehicleMarkerRef.current || !vehicleMarkerRef.current.getElement().isConnected) {
+      // Remove old marker if it exists but isn't connected
+      if (vehicleMarkerRef.current) {
+        try {
+          vehicleMarkerRef.current.remove();
+        } catch (e) {
+          console.log('🚐 Old marker cleanup failed, continuing...');
+        }
+      }
+      
       const vehicleElement = document.createElement('div');
       vehicleElement.className = 'vehicle-marker';
       vehicleElement.style.cssText = `
@@ -740,6 +754,11 @@ export default function MapboxMap({
         background-repeat: no-repeat;
         background-position: center;
         cursor: pointer;
+        z-index: 1000;
+        position: relative;
+        border: 2px solid rgba(255,255,255,0.8);
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         ${isDrivingMode ? 'transform: rotate(0deg);' : ''}
       `;
 
@@ -749,6 +768,8 @@ export default function MapboxMap({
 
       currentVehiclePositionRef.current = { lat, lng };
       console.log('🚐 Vehicle marker created at:', lat, lng);
+      console.log('🚐 Vehicle element visible in DOM:', vehicleElement.isConnected);
+      console.log('🚐 iMax van image path:', iMaxVanPath);
       if (isDrivingMode) {
         console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
       }
