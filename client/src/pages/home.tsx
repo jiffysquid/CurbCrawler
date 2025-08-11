@@ -543,10 +543,10 @@ export default function Home() {
   useEffect(() => {
     let timerInterval: NodeJS.Timeout;
     
-    console.log(`🕐 Timer effect: isRecording=${isRecording}, recordingStartTime=${recordingStartTime?.toISOString()}`);
+    console.log(`🕐 Timer effect triggered: isRecording=${isRecording}, recordingStartTime=${recordingStartTime?.toISOString()}, realTimeDistance=${realTimeDistance}`);
     
     if (isRecording && recordingStartTime) {
-      console.log('🕐 Starting timer interval for recording stats');
+      console.log('🕐 ✅ Starting timer interval for recording stats');
       timerInterval = setInterval(() => {
         const now = new Date();
         const elapsed = now.getTime() - recordingStartTime.getTime();
@@ -664,12 +664,18 @@ export default function Home() {
     }
 
     const startTime = new Date();
+    console.log('🎬 Starting recording - setting state variables');
+    console.log('🎬 startTime:', startTime.toISOString());
+    console.log('🎬 location:', location);
+    
     setIsRecording(true);
     setRecordingStartTime(startTime);
     setRecordingStats({ duration: '0s', distance: '0m', cost: '0.00' });
     setRealTimeDistance(0);
     setLastRecordingLocation({ lat: location.lat, lng: location.lng });
     setRecordingPath([{ lat: location.lat, lng: location.lng }]); // Initialize persistent path
+    
+    console.log('🎬 State variables set - isRecording should be true, recordingStartTime should be set');
     
     // Ensure GPS tracking is active when recording starts
     if (!isWatching) {
@@ -711,6 +717,15 @@ export default function Home() {
     console.log('🛑 Stop recording button clicked');
     const activeSession = sessions.find(s => s.isActive);
     console.log('🛑 Active session found:', !!activeSession);
+    
+    // Force stop recording state immediately
+    console.log('🛑 Forcing recording state to false');
+    setIsRecording(false);
+    setRecordingStartTime(null);
+    setRealTimeDistance(0);
+    setLastRecordingLocation(null);
+    setRecordingPath([]);
+    releaseWakeLock();
     
     // Save persistent path
     if (recordingPath.length > 1 && recordingStartTime) {
