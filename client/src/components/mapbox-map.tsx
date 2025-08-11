@@ -1164,6 +1164,10 @@ export default function MapboxMap({
 
   // Map controls
   const toggleZoom = () => {
+    console.log('🔍 toggleZoom clicked! Current state:', isZoomedToVan);
+    console.log('🔍 mapRef.current exists:', !!mapRef.current);
+    console.log('🔍 currentLocation exists:', !!currentLocation);
+    
     if (mapRef.current && currentLocation) {
       if (isZoomedToVan) {
         // Zoom out to suburb view - still follow but wider view
@@ -1186,6 +1190,8 @@ export default function MapboxMap({
         setIsZoomedToVan(true);
         console.log('🔍 Switched to van view - close following enabled');
       }
+    } else {
+      console.log('🔍 toggleZoom blocked - missing mapRef or currentLocation');
     }
   };
 
