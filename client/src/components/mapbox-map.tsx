@@ -87,6 +87,18 @@ export default function MapboxMap({
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
   mapboxgl.accessToken = mapboxToken;
 
+  // Auto-activate driving mode when recording starts
+  useEffect(() => {
+    if (isRecording) {
+      console.log('🚗 Auto-enabling driving mode for recording session');
+      setIsDrivingMode(true);
+    } else {
+      console.log('🚗 Disabling driving mode - recording stopped');
+      setIsDrivingMode(false);
+      setDeviceHeading(null);
+    }
+  }, [isRecording]);
+
   // Device orientation/compass heading for driving mode
   useEffect(() => {
     if (!isDrivingMode) return;
@@ -166,7 +178,7 @@ export default function MapboxMap({
     if (diff < -180) diff += 360;
     
     // If difference is small, just set it directly
-    if (Math.abs(diff) < 2) {
+    if (Math.abs(diff) < 1) {
       map.setBearing(targetBearing);
       mapBearingRef.current = targetBearing;
       return;
@@ -179,7 +191,7 @@ export default function MapboxMap({
     
     // Animate the bearing change
     const startTime = performance.now();
-    const duration = 300; // 300ms animation
+    const duration = 200; // 200ms animation for more responsive feel
     const startBearing = currentBearing;
     
     const animate = (currentTime: number) => {
@@ -221,7 +233,7 @@ export default function MapboxMap({
       );
       
       // Only calculate bearing if we've moved enough (avoid jitter)
-      if (distance > 0.00001) { // ~1 meter
+      if (distance > 0.000005) { // ~0.5 meter for more responsive rotation
         bearingToUse = calculateMovementBearing(previousLocationRef.current, currentLocation);
         console.log('🧭 Using movement-based bearing for driving mode:', bearingToUse.toFixed(1) + '°');
       }
@@ -1357,21 +1369,7 @@ export default function MapboxMap({
           )}
         </Button>
 
-        {/* Driving Mode Toggle */}
-        <Button
-          onClick={() => {
-            setIsDrivingMode(!isDrivingMode);
-            console.log('🧭 Driving mode toggled:', !isDrivingMode ? 'ON' : 'OFF');
-          }}
-          size="sm"
-          variant={isDrivingMode ? "default" : "outline"}
-          className={`${
-            isDrivingMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-          title={isDrivingMode ? 'Exit driving mode' : 'Enter driving mode'}
-        >
-          🧭
-        </Button>
+
       </div>
 
       {/* Pin Info Popup */}
