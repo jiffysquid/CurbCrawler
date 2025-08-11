@@ -191,17 +191,19 @@ export default function MapboxMap({
     
     // Animate the bearing change
     const startTime = performance.now();
-    const duration = 200; // 200ms animation for more responsive feel
+    const duration = 1200; // Even longer duration for very smooth rotation
     const startBearing = currentBearing;
     
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Ease-out function for smooth deceleration
-      const easeOut = 1 - Math.pow(1 - progress, 2);
+      // Smooth ease-in-out function for natural movement
+      const easeInOut = progress < 0.5 
+        ? 2 * progress * progress 
+        : -1 + (4 - 2 * progress) * progress;
       
-      const newBearing = startBearing + (diff * easeOut);
+      const newBearing = startBearing + (diff * easeInOut);
       map.setBearing(newBearing);
       mapBearingRef.current = newBearing;
       
@@ -233,22 +235,30 @@ export default function MapboxMap({
       );
       
       // Only calculate bearing if we've moved enough (avoid jitter)
-      if (distance > 0.000005) { // ~0.5 meter for more responsive rotation
+      if (distance > 0.00002) { // ~2 meters to reduce excessive rotation updates
         bearingToUse = calculateMovementBearing(previousLocationRef.current, currentLocation);
         console.log('🧭 Using movement-based bearing for driving mode:', bearingToUse.toFixed(1) + '°');
       }
     }
     
-    if (bearingToUse !== null && bearingToUse !== targetBearingRef.current) {
-      targetBearingRef.current = bearingToUse;
+    // Add throttling for bearing updates to prevent jerkiness
+    if (bearingToUse !== null) {
+      const bearingDiff = Math.abs(bearingToUse - (targetBearingRef.current || 0));
+      const timeSinceLastRotation = performance.now() - lastRotationTime.current;
       
-      // Use smooth animation for bearing changes
-      animateBearing(bearingToUse);
-      
-      if (deviceHeading !== null) {
-        console.log('🗺️ Map bearing animating to device heading:', bearingToUse.toFixed(1) + '°');
-      } else {
-        console.log('🗺️ Map bearing animating to movement direction:', bearingToUse.toFixed(1) + '°');
+      // Only update bearing if significant change and enough time has passed
+      if (bearingDiff > 3 && timeSinceLastRotation > 500) {
+        targetBearingRef.current = bearingToUse;
+        lastRotationTime.current = performance.now();
+        
+        // Use smooth animation for bearing changes
+        animateBearing(bearingToUse);
+        
+        if (deviceHeading !== null) {
+          console.log('🗺️ Map bearing animating to device heading:', bearingToUse.toFixed(1) + '°');
+        } else {
+          console.log('🗺️ Map bearing animating to movement direction:', bearingToUse.toFixed(1) + '°');
+        }
       }
     }
     
@@ -296,11 +306,13 @@ export default function MapboxMap({
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Ease-out function for smooth deceleration
-      const easeOut = 1 - Math.pow(1 - progress, 2);
+      // Smooth easing function for natural movement
+      const easeInOutCubic = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       
-      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easeOut);
-      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easeOut);
+      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easeInOutCubic);
+      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easeInOutCubic);
       
       vehicleMarkerRef.current?.setLngLat([newLng, newLat]);
       currentVehiclePositionRef.current = { lat: newLat, lng: newLng };
@@ -332,18 +344,20 @@ export default function MapboxMap({
     }
     
     const startTime = performance.now();
-    const duration = 500; // 500ms for smooth camera following
+    const duration = 2000; // 2 seconds for very smooth camera following
     const startCenter = map.getCenter();
     
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Ease-out function for smooth camera movement
-      const easeOut = 1 - Math.pow(1 - progress, 2);
+      // Custom smooth easing function for natural movement
+      const easeInOutCubic = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       
-      const newLng = startCenter.lng + ((targetPosition.lng - startCenter.lng) * easeOut);
-      const newLat = startCenter.lat + ((targetPosition.lat - startCenter.lat) * easeOut);
+      const newLng = startCenter.lng + ((targetPosition.lng - startCenter.lng) * easeInOutCubic);
+      const newLat = startCenter.lat + ((targetPosition.lat - startCenter.lat) * easeInOutCubic);
       
       map.setCenter([newLng, newLat]);
       
@@ -697,8 +711,12 @@ export default function MapboxMap({
       if (isRecording) {
         mapRef.current.easeTo({
           center: [currentLng, currentLat],
-          duration: 100,
-          essential: true
+          duration: 800, // Longer duration for smoother movement
+          essential: true,
+          easing: (t) => {
+            // Smooth easing to eliminate jerkiness
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          }
         });
       }
 
