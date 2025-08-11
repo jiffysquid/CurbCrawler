@@ -778,11 +778,10 @@ export default function MapboxMap({
       map.setZoom(16.5);
       map.setPitch(40);
       
-      // Add padding for vehicle positioning at bottom-center
-      const padding = { bottom: window.innerHeight * 0.3 };
-      map.setPadding(padding);
+      // Reset padding to center the vehicle on screen
+      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
       
-      console.log('🗺️ Camera following vehicle in driving mode - smooth animation');
+      console.log('🗺️ Camera following vehicle in driving mode - centered position');
     } else {
       console.log(`🗺️ Camera following vehicle - smooth animation`);
     }
