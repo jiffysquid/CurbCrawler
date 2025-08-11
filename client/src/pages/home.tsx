@@ -543,12 +543,17 @@ export default function Home() {
   useEffect(() => {
     let timerInterval: NodeJS.Timeout;
     
+    console.log(`🕐 Timer effect: isRecording=${isRecording}, recordingStartTime=${recordingStartTime?.toISOString()}`);
+    
     if (isRecording && recordingStartTime) {
+      console.log('🕐 Starting timer interval for recording stats');
       timerInterval = setInterval(() => {
         const now = new Date();
         const elapsed = now.getTime() - recordingStartTime.getTime();
         const minutes = Math.floor(elapsed / 60000);
         const seconds = Math.floor((elapsed % 60000) / 1000);
+        
+        console.log(`🕐 Timer: elapsed=${elapsed}ms, minutes=${minutes}, seconds=${seconds}`);
         
         let duration = '';
         if (minutes > 0) {
@@ -572,10 +577,13 @@ export default function Home() {
         console.log(`📊 Recording stats: ${duration}, ${distanceStr}, $${costStr} (${sessionLocations.length} locations)`);
         setRecordingStats({ duration, distance: distanceStr, cost: costStr });
       }, 1000);
+    } else {
+      console.log('🕐 Timer not starting: missing isRecording or recordingStartTime');
     }
     
     return () => {
       if (timerInterval) {
+        console.log('🕐 Clearing timer interval');
         clearInterval(timerInterval);
       }
     };
