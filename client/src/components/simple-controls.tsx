@@ -110,8 +110,8 @@ export default function SimpleControls({
   };
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[1000]">
-      <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200 px-6 py-3">
-        <div className="flex items-center gap-4">
+      <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200 px-8 py-3 min-w-fit">
+        <div className="flex items-center gap-4 whitespace-nowrap">
           {!isRecording ? (
             <Button
               onClick={handleStartRecording}

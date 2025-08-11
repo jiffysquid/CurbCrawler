@@ -243,6 +243,39 @@ export default function Home() {
       // Update recording path with KML location when recording
       if (isRecording) {
         console.log('🔴 Adding KML location to recording path:', newLocation.lat, newLocation.lng);
+        
+        // Calculate distance for KML simulation (same logic as GPS)
+        if (lastRecordingLocation) {
+          const segmentDistance = calculateDistance(
+            lastRecordingLocation.lat, 
+            lastRecordingLocation.lng, 
+            newLocation.lat, 
+            newLocation.lng
+          );
+          
+          console.log(`🔍 KML: Distance calc - last:(${lastRecordingLocation.lat.toFixed(6)}, ${lastRecordingLocation.lng.toFixed(6)}) -> new:(${newLocation.lat.toFixed(6)}, ${newLocation.lng.toFixed(6)}) = ${(segmentDistance * 1000).toFixed(1)}m`);
+          
+          // Add meaningful distance changes (> 1 meter) to avoid noise
+          if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+            setRealTimeDistance(prev => {
+              const newTotal = prev + segmentDistance;
+              console.log(`📊 KML distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
+              return newTotal;
+            });
+          } else {
+            console.log(`🔍 KML: Skipping small distance: ${(segmentDistance * 1000).toFixed(1)}m (< 1m threshold)`);
+          }
+        } else {
+          console.log('🔍 KML: No lastRecordingLocation available for distance calculation');
+        }
+        
+        // Update last recording location for next distance calculation
+        setLastRecordingLocation({ 
+          lat: newLocation.lat, 
+          lng: newLocation.lng, 
+          timestamp: Date.now() 
+        });
+        
         setRecordingPath(prev => {
           // Avoid duplicate points
           const lastPoint = prev[prev.length - 1];
@@ -267,7 +300,7 @@ export default function Home() {
     } catch (error) {
       console.error('🎯 Home: Error updating location state:', error);
     }
-  }, [isRecording]);
+  }, [isRecording, lastRecordingLocation, calculateDistance]);
 
   // Debug: Log when handleKMLLocationUpdate is created
   console.log('🏠 Home: handleKMLLocationUpdate type:', typeof handleKMLLocationUpdate);
@@ -277,14 +310,56 @@ export default function Home() {
   useEffect(() => {
     console.log('🎯 Home: Setting up global KML callback [REFRESH]');
     
+    // Capture current values in closure
+    const getCurrentValues = () => ({
+      isRecording,
+      lastRecordingLocation,
+      setRealTimeDistance,
+      setLastRecordingLocation,
+      setRecordingPath
+    });
+    
     (window as any).kmlLocationCallback = (newLocation: { lat: number; lng: number; accuracy?: number }) => {
       console.log('🎯 Home: Global KML callback received:', newLocation.lat, newLocation.lng);
+      const values = getCurrentValues();
       setLocation(newLocation);
       
       // Update recording path with KML location when recording
-      if (isRecording) {
+      if (values.isRecording) {
         console.log('🔴 Adding global KML location to recording path:', newLocation.lat, newLocation.lng);
-        setRecordingPath(prev => {
+        
+        // Calculate distance for global KML callback (same logic as other handlers)
+        if (values.lastRecordingLocation) {
+          const segmentDistance = calculateDistance(
+            values.lastRecordingLocation.lat, 
+            values.lastRecordingLocation.lng, 
+            newLocation.lat, 
+            newLocation.lng
+          );
+          
+          console.log(`🔍 Global KML: Distance calc - last:(${values.lastRecordingLocation.lat.toFixed(6)}, ${values.lastRecordingLocation.lng.toFixed(6)}) -> new:(${newLocation.lat.toFixed(6)}, ${newLocation.lng.toFixed(6)}) = ${(segmentDistance * 1000).toFixed(1)}m`);
+          
+          if (segmentDistance > 0.001) { // 0.001 km = 1 meter
+            values.setRealTimeDistance(prev => {
+              const newTotal = prev + segmentDistance;
+              console.log(`📊 Global KML distance: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
+              return newTotal;
+            });
+          } else {
+            console.log(`🔍 Global KML: Skipping small distance: ${(segmentDistance * 1000).toFixed(1)}m (< 1m threshold)`);
+          }
+        } else {
+          console.log('🔍 Global KML: No lastRecordingLocation available for distance calculation');
+        }
+        
+        // Update last recording location
+        values.setLastRecordingLocation({ 
+          lat: newLocation.lat, 
+          lng: newLocation.lng, 
+          timestamp: Date.now() 
+        });
+        
+        values.setRecordingPath(prev => {
           const lastPoint = prev[prev.length - 1];
           if (lastPoint && 
               Math.abs(lastPoint.lat - newLocation.lat) < 0.00001 && 
@@ -309,7 +384,7 @@ export default function Home() {
       console.log('🎯 Home: Removing global KML callback');
       delete (window as any).kmlLocationCallback;
     };
-  }, [isRecording]);
+  }, [isRecording, lastRecordingLocation, calculateDistance]);
 
   // Handle GPS errors
   useEffect(() => {
