@@ -1406,7 +1406,10 @@ export default function MapboxMap({
         </Button>
         
         <Button
-          onClick={toggleZoom}
+          onClick={() => {
+            console.log('🔍 Button clicked! Testing basic handler');
+            toggleZoom();
+          }}
           size="sm"
           variant="outline"
           className={`bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg ${
