@@ -544,6 +544,7 @@ export default function Home() {
     let timerInterval: NodeJS.Timeout;
     
     console.log(`🕐 Timer effect triggered: isRecording=${isRecording}, recordingStartTime=${recordingStartTime?.toISOString()}, realTimeDistance=${realTimeDistance}`);
+    console.log(`🕐 Type checks: isRecording=${typeof isRecording} (${isRecording}), recordingStartTime=${typeof recordingStartTime} (${!!recordingStartTime})`);
     
     if (isRecording && recordingStartTime) {
       console.log('🕐 ✅ Starting timer interval for recording stats');
@@ -563,6 +564,7 @@ export default function Home() {
         }
         
         // Use real-time distance calculation for immediate updates
+        // Get latest realTimeDistance value to avoid closure issues
         const distanceKm = realTimeDistance;
         
         // Format distance display
@@ -587,7 +589,7 @@ export default function Home() {
         clearInterval(timerInterval);
       }
     };
-  }, [isRecording, recordingStartTime, realTimeDistance]);
+  }, [isRecording, recordingStartTime]);
 
   const handleStartSession = () => {
     if (!location) {
