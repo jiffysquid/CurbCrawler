@@ -7,7 +7,7 @@ import { PersistentPath } from '../lib/utils';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Navigation, Info, Users, Car, Building, X, Plus, Trash2 } from 'lucide-react';
+import { MapPin, Navigation, Info, Users, Car, Building, X, Plus, Trash2, Target } from 'lucide-react';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -458,6 +458,15 @@ export default function MapboxMap({
 
     map.on('load', () => {
       console.log('✅ Mapbox GL JS map loaded successfully');
+      
+      // Immediately center on current location if available
+      if (currentLocation) {
+        map.setCenter([currentLocation.lng, currentLocation.lat]);
+        map.setZoom(16.5);
+        map.setPitch(40);
+        console.log('🎯 Map immediately centered on current location:', currentLocation.lat, currentLocation.lng);
+      }
+      
       setMapReady(true);
       
       // Add sources for dynamic data
@@ -799,21 +808,20 @@ export default function MapboxMap({
       }
     }
 
-    // Smooth camera following instead of easeTo which conflicts with rotation
-    targetCameraPositionRef.current = { lat, lng };
-    animateCameraFollow({ lat, lng });
+    // Always center the map immediately on the vehicle to avoid offset
+    map.setCenter([lng, lat]);
+    map.setZoom(16.5);
+    map.setPitch(40);
     
-    if (isDrivingMode) {
-      // Set zoom and pitch for driving mode without animation to avoid conflicts
-      map.setZoom(16.5);
-      map.setPitch(40);
-      
-      // Reset padding to center the vehicle on screen
-      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-      
-      console.log('🗺️ Camera following vehicle in driving mode - centered position');
-    } else {
-      console.log(`🗺️ Camera following vehicle - smooth animation`);
+    // Reset padding to center the vehicle on screen
+    map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+    
+    console.log('🗺️ Map centered on vehicle at:', lat, lng);
+    
+    // Then apply smooth following for future updates if not the first location
+    if (previousLocationRef.current) {
+      targetCameraPositionRef.current = { lat, lng };
+      animateCameraFollow({ lat, lng });
     }
 
     previousLocationRef.current = currentLocation;
@@ -1181,6 +1189,16 @@ export default function MapboxMap({
     }
   };
 
+  // Center map on van immediately (fix for offset issues)
+  const centerOnVan = () => {
+    if (mapRef.current && currentLocation) {
+      mapRef.current.setCenter([currentLocation.lng, currentLocation.lat]);
+      mapRef.current.setZoom(16.5);
+      mapRef.current.setPitch(40);
+      console.log('🎯 Map manually centered on van at:', currentLocation.lat, currentLocation.lng);
+    }
+  };
+
   // Update pins on map when pins change
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
@@ -1369,6 +1387,16 @@ export default function MapboxMap({
           disabled={mapPins.length >= 9 || !currentLocation}
         >
           <MapPin className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          onClick={centerOnVan}
+          size="sm"
+          variant="outline"
+          className="bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg bg-red-50 border-red-300"
+          title="Center on Van"
+        >
+          <Target className="h-4 w-4" />
         </Button>
         
         <Button
