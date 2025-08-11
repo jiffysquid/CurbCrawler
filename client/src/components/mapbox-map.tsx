@@ -319,6 +319,18 @@ export default function MapboxMap({
       cancelAnimationFrame(cameraAnimationRef.current);
     }
     
+    // Calculate camera offset to position van 20% lower on screen
+    // At zoom level 16.5, approximately 0.001 degrees latitude = ~111 meters
+    // Offset camera north by about 20% of viewport height in degrees
+    const zoom = map.getZoom();
+    const latOffset = (0.002 * Math.pow(2, 16.5 - zoom)) * 0.2; // 20% offset scaled by zoom
+    
+    // Offset the target position north (higher lat) so vehicle appears lower
+    const offsetTargetPosition = {
+      lng: targetPosition.lng,
+      lat: targetPosition.lat + latOffset
+    };
+    
     const startTime = performance.now();
     const duration = 500; // 500ms for smooth camera following
     const startCenter = map.getCenter();
@@ -330,8 +342,8 @@ export default function MapboxMap({
       // Ease-out function for smooth camera movement
       const easeOut = 1 - Math.pow(1 - progress, 2);
       
-      const newLng = startCenter.lng + ((targetPosition.lng - startCenter.lng) * easeOut);
-      const newLat = startCenter.lat + ((targetPosition.lat - startCenter.lat) * easeOut);
+      const newLng = startCenter.lng + ((offsetTargetPosition.lng - startCenter.lng) * easeOut);
+      const newLat = startCenter.lat + ((offsetTargetPosition.lat - startCenter.lat) * easeOut);
       
       map.setCenter([newLng, newLat]);
       
@@ -339,7 +351,7 @@ export default function MapboxMap({
         cameraAnimationRef.current = requestAnimationFrame(animate);
       } else {
         // Ensure we end exactly at target
-        map.setCenter([targetPosition.lng, targetPosition.lat]);
+        map.setCenter([offsetTargetPosition.lng, offsetTargetPosition.lat]);
         cameraAnimationRef.current = null;
       }
     };
@@ -676,10 +688,12 @@ export default function MapboxMap({
       // DISABLED: Vehicle rotation can cause crashes during recording
       // Vehicle now stays fixed pointing upward for stability
 
-      // Update map center during recording for smooth following
+      // Update map center during recording for smooth following with 20% offset
       if (isRecording) {
+        const zoom = mapRef.current.getZoom();
+        const latOffset = (0.002 * Math.pow(2, 16.5 - zoom)) * 0.2; // 20% offset scaled by zoom
         mapRef.current.easeTo({
-          center: [currentLng, currentLat],
+          center: [currentLng, currentLat + latOffset],
           duration: 100,
           essential: true
         });
