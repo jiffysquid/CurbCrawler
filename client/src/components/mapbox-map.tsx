@@ -272,8 +272,52 @@ export default function MapboxMap({
 
   // Smooth vehicle position interpolation state
   const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const interpolationStateRef = useRef<{
+    isInterpolating: boolean;
+    startPosition: { lat: number; lng: number } | null;
+    targetPosition: { lat: number; lng: number } | null;
+    startTime: number;
+    duration: number;
+  }>({
+    isInterpolating: false,
+    startPosition: null,
+    targetPosition: null,
+    startTime: 0,
+    duration: 800 // 800ms for smooth interpolation
+  });
 
-  // Smooth vehicle position animation with improved interpolation
+  // Advanced smooth interpolation system for vehicle movement
+  const interpolateVehiclePosition = useCallback(() => {
+    if (!vehicleMarkerRef.current || !interpolationStateRef.current.isInterpolating) return;
+    
+    const state = interpolationStateRef.current;
+    const currentTime = performance.now();
+    const elapsed = currentTime - state.startTime;
+    const progress = Math.min(elapsed / state.duration, 1);
+    
+    if (!state.startPosition || !state.targetPosition) return;
+    
+    // Smooth easing function - ease out for natural deceleration
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
+    
+    const newLat = state.startPosition.lat + ((state.targetPosition.lat - state.startPosition.lat) * easedProgress);
+    const newLng = state.startPosition.lng + ((state.targetPosition.lng - state.startPosition.lng) * easedProgress);
+    
+    vehicleMarkerRef.current.setLngLat([newLng, newLat]);
+    currentVehiclePositionRef.current = { lat: newLat, lng: newLng };
+    
+    if (progress < 1) {
+      vehicleAnimationRef.current = requestAnimationFrame(interpolateVehiclePosition);
+    } else {
+      // Animation complete
+      vehicleMarkerRef.current.setLngLat([state.targetPosition.lng, state.targetPosition.lat]);
+      currentVehiclePositionRef.current = state.targetPosition;
+      interpolationStateRef.current.isInterpolating = false;
+      vehicleAnimationRef.current = null;
+    }
+  }, []);
+
+  // Start smooth interpolation to target position
   const animateVehiclePosition = useCallback((targetPosition: { lat: number; lng: number }) => {
     if (!vehicleMarkerRef.current || !mapRef.current) return;
     
@@ -286,48 +330,30 @@ export default function MapboxMap({
     );
     
     // If distance is very small, just set position directly
-    if (distance < 0.00001) { // ~1 meter - smaller threshold for direct positioning  
+    if (distance < 0.000005) { // ~0.5 meter - very small threshold
       vehicleMarkerRef.current.setLngLat([targetPosition.lng, targetPosition.lat]);
       currentVehiclePositionRef.current = targetPosition;
       return;
     }
     
-    // Cancel any existing animation to prevent overlap
+    // Cancel any existing animation
     if (vehicleAnimationRef.current) {
       cancelAnimationFrame(vehicleAnimationRef.current);
       vehicleAnimationRef.current = null;
     }
     
-    // Animate the vehicle position
-    const startTime = performance.now();
-    const duration = 150; // 150ms for very smooth, responsive movement
-    const startPosition = currentPosition;
-    
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Linear interpolation for very smooth movement
-      const easedProgress = progress;
-      
-      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easedProgress);
-      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easedProgress);
-      
-      vehicleMarkerRef.current?.setLngLat([newLng, newLat]);
-      currentVehiclePositionRef.current = { lat: newLat, lng: newLng };
-      
-      if (progress < 1) {
-        vehicleAnimationRef.current = requestAnimationFrame(animate);
-      } else {
-        // Ensure we end exactly at target
-        vehicleMarkerRef.current?.setLngLat([targetPosition.lng, targetPosition.lat]);
-        currentVehiclePositionRef.current = targetPosition;
-        vehicleAnimationRef.current = null;
-      }
+    // Set up interpolation state
+    interpolationStateRef.current = {
+      isInterpolating: true,
+      startPosition: currentPosition,
+      targetPosition: targetPosition,
+      startTime: performance.now(),
+      duration: Math.min(800, Math.max(200, distance * 1000000)) // Dynamic duration based on distance
     };
     
-    vehicleAnimationRef.current = requestAnimationFrame(animate);
-  }, []);
+    // Start interpolation
+    vehicleAnimationRef.current = requestAnimationFrame(interpolateVehiclePosition);
+  }, [interpolateVehiclePosition]);
 
   // Smooth camera following animation  
   const targetCameraPositionRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -802,18 +828,10 @@ export default function MapboxMap({
         Math.pow(lng - currentPos.lng, 2)
       );
       
-      // Always update vehicle position to ensure it's visible
-      // Use animation for significant movements, direct update for small ones
-      if (movementDistance > 0.00002) {
-        targetVehiclePositionRef.current = { lat, lng };
-        animateVehiclePosition({ lat, lng });
-        console.log('🚐 Vehicle marker animating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
-      } else {
-        // Direct update for small movements to ensure vehicle stays visible
-        vehicleMarkerRef.current.setLngLat([lng, lat]);
-        currentVehiclePositionRef.current = { lat, lng };
-        console.log('🚐 Vehicle marker positioned directly at:', lat, lng, '(small movement)');
-      }
+      // Always animate for smooth movement - no direct updates to avoid jerks
+      targetVehiclePositionRef.current = { lat, lng };
+      animateVehiclePosition({ lat, lng });
+      console.log('🚐 Vehicle interpolating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
       
       // Ensure vehicle always points up in driving mode
       if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
@@ -822,15 +840,34 @@ export default function MapboxMap({
       }
     }
 
-    // Always ensure map is centered on vehicle
-    map.setCenter([lng, lat]);
-    map.setZoom(16.5);
-    map.setPitch(40);
+    // Smoothly follow vehicle with less aggressive centering
+    if (!previousLocationRef.current) {
+      // First time - center immediately
+      map.setCenter([lng, lat]);
+      map.setZoom(16.5);
+      map.setPitch(40);
+    } else {
+      // Gentle camera following for subsequent updates
+      const currentCenter = map.getCenter();
+      const distanceFromCenter = Math.sqrt(
+        Math.pow(lat - currentCenter.lat, 2) + 
+        Math.pow(lng - currentCenter.lng, 2)
+      );
+      
+      // Only move camera if vehicle is getting far from center
+      if (distanceFromCenter > 0.0002) { // ~20 meters from center
+        map.easeTo({
+          center: [lng, lat],
+          duration: 1000,
+          easing: (t) => t * (2 - t) // Ease out
+        });
+      }
+    }
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
     
-    console.log('🗺️ Map centered on vehicle at:', lat, lng);
+    console.log('🗺️ Map following vehicle at:', lat, lng);
 
     previousLocationRef.current = currentLocation;
     
