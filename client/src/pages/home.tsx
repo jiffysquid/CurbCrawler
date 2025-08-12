@@ -143,6 +143,7 @@ export default function Home() {
             if (segmentDistance > 0.001) { // 0.001 km = 1 meter
               setRealTimeDistance(prev => {
                 const newTotal = prev + segmentDistance;
+                realTimeDistanceRef.current = newTotal; // CRITICAL FIX: Update ref for timer access
                 console.log(`📊 GPS distance update: +${(segmentDistance * 1000).toFixed(0)}m, total: ${(newTotal * 1000).toFixed(0)}m`);
                 return newTotal;
               });

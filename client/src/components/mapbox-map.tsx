@@ -1406,16 +1406,20 @@ export default function MapboxMap({
         </Button>
         
         <Button
-          onClick={() => {
-            console.log('🔍 Button clicked! Testing basic handler');
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔍 Button clicked! Event:', e.type);
+            console.log('🔍 Current isZoomedToVan state:', isZoomedToVan);
             toggleZoom();
           }}
           size="sm"
           variant="outline"
-          className={`bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg ${
+          className={`bg-white/90 backdrop-blur-sm border-gray-300 shadow-lg hover:bg-gray-100 cursor-pointer ${
             isZoomedToVan ? 'bg-blue-50 border-blue-300' : 'bg-green-50 border-green-300'
           }`}
           title={isZoomedToVan ? 'Zoom to Suburb' : 'Zoom to Van'}
+          style={{ pointerEvents: 'auto' }}
         >
           {isZoomedToVan ? (
             <Building className="h-4 w-4" />
