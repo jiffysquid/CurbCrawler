@@ -840,19 +840,61 @@ export default function MapboxMap({
       }
     }
 
-    // Smooth camera following with verified movement
+    // Smooth camera following with enhanced debugging
     try {
-      // Stop any existing animations first to prevent conflicts
-      map.stop();
+      console.log('🗺️ Map ready state:', mapReady, 'Map loaded:', map.loaded());
       
-      // Use smooth easeTo animation for natural movement
-      map.easeTo({
-        center: [lng, lat],
+      // Check if map is fully loaded before camera operations
+      if (!map.loaded()) {
+        console.warn('⚠️ Map not loaded yet, skipping camera movement');
+        return;
+      }
+      
+      // Stop any existing animations first
+      map.stop();
+      console.log('🛑 Stopped existing map animations');
+      
+      // Get current camera position for comparison
+      const currentCenter = map.getCenter();
+      const currentZoom = map.getZoom();
+      console.log('📍 Current camera:', currentCenter.lat.toFixed(6), currentCenter.lng.toFixed(6), 'zoom:', currentZoom.toFixed(1));
+      console.log('🎯 Target camera:', lat.toFixed(6), lng.toFixed(6), 'zoom: 16.5');
+      
+      // Use smooth easeTo animation with promise handling
+      const cameraOptions = {
+        center: [lng, lat] as [number, number],
         zoom: 16.5,
         pitch: 40,
-        duration: 500, // Smooth 500ms animation
-        easing: (t) => 1 - Math.pow(1 - t, 3) // Ease out cubic for smooth deceleration
-      });
+        duration: 500,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3)
+      };
+      
+      console.log('🎬 Starting easeTo animation with options:', cameraOptions);
+      
+      map.easeTo(cameraOptions);
+      
+      // Verify the animation started by checking if center is changing
+      setTimeout(() => {
+        const newCenter = map.getCenter();
+        const newZoom = map.getZoom();
+        console.log('🔍 After animation start - Camera:', newCenter.lat.toFixed(6), newCenter.lng.toFixed(6), 'zoom:', newZoom.toFixed(1));
+        
+        // If camera hasn't moved, force direct movement
+        const distanceMoved = Math.sqrt(
+          Math.pow(newCenter.lat - currentCenter.lat, 2) + 
+          Math.pow(newCenter.lng - currentCenter.lng, 2)
+        );
+        
+        if (distanceMoved < 0.00001) { // Less than ~1 meter
+          console.warn('⚠️ easeTo animation failed, using direct fallback');
+          map.setCenter([lng, lat]);
+          map.setZoom(16.5);
+          map.setPitch(40);
+          console.log('✅ Applied direct camera movement as fallback');
+        } else {
+          console.log('✅ easeTo animation working correctly');
+        }
+      }, 100);
       
       console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
     } catch (error) {
@@ -861,6 +903,7 @@ export default function MapboxMap({
       map.setCenter([lng, lat]);
       map.setZoom(16.5);
       map.setPitch(40);
+      console.log('✅ Applied fallback camera movement');
     }
     
     // Reset padding to center the vehicle on screen
