@@ -840,16 +840,16 @@ export default function MapboxMap({
       }
     }
 
-    // Always center map on vehicle for smooth following
+    // Camera following for vehicle movement - ALWAYS move camera
     map.easeTo({
       center: [lng, lat],
       zoom: 16.5,
       pitch: 40,
-      duration: previousLocationRef.current ? 400 : 0, // Instant first time, smooth afterwards
+      duration: 500, // Always smooth camera movement
       easing: (t) => 1 - Math.pow(1 - t, 2) // Ease out quadratic
     });
     
-    console.log('🗺️ Map camera moving to:', lat, lng, previousLocationRef.current ? '(smooth)' : '(instant)');
+    console.log('🗺️ Map camera actively following vehicle to:', lat, lng);
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
