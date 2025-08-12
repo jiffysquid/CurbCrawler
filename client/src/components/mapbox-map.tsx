@@ -273,7 +273,7 @@ export default function MapboxMap({
   // Smooth vehicle position interpolation state
   const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
 
-  // Smooth vehicle position animation
+  // Smooth vehicle position animation with improved interpolation
   const animateVehiclePosition = useCallback((targetPosition: { lat: number; lng: number }) => {
     if (!vehicleMarkerRef.current || !mapRef.current) return;
     
@@ -286,7 +286,7 @@ export default function MapboxMap({
     );
     
     // If distance is very small, just set position directly
-    if (distance < 0.00001) { // ~1 meter
+    if (distance < 0.00002) { // ~2 meters - increased threshold for smoother movement
       vehicleMarkerRef.current.setLngLat([targetPosition.lng, targetPosition.lat]);
       currentVehiclePositionRef.current = targetPosition;
       return;
@@ -796,10 +796,19 @@ export default function MapboxMap({
         console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
       }
     } else {
-      // Animate vehicle to new position smoothly
-      targetVehiclePositionRef.current = { lat, lng };
-      animateVehiclePosition({ lat, lng });
-      console.log('🚐 Vehicle marker animating to:', lat, lng);
+      // Check if significant movement has occurred before animating
+      const currentPos = currentVehiclePositionRef.current || { lat, lng };
+      const movementDistance = Math.sqrt(
+        Math.pow(lat - currentPos.lat, 2) + 
+        Math.pow(lng - currentPos.lng, 2)
+      );
+      
+      // Only animate if movement is significant (> 3 meters)
+      if (movementDistance > 0.00003) {
+        targetVehiclePositionRef.current = { lat, lng };
+        animateVehiclePosition({ lat, lng });
+        console.log('🚐 Vehicle marker animating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
+      }
       
       // Ensure vehicle always points up in driving mode
       if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
@@ -808,10 +817,8 @@ export default function MapboxMap({
       }
     }
 
-    // Always center the map immediately on the vehicle to avoid offset
-    map.setCenter([lng, lat]);
-    map.setZoom(16.5);
-    map.setPitch(40);
+    // Use smooth camera following instead of immediate centering
+    animateCameraFollow({ lat, lng });
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
