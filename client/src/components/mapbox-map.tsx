@@ -840,16 +840,27 @@ export default function MapboxMap({
       }
     }
 
-    // Camera following for vehicle movement - ALWAYS move camera
-    map.easeTo({
-      center: [lng, lat],
-      zoom: 16.5,
-      pitch: 40,
-      duration: 500, // Always smooth camera movement
-      easing: (t) => 1 - Math.pow(1 - t, 2) // Ease out quadratic
-    });
-    
-    console.log('🗺️ Map camera actively following vehicle to:', lat, lng);
+    // Force camera to follow vehicle immediately - no conflicts
+    try {
+      // Stop any existing camera animations first
+      map.stop();
+      
+      // Force immediate camera movement
+      map.easeTo({
+        center: [lng, lat],
+        zoom: 16.5,
+        pitch: 40,
+        duration: 300,
+        easing: (t) => t // Linear easing for predictable movement
+      });
+      
+      console.log('🗺️ FORCED camera movement to:', lat, lng, 'zoom:', map.getZoom());
+    } catch (error) {
+      console.error('🚨 Camera movement failed:', error);
+      // Fallback to instant centering
+      map.setCenter([lng, lat]);
+      console.log('🗺️ Fallback instant center to:', lat, lng);
+    }
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
@@ -867,7 +878,7 @@ export default function MapboxMap({
         cancelAnimationFrame(cameraAnimationRef.current);
       }
     };
-  }, [currentLocation, mapReady, isDrivingMode, animateVehiclePosition, animateCameraFollow]);
+  }, [currentLocation, mapReady, isDrivingMode, animateVehiclePosition]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery({
