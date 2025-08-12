@@ -803,11 +803,17 @@ export default function MapboxMap({
         Math.pow(lng - currentPos.lng, 2)
       );
       
-      // Only animate if movement is significant (> 3 meters)
+      // Always update vehicle position to ensure it's visible
+      // Use animation for significant movements, direct update for small ones
       if (movementDistance > 0.00003) {
         targetVehiclePositionRef.current = { lat, lng };
         animateVehiclePosition({ lat, lng });
         console.log('🚐 Vehicle marker animating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
+      } else {
+        // Direct update for small movements to ensure vehicle stays visible
+        vehicleMarkerRef.current.setLngLat([lng, lat]);
+        currentVehiclePositionRef.current = { lat, lng };
+        console.log('🚐 Vehicle marker positioned directly at:', lat, lng, '(small movement)');
       }
       
       // Ensure vehicle always points up in driving mode
@@ -817,19 +823,15 @@ export default function MapboxMap({
       }
     }
 
-    // Use smooth camera following instead of immediate centering
-    animateCameraFollow({ lat, lng });
+    // Always ensure map is centered on vehicle
+    map.setCenter([lng, lat]);
+    map.setZoom(16.5);
+    map.setPitch(40);
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
     
     console.log('🗺️ Map centered on vehicle at:', lat, lng);
-    
-    // Then apply smooth following for future updates if not the first location
-    if (previousLocationRef.current) {
-      targetCameraPositionRef.current = { lat, lng };
-      animateCameraFollow({ lat, lng });
-    }
 
     previousLocationRef.current = currentLocation;
     
