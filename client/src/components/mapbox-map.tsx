@@ -32,6 +32,24 @@ interface SuburbInfo {
   };
 }
 
+interface ClearoutSchedule {
+  current?: string[];
+  next?: string[];
+}
+
+interface SuburbData {
+  name: string;
+  clearoutType?: 'current' | 'next' | 'none';
+  coordinates: number[][];
+}
+
+interface DemographicsData {
+  name: string;
+  population: number;
+  medianHousePrice: number;
+  starRating: number;
+}
+
 export default function MapboxMap({
   currentLocation,
   isRecording,
@@ -84,6 +102,7 @@ export default function MapboxMap({
   const targetBearingRef = useRef<number | null>(null);
   const mapBearingRef = useRef<number | null>(null);
   const currentVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Set up Mapbox access token
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiamlmeXNxdWlkIiwiYSI6ImNqZXMwdXBqbzBlZWIyeHVtd294N2Y0OWcifQ.ss-8bQczO8uoCANcVIYIYA';
@@ -273,7 +292,6 @@ export default function MapboxMap({
   }, [deviceHeading, isDrivingMode, currentLocation, calculateMovementBearing, animateBearing]);
 
   // Smooth vehicle position interpolation state
-  const targetVehiclePositionRef = useRef<{ lat: number; lng: number } | null>(null);
   const interpolationStateRef = useRef<{
     isInterpolating: boolean;
     startPosition: { lat: number; lng: number } | null;
@@ -716,6 +734,8 @@ export default function MapboxMap({
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
   };
 
+
+
   // Smooth vehicle marker animation
   const animateVehicle = useCallback(() => {
     if (!mapRef.current || !vehicleMarkerRef.current || !interpolationRef.current.isAnimating) return;
@@ -925,95 +945,15 @@ export default function MapboxMap({
     // Update previous location for future reference
     previousLocationRef.current = currentLocation;
   }, [currentLocation]);
-      
-      // Check if map is fully loaded before camera operations
-      if (!map.loaded()) {
-        console.warn('⚠️ Map not loaded yet, skipping camera movement');
-        return;
-      }
-      
-      // Stop any existing animations first
-      map.stop();
-      console.log('🛑 Stopped existing map animations');
-      
-      // Get current camera position for comparison
-      const currentCenter = map.getCenter();
-      const currentZoom = map.getZoom();
-      console.log('📍 Current camera:', currentCenter.lat.toFixed(6), currentCenter.lng.toFixed(6), 'zoom:', currentZoom.toFixed(1));
-      console.log('🎯 Target camera:', lat.toFixed(6), lng.toFixed(6), 'zoom: 16.5');
-      
-      // Use smooth easeTo animation with promise handling
-      const cameraOptions = {
-        center: [lng, lat] as [number, number],
-        zoom: 16.5,
-        pitch: 40,
-        duration: 500,
-        easing: (t: number) => 1 - Math.pow(1 - t, 3)
-      };
-      
-      console.log('🎬 Starting easeTo animation with options:', cameraOptions);
-      
-      map.easeTo(cameraOptions);
-      
-      // Verify the animation started by checking if center is changing
-      setTimeout(() => {
-        const newCenter = map.getCenter();
-        const newZoom = map.getZoom();
-        console.log('🔍 After animation start - Camera:', newCenter.lat.toFixed(6), newCenter.lng.toFixed(6), 'zoom:', newZoom.toFixed(1));
-        
-        // If camera hasn't moved, force direct movement
-        const distanceMoved = Math.sqrt(
-          Math.pow(newCenter.lat - currentCenter.lat, 2) + 
-          Math.pow(newCenter.lng - currentCenter.lng, 2)
-        );
-        
-        if (distanceMoved < 0.00001) { // Less than ~1 meter
-          console.warn('⚠️ easeTo animation failed, using direct fallback');
-          map.setCenter([lng, lat]);
-          map.setZoom(16.5);
-          map.setPitch(40);
-          console.log('✅ Applied direct camera movement as fallback');
-        } else {
-          console.log('✅ easeTo animation working correctly');
-        }
-      }, 100);
-      
-      console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
-    } catch (error) {
-      console.error('🚨 Smooth camera movement failed, using fallback:', error);
-      // Fallback to direct setting if easeTo fails
-      map.setCenter([lng, lat]);
-      map.setZoom(16.5);
-      map.setPitch(40);
-      console.log('✅ Applied fallback camera movement');
-    }
-    
-    // Reset padding to center the vehicle on screen
-    map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-    
-    console.log('🗺️ Map following vehicle at:', lat, lng);
-
-    previousLocationRef.current = currentLocation;
-    
-    // Cleanup animations on unmount
-    return () => {
-      if (vehicleAnimationRef.current) {
-        cancelAnimationFrame(vehicleAnimationRef.current);
-      }
-      if (cameraAnimationRef.current) {
-        cancelAnimationFrame(cameraAnimationRef.current);
-      }
-    };
-  }, [currentLocation, mapReady, isDrivingMode, animateVehiclePosition]);
 
   // Load clearout schedule to get current and next suburbs
-  const { data: clearoutSchedule } = useQuery({
+  const { data: clearoutSchedule } = useQuery<ClearoutSchedule>({
     queryKey: ['/api/clearout-schedule'],
     enabled: Boolean(mapReady)
   });
 
   // Load suburb boundaries
-  const { data: suburbs } = useQuery({
+  const { data: suburbs } = useQuery<SuburbData[]>({
     queryKey: ['/api/suburbs/boundaries'],
     enabled: Boolean(showSuburbs && mapReady && clearoutSchedule)
   });
@@ -1025,16 +965,16 @@ export default function MapboxMap({
   });
 
   // Load demographics with proper current/next suburb parameters
-  const { data: demographicsArray } = useQuery({
+  const { data: demographicsArray } = useQuery<DemographicsData[]>({
     queryKey: ['/api/suburbs/demographics', clearoutSchedule?.current, clearoutSchedule?.next],
     queryFn: async () => {
       if (!clearoutSchedule) return [];
       const params = new URLSearchParams();
       if (clearoutSchedule.current) {
-        clearoutSchedule.current.forEach(suburb => params.append('current', suburb));
+        clearoutSchedule.current.forEach((suburb: string) => params.append('current', suburb));
       }
       if (clearoutSchedule.next) {
-        clearoutSchedule.next.forEach(suburb => params.append('next', suburb));
+        clearoutSchedule.next.forEach((suburb: string) => params.append('next', suburb));
       }
       console.log('🔍 Fetching demographics with params:', params.toString());
       const response = await fetch(`/api/suburbs/demographics?${params}`);
@@ -1048,12 +988,12 @@ export default function MapboxMap({
 
   // Convert demographics array to object keyed by suburb name for individual lookups
   const demographics = useMemo(() => {
-    if (!demographicsArray || !Array.isArray(demographicsArray)) return {};
+    if (!demographicsArray || !Array.isArray(demographicsArray)) return {} as Record<string, DemographicsData>;
     console.log('🔍 Converting demographics array to object:', demographicsArray.length, 'suburbs');
-    return demographicsArray.reduce((acc, suburb) => {
+    return demographicsArray.reduce((acc: Record<string, DemographicsData>, suburb: DemographicsData) => {
       acc[suburb.name] = suburb;
       return acc;
-    }, {});
+    }, {} as Record<string, DemographicsData>);
   }, [demographicsArray]);
 
   // Use prop-based current suburb only (remove internal query to prevent conflicts)
@@ -1069,7 +1009,7 @@ export default function MapboxMap({
   // Update current suburb info with clearout type
   useEffect(() => {
     if (stableCurrentSuburb && suburbs) {
-      const suburbData = suburbs.find((s: any) => s.name === stableCurrentSuburb.suburb);
+      const suburbData = suburbs.find((s: SuburbData) => s.name === stableCurrentSuburb.suburb);
       if (suburbData) {
         setCurrentSuburbInfo({
           name: suburbData.name,
@@ -1093,22 +1033,22 @@ export default function MapboxMap({
     
     if (source && suburbs) {
       // Filter to only show current and next week clearouts
-      const filteredSuburbs = suburbs.filter((suburb: any) => {
+      const filteredSuburbs = suburbs.filter((suburb: SuburbData) => {
         const isCurrent = clearoutSchedule?.current?.includes(suburb.name) || suburb.clearoutType === 'current';
         const isNext = clearoutSchedule?.next?.includes(suburb.name) || suburb.clearoutType === 'next';
         return isCurrent || isNext;
       });
 
-      const features = filteredSuburbs.map((suburb: any) => {
+      const features = filteredSuburbs.map((suburb: SuburbData) => {
         const isCurrent = clearoutSchedule?.current?.includes(suburb.name);
         const isNext = clearoutSchedule?.next?.includes(suburb.name);
         const clearoutType = isCurrent ? 'current' : isNext ? 'next' : 'none';
         
         return {
-          type: 'Feature',
+          type: 'Feature' as const,
           geometry: {
-            type: 'Polygon',
-            coordinates: [suburb.coordinates.map((coord: any) => [coord[1], coord[0]])]
+            type: 'Polygon' as const,
+            coordinates: [suburb.coordinates.map((coord: number[]) => [coord[1], coord[0]])]
           },
           properties: {
             name: suburb.name,
