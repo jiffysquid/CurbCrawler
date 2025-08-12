@@ -840,20 +840,16 @@ export default function MapboxMap({
       }
     }
 
-    // Smooth camera following that works with vehicle interpolation
-    if (!previousLocationRef.current) {
-      // First time - center immediately
-      map.setCenter([lng, lat]);
-      map.setZoom(16.5);
-      map.setPitch(40);
-    } else {
-      // Always follow but with smooth camera movement
-      map.easeTo({
-        center: [lng, lat],
-        duration: 600, // 600ms smooth camera follow
-        easing: (t) => 1 - Math.pow(1 - t, 2) // Ease out quadratic
-      });
-    }
+    // Always center map on vehicle for smooth following
+    map.easeTo({
+      center: [lng, lat],
+      zoom: 16.5,
+      pitch: 40,
+      duration: previousLocationRef.current ? 400 : 0, // Instant first time, smooth afterwards
+      easing: (t) => 1 - Math.pow(1 - t, 2) // Ease out quadratic
+    });
+    
+    console.log('🗺️ Map camera moving to:', lat, lng, previousLocationRef.current ? '(smooth)' : '(instant)');
     
     // Reset padding to center the vehicle on screen
     map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
