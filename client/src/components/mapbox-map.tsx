@@ -809,8 +809,39 @@ export default function MapboxMap({
         
         console.log('🎯 GPS Interpolator -> Camera:', lat.toFixed(6), lng.toFixed(6));
         
-        // Use the existing camera/vehicle logic but with smooth interpolated positions
-        handleInterpolatedLocationUpdate(map, lat, lng);
+        // Direct camera update for KML simulation
+        try {
+          if (!map.loaded()) {
+            console.warn('⚠️ Map not loaded yet, skipping camera movement');
+            return;
+          }
+          
+          map.stop();
+          console.log('🛑 Stopped existing map animations');
+          
+          const cameraOptions = {
+            center: [lng, lat] as [number, number],
+            zoom: 16.5,
+            pitch: 40,
+            duration: 500,
+            easing: (t: number) => 1 - Math.pow(1 - t, 3)
+          };
+          
+          console.log('🎬 GPS Interpolator camera update:', lat.toFixed(6), lng.toFixed(6));
+          map.easeTo(cameraOptions);
+          
+          // Update vehicle marker position
+          if (vehicleMarkerRef.current) {
+            vehicleMarkerRef.current.setLngLat([lng, lat]);
+            console.log('🚐 Vehicle marker updated to:', lat.toFixed(6), lng.toFixed(6));
+          }
+          
+        } catch (error) {
+          console.error('🚨 GPS Interpolator camera update failed:', error);
+          map.setCenter([lng, lat]);
+          map.setZoom(16.5);
+          map.setPitch(40);
+        }
       });
       
       // Set interpolation duration to 400ms for smooth movement
@@ -944,7 +975,28 @@ export default function MapboxMap({
 
     // Update previous location for future reference
     previousLocationRef.current = currentLocation;
-  }, [currentLocation]);
+    
+    // For KML simulation, also directly update the map camera if GPS interpolator isn't moving enough
+    if (mapRef.current && mapReady && accuracy && accuracy <= 10) {
+      console.log('🗺️ KML simulation detected, ensuring camera follows');
+      
+      // Force camera update for KML simulation (high accuracy indicates simulation)
+      const map = mapRef.current;
+      try {
+        map.easeTo({
+          center: [lng, lat],
+          zoom: 16.5,
+          pitch: 40,
+          duration: 800,
+          essential: true,
+          easing: (t: number) => 1 - Math.pow(1 - t, 3)
+        });
+        console.log('🎬 Force camera update for KML simulation to:', lat.toFixed(6), lng.toFixed(6));
+      } catch (error) {
+        console.error('🚨 Force camera update failed:', error);
+      }
+    }
+  }, [currentLocation, mapReady]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery<ClearoutSchedule>({
