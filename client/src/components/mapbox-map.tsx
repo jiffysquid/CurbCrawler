@@ -840,32 +840,27 @@ export default function MapboxMap({
       }
     }
 
-    // DIRECT camera control - bypass all animations
+    // Smooth camera following with verified movement
     try {
-      console.log('🗺️ Current map center before move:', map.getCenter());
-      console.log('🗺️ Current map zoom before move:', map.getZoom());
-      
-      // Stop any existing animations
+      // Stop any existing animations first to prevent conflicts
       map.stop();
       
-      // Force immediate direct setting (no animations)
+      // Use smooth easeTo animation for natural movement
+      map.easeTo({
+        center: [lng, lat],
+        zoom: 16.5,
+        pitch: 40,
+        duration: 500, // Smooth 500ms animation
+        easing: (t) => 1 - Math.pow(1 - t, 3) // Ease out cubic for smooth deceleration
+      });
+      
+      console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
+    } catch (error) {
+      console.error('🚨 Smooth camera movement failed, using fallback:', error);
+      // Fallback to direct setting if easeTo fails
       map.setCenter([lng, lat]);
       map.setZoom(16.5);
       map.setPitch(40);
-      
-      console.log('🗺️ DIRECTLY set camera to:', lat, lng);
-      console.log('🗺️ Map center after move:', map.getCenter());
-      console.log('🗺️ Map zoom after move:', map.getZoom());
-      
-      // Verify the center actually changed
-      const newCenter = map.getCenter();
-      if (Math.abs(newCenter.lat - lat) > 0.001 || Math.abs(newCenter.lng - lng) > 0.001) {
-        console.error('🚨 Camera did NOT move! Target:', lat, lng, 'Actual:', newCenter.lat, newCenter.lng);
-      } else {
-        console.log('✅ Camera movement SUCCESSFUL');
-      }
-    } catch (error) {
-      console.error('🚨 Direct camera movement failed:', error);
     }
     
     // Reset padding to center the vehicle on screen
