@@ -58,17 +58,43 @@ export function calculateDistance(
   lat2: number, 
   lon2: number
 ): number {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const distance = R * c;
-  
-  return distance;
+  // Validate input parameters
+  if (typeof lat1 !== 'number' || typeof lon1 !== 'number' || 
+      typeof lat2 !== 'number' || typeof lon2 !== 'number' ||
+      isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+    console.error('Invalid coordinates in distance calculation:', { lat1, lon1, lat2, lon2 });
+    return 0;
+  }
+
+  // Check for reasonable coordinate ranges
+  if (Math.abs(lat1) > 90 || Math.abs(lat2) > 90 || 
+      Math.abs(lon1) > 180 || Math.abs(lon2) > 180) {
+    console.error('Coordinates out of valid range:', { lat1, lon1, lat2, lon2 });
+    return 0;
+  }
+
+  try {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    // Validate result
+    if (isNaN(distance) || distance < 0) {
+      console.error('Invalid distance calculation result:', distance);
+      return 0;
+    }
+    
+    return distance;
+  } catch (error) {
+    console.error('Error in distance calculation:', error);
+    return 0;
+  }
 }
 
 export function calculateBearing(

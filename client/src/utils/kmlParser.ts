@@ -59,8 +59,8 @@ export class KMLSimulator {
     
     console.log(`🚗 Starting KML simulation with ${this.points.length} points (speed: ${speedMultiplier}x)`);
     
-    // Simulate GPS updates every 1000ms divided by speed multiplier
-    const interval = Math.max(100, 1000 / speedMultiplier);
+    // Simulate GPS updates every 2000ms divided by speed multiplier (slower for stability)
+    const interval = Math.max(1000, 2000 / speedMultiplier);
     
     this.intervalId = window.setInterval(() => {
       if (this.currentIndex >= this.points.length) {
@@ -71,60 +71,46 @@ export class KMLSimulator {
       
       const point = this.points[this.currentIndex];
       
+      // Validate point data before processing
+      if (!point || typeof point.lat !== 'number' || typeof point.lng !== 'number' || 
+          isNaN(point.lat) || isNaN(point.lng)) {
+        console.error(`❌ KML: Invalid point data at index ${this.currentIndex}:`, point);
+        this.currentIndex++;
+        return;
+      }
+
       // Try callback first (for compatibility)
       if (this.onLocationUpdate) {
         try {
-          console.log(`🔄 KML: Calling location callback with:`, point.lat, point.lng);
           this.onLocationUpdate({
             lat: point.lat,
             lng: point.lng,
             accuracy: 5 // Simulate good GPS accuracy
           });
-          console.log(`✅ KML: Location callback completed successfully`);
         } catch (error) {
           console.error(`❌ KML: Location callback failed:`, error);
         }
-      } else {
-        console.warn(`⚠️ KML: No location callback set during simulation`);
       }
       
       // Direct window callback approach
       if ((window as any).kmlLocationCallback) {
         try {
-          console.log(`📞 KML: Calling global window callback:`, point.lat, point.lng);
           (window as any).kmlLocationCallback({
             lat: point.lat,
             lng: point.lng,
             accuracy: 5
           });
-          console.log(`✅ KML: Global callback completed successfully`);
         } catch (error) {
           console.error(`❌ KML: Global callback failed:`, error);
         }
-      } else {
-        console.warn(`⚠️ KML: No global callback available on window`);
       }
       
-      // Also emit window event as backup
-      const locationEvent = new CustomEvent('kml-location-update', {
-        detail: {
-          lat: point.lat,
-          lng: point.lng,
-          accuracy: 5
-        }
-      });
-      window.dispatchEvent(locationEvent);
-      console.log(`📡 KML: Dispatched window event for:`, point.lat, point.lng);
-      
-      console.log(`📍 KML simulation: Point ${this.currentIndex + 1}/${this.points.length} - ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`);
+      // Reduced logging for performance
+      if (this.currentIndex % 10 === 0) { // Log every 10th point
+        console.log(`📍 KML simulation: Point ${this.currentIndex + 1}/${this.points.length} - ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`);
+      }
       
       this.currentIndex++;
-      
-      // Debug: Log next point to verify progression
-      if (this.currentIndex < this.points.length) {
-        const nextPoint = this.points[this.currentIndex];
-        console.log(`🔜 Next KML point will be: ${nextPoint.lat.toFixed(6)}, ${nextPoint.lng.toFixed(6)}`);
-      }
     }, interval);
   }
 

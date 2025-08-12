@@ -9,7 +9,7 @@ import GPSDebug from "@/components/gps-debug";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useWakeLock } from "@/hooks/use-wake-lock";
-import { calculateDistance, savePersistentPath, loadPersistentPaths, PATH_COLORS, PersistentPath } from "@/lib/utils";
+import { calculateDistance, throttle, savePersistentPath, loadPersistentPaths, PATH_COLORS, PersistentPath } from "@/lib/utils";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionWithStats, LocationPoint } from "@shared/schema";
@@ -188,9 +188,11 @@ export default function Home() {
       }
       
       // Simplified suburb lookup - no delay during recording to avoid timer issues
-      updateCurrentSuburb(gpsLocation).catch(error => {
+      try {
+        updateCurrentSuburb(gpsLocation);
+      } catch (error) {
         console.log('Suburb lookup failed, continuing with GPS tracking:', error);
-      });
+      }
     }
   }, [gpsLocation, isRecording]);
 
@@ -210,22 +212,30 @@ export default function Home() {
     }
   }, [isRecording]);
 
-  // Function to update current suburb
-  const updateCurrentSuburb = async (location: { lat: number; lng: number }) => {
-    try {
-      const response = await fetch(`/api/suburbs/lookup?lat=${location.lat}&lng=${location.lng}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const newSuburb = data.suburb || 'Unknown';
-        if (newSuburb !== currentSuburb) {
-          console.log('🏘️ Suburb updated from', currentSuburb, 'to', newSuburb);
+  // Throttled suburb lookup to prevent excessive API calls
+  const updateCurrentSuburb = useCallback(
+    throttle(async (location: { lat: number; lng: number }) => {
+      try {
+        // Validate location data before API call
+        if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number' ||
+            isNaN(location.lat) || isNaN(location.lng)) {
+          console.error('Invalid location for suburb lookup:', location);
+          return;
         }
-        setCurrentSuburb(newSuburb);
+
+        const response = await fetch(`/api/suburbs/lookup?lat=${location.lat}&lng=${location.lng}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const newSuburb = data.suburb || 'Unknown';
+          if (newSuburb !== currentSuburb) {
+            console.log('🏘️ Suburb updated from', currentSuburb, 'to', newSuburb);
+          }
+          setCurrentSuburb(newSuburb);
       } else {
         console.log('Suburb lookup failed with status:', response.status);
         setCurrentSuburb('Unknown');
@@ -234,7 +244,9 @@ export default function Home() {
       console.log('Could not determine current suburb:', error);
       setCurrentSuburb('Unknown');
     }
-  };
+  }, 3000), // Throttle to max 1 call every 3 seconds
+  [currentSuburb]
+);
 
   // Handle KML simulation location updates
   const handleKMLLocationUpdate = useCallback((newLocation: { lat: number; lng: number; accuracy?: number }) => {
@@ -296,9 +308,11 @@ export default function Home() {
         });
       }
       
-      updateCurrentSuburb(newLocation).catch(error => {
+      try {
+        updateCurrentSuburb(newLocation);
+      } catch (error) {
         console.log('KML suburb lookup failed:', error);
-      });
+      }
       console.log('🎯 Home: Location state updated successfully');
     } catch (error) {
       console.error('🎯 Home: Error updating location state:', error);
