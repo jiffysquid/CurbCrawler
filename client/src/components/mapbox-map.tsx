@@ -286,33 +286,32 @@ export default function MapboxMap({
     );
     
     // If distance is very small, just set position directly
-    if (distance < 0.00002) { // ~2 meters - increased threshold for smoother movement
+    if (distance < 0.00001) { // ~1 meter - smaller threshold for direct positioning  
       vehicleMarkerRef.current.setLngLat([targetPosition.lng, targetPosition.lat]);
       currentVehiclePositionRef.current = targetPosition;
       return;
     }
     
-    // Cancel any existing animation
+    // Cancel any existing animation to prevent overlap
     if (vehicleAnimationRef.current) {
       cancelAnimationFrame(vehicleAnimationRef.current);
+      vehicleAnimationRef.current = null;
     }
     
     // Animate the vehicle position
     const startTime = performance.now();
-    const duration = 400; // 400ms for smooth vehicle movement
+    const duration = 150; // 150ms for very smooth, responsive movement
     const startPosition = currentPosition;
     
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Smooth easing function for natural movement
-      const easeInOutCubic = progress < 0.5 
-        ? 4 * progress * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      // Linear interpolation for very smooth movement
+      const easedProgress = progress;
       
-      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easeInOutCubic);
-      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easeInOutCubic);
+      const newLat = startPosition.lat + ((targetPosition.lat - startPosition.lat) * easedProgress);
+      const newLng = startPosition.lng + ((targetPosition.lng - startPosition.lng) * easedProgress);
       
       vehicleMarkerRef.current?.setLngLat([newLng, newLat]);
       currentVehiclePositionRef.current = { lat: newLat, lng: newLng };
@@ -805,7 +804,7 @@ export default function MapboxMap({
       
       // Always update vehicle position to ensure it's visible
       // Use animation for significant movements, direct update for small ones
-      if (movementDistance > 0.00003) {
+      if (movementDistance > 0.00002) {
         targetVehiclePositionRef.current = { lat, lng };
         animateVehiclePosition({ lat, lng });
         console.log('🚐 Vehicle marker animating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
