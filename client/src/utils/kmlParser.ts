@@ -64,8 +64,9 @@ export class KMLSimulator {
     
     this.intervalId = window.setInterval(() => {
       if (this.currentIndex >= this.points.length) {
-        this.stopSimulation();
-        return;
+        // Loop back to beginning for continuous simulation
+        this.currentIndex = 0;
+        console.log('🔄 KML simulation reached end, looping back to start');
       }
       
       const point = this.points[this.currentIndex];
@@ -134,6 +135,14 @@ export class KMLSimulator {
     }
     this.isRunning = false;
     console.log('⏹️ KML simulation stopped');
+  }
+  
+  // Restart simulation from beginning for continuous playback
+  restartSimulation(speedMultiplier: number = 1) {
+    this.stopSimulation();
+    this.currentIndex = 0;
+    console.log('🔄 Restarting KML simulation from beginning');
+    this.startSimulation(speedMultiplier);
   }
 
   jumpToPoint(index: number) {
