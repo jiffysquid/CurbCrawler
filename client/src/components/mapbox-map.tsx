@@ -8,6 +8,7 @@ import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { MapPin, Navigation, Info, Users, Car, Building, X, Plus, Trash2, Target } from 'lucide-react';
+import { GPSInterpolator, GPSPosition } from '../utils/gps-interpolator';
 
 interface MapboxMapProps {
   currentLocation: { lat: number; lng: number; accuracy?: number } | null;
@@ -47,6 +48,7 @@ export default function MapboxMap({
   const vehicleMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const gpsInterpolatorRef = useRef<GPSInterpolator | null>(null);
 
   const lastRotationTime = useRef<number>(0);
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
@@ -775,15 +777,35 @@ export default function MapboxMap({
     }
   }, [isRecording, onLocationUpdate]);
 
-  // Handle location updates - simplified to just update marker position
+  // Initialize GPS interpolator
   useEffect(() => {
-    console.log('🎯 MapboxMap: Location changed:', currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : 'null');
-    if (!mapRef.current || !mapReady || !currentLocation) return;
+    if (!gpsInterpolatorRef.current) {
+      gpsInterpolatorRef.current = new GPSInterpolator((interpolatedPosition: GPSPosition) => {
+        // This callback receives smooth interpolated positions
+        if (!mapRef.current || !mapReady) return;
+        
+        const map = mapRef.current;
+        const { lat, lng } = interpolatedPosition;
+        
+        console.log('🎯 GPS Interpolator -> Camera:', lat.toFixed(6), lng.toFixed(6));
+        
+        // Use the existing camera/vehicle logic but with smooth interpolated positions
+        handleInterpolatedLocationUpdate(map, lat, lng);
+      });
+      
+      // Set interpolation duration to 400ms for smooth movement
+      gpsInterpolatorRef.current.setInterpolationDuration(400);
+      console.log('🚀 GPS Interpolator initialized with 400ms duration');
+    }
+    
+    return () => {
+      gpsInterpolatorRef.current?.stop();
+    };
+  }, [mapReady]);
 
-    const map = mapRef.current;
-    const { lat, lng } = currentLocation;
-
-    // Create vehicle marker if it doesn't exist or if marker was lost
+  // Handle interpolated location updates (keeps existing vehicle/camera logic)
+  const handleInterpolatedLocationUpdate = useCallback((map: mapboxgl.Map, lat: number, lng: number) => {
+    // Existing vehicle marker creation/update logic
     if (!vehicleMarkerRef.current || !vehicleMarkerRef.current.getElement().isConnected) {
       // Remove old marker if it exists but isn't connected
       if (vehicleMarkerRef.current) {
@@ -815,34 +837,94 @@ export default function MapboxMap({
 
       currentVehiclePositionRef.current = { lat, lng };
       console.log('🚐 Vehicle marker created at:', lat, lng);
-      console.log('🚐 Vehicle element visible in DOM:', vehicleElement.isConnected);
-      console.log('🚐 iMax van image path:', iMaxVanPath);
-      if (isDrivingMode) {
-        console.log('🧭 Vehicle marker set to fixed upward orientation for driving mode');
-      }
     } else {
-      // Check if significant movement has occurred before animating
-      const currentPos = currentVehiclePositionRef.current || { lat, lng };
-      const movementDistance = Math.sqrt(
-        Math.pow(lat - currentPos.lat, 2) + 
-        Math.pow(lng - currentPos.lng, 2)
-      );
-      
-      // Always animate for smooth movement - no direct updates to avoid jerks
+      // Update vehicle position with smooth animation
       targetVehiclePositionRef.current = { lat, lng };
       animateVehiclePosition({ lat, lng });
-      console.log('🚐 Vehicle interpolating to:', lat, lng, '(moved', (movementDistance * 111000).toFixed(1), 'm)');
-      
-      // Ensure vehicle always points up in driving mode
-      if (isDrivingMode && vehicleMarkerRef.current.getElement()) {
-        const element = vehicleMarkerRef.current.getElement();
-        element.style.transform = 'rotate(0deg)';
-      }
+      console.log('🚐 Vehicle smoothly moving to:', lat, lng);
     }
 
-    // Smooth camera following with enhanced debugging
+    // Existing camera following logic (keep as-is)
     try {
       console.log('🗺️ Map ready state:', mapReady, 'Map loaded:', map.loaded());
+      
+      if (!map.loaded()) {
+        console.warn('⚠️ Map not loaded yet, skipping camera movement');
+        return;
+      }
+      
+      map.stop();
+      console.log('🛑 Stopped existing map animations');
+      
+      const currentCenter = map.getCenter();
+      const currentZoom = map.getZoom();
+      console.log('📍 Current camera:', currentCenter.lat.toFixed(6), currentCenter.lng.toFixed(6), 'zoom:', currentZoom.toFixed(1));
+      console.log('🎯 Target camera:', lat.toFixed(6), lng.toFixed(6), 'zoom: 16.5');
+      
+      const cameraOptions = {
+        center: [lng, lat] as [number, number],
+        zoom: 16.5,
+        pitch: 40,
+        duration: 500,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3)
+      };
+      
+      console.log('🎬 Starting easeTo animation with options:', cameraOptions);
+      map.easeTo(cameraOptions);
+      
+      setTimeout(() => {
+        const newCenter = map.getCenter();
+        const newZoom = map.getZoom();
+        console.log('🔍 After animation start - Camera:', newCenter.lat.toFixed(6), newCenter.lng.toFixed(6), 'zoom:', newZoom.toFixed(1));
+        
+        const distanceMoved = Math.sqrt(
+          Math.pow(newCenter.lat - currentCenter.lat, 2) + 
+          Math.pow(newCenter.lng - currentCenter.lng, 2)
+        );
+        
+        if (distanceMoved < 0.00001) {
+          console.warn('⚠️ easeTo animation failed, using direct fallback');
+          map.setCenter([lng, lat]);
+          map.setZoom(16.5);
+          map.setPitch(40);
+          console.log('✅ Applied direct camera movement as fallback');
+        } else {
+          console.log('✅ easeTo animation working correctly');
+        }
+      }, 100);
+      
+      console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
+    } catch (error) {
+      console.error('🚨 Smooth camera movement failed, using fallback:', error);
+      map.setCenter([lng, lat]);
+      map.setZoom(16.5);
+      map.setPitch(40);
+      console.log('✅ Applied fallback camera movement');
+    }
+    
+    map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+    console.log('🗺️ Map following vehicle at:', lat, lng);
+  }, [mapReady, isDrivingMode, animateVehiclePosition]);
+
+  // Handle raw location updates - now feeds into GPS interpolator
+  useEffect(() => {
+    console.log('🎯 MapboxMap: Location changed:', currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : 'null');
+    if (!currentLocation || !gpsInterpolatorRef.current) return;
+
+    const { lat, lng, accuracy } = currentLocation;
+
+    // Feed raw GPS data into interpolator for smooth processing
+    console.log('📍 Raw GPS update:', lat.toFixed(6), lng.toFixed(6), 'accuracy:', accuracy || 'unknown');
+    gpsInterpolatorRef.current.updatePosition({
+      lat,
+      lng,
+      accuracy,
+      timestamp: Date.now()
+    });
+
+    // Update previous location for future reference
+    previousLocationRef.current = currentLocation;
+  }, [currentLocation]);
       
       // Check if map is fully loaded before camera operations
       if (!map.loaded()) {
