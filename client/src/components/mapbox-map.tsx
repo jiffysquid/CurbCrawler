@@ -832,25 +832,16 @@ export default function MapboxMap({
             cursor: pointer;
             z-index: 1000;
             position: relative;
-            border: 2px solid red;
+
           `;
 
-          // Debug: Check if the image path is loading
-          console.log('🚐 Van image path:', iMaxVanPath);
-          console.log('🚐 Vehicle element HTML:', vehicleElement.outerHTML);
-          
-          // Test if image loads by creating an img element
-          const testImg = new Image();
-          testImg.onload = () => console.log('✅ Van image loaded successfully');
-          testImg.onerror = () => console.error('❌ Van image failed to load');
-          testImg.src = iMaxVanPath;
+
 
           vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
             .setLngLat([lng, lat])
             .addTo(map);
 
           console.log('🚐 Vehicle marker created at:', lat, lng);
-          console.log('🚐 Vehicle marker DOM element:', vehicleMarkerRef.current.getElement());
         } else {
           // Update existing vehicle marker position
           vehicleMarkerRef.current.setLngLat([lng, lat]);
@@ -913,7 +904,6 @@ export default function MapboxMap({
         cursor: pointer;
         z-index: 1000;
         position: relative;
-        border: 2px solid red;
         ${isDrivingMode ? 'transform: rotate(0deg);' : ''}
       `;
 
@@ -1052,21 +1042,16 @@ export default function MapboxMap({
           cursor: pointer;
           z-index: 1000;
           position: relative;
-          border: 2px solid red;
+
         `;
 
-        console.log('🚐 Van image path (fallback):', iMaxVanPath);
-        
-        const testImg = new Image();
-        testImg.onload = () => console.log('✅ Van image loaded successfully (fallback)');
-        testImg.onerror = () => console.error('❌ Van image failed to load (fallback)');
-        testImg.src = iMaxVanPath;
+
 
         vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
           .setLngLat([lng, lat])
           .addTo(map);
 
-        console.log('🚐 Vehicle marker created (fallback) at:', lat, lng);
+        console.log('🚐 Vehicle marker created at:', lat, lng);
       } else {
         // Update existing vehicle marker
         vehicleMarkerRef.current.setLngLat([lng, lat]);
@@ -1110,22 +1095,15 @@ export default function MapboxMap({
         cursor: pointer;
         z-index: 1000;
         position: relative;
-        border: 2px solid red;
       `;
 
-      console.log('🚐 Van image path (emergency):', iMaxVanPath);
-      
-      const testImg = new Image();
-      testImg.onload = () => console.log('✅ Van image loaded successfully (emergency)');
-      testImg.onerror = () => console.error('❌ Van image failed to load (emergency)');
-      testImg.src = iMaxVanPath;
+
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
         .setLngLat([lng, lat])
         .addTo(map);
 
-      console.log('🚐 Emergency vehicle marker created at:', lat, lng);
-      console.log('🚐 Emergency vehicle marker DOM element:', vehicleMarkerRef.current.getElement());
+      console.log('🚐 Vehicle marker created at:', lat, lng);
     }
   }, [mapReady, currentLocation]);
 
