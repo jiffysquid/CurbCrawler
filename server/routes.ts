@@ -800,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clearoutStatus: currentSuburbs.includes("SINNAMON PARK") ? "current" : nextSuburbs.includes("SINNAMON PARK") ? "next" : null,
           dataSource: "abs-census-2021"
         },
-        // Next actual clearout suburbs (August 13-19, 2025)
+        // Current actual clearout suburbs (August 13-19, 2025)
         {
           name: "CHAPEL HILL",
           population: 7845,
@@ -843,6 +843,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
           medianIncome: 89000,
           medianAge: 33,
           clearoutStatus: currentSuburbs.includes("TOOWONG") ? "current" : nextSuburbs.includes("TOOWONG") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        // Next actual clearout suburbs (August 20-26, 2025)
+        {
+          name: "SEVENTEEN MILE ROCKS",
+          population: 5234,
+          populationDensity: 2180,
+          area: 2.40,
+          medianHousePrice: 820000,
+          medianIncome: 76000,
+          medianAge: 36,
+          clearoutStatus: currentSuburbs.includes("SEVENTEEN MILE ROCKS") ? "current" : nextSuburbs.includes("SEVENTEEN MILE ROCKS") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "CHELMER",
+          population: 3567,
+          populationDensity: 2950,
+          area: 1.21,
+          medianHousePrice: 1340000,
+          medianIncome: 98000,
+          medianAge: 42,
+          clearoutStatus: currentSuburbs.includes("CHELMER") ? "current" : nextSuburbs.includes("CHELMER") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "CORINDA",
+          population: 5890,
+          populationDensity: 3420,
+          area: 1.72,
+          medianHousePrice: 985000,
+          medianIncome: 82000,
+          medianAge: 38,
+          clearoutStatus: currentSuburbs.includes("CORINDA") ? "current" : nextSuburbs.includes("CORINDA") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "GRACEVILLE",
+          population: 4123,
+          populationDensity: 3140,
+          area: 1.31,
+          medianHousePrice: 1120000,
+          medianIncome: 88000,
+          medianAge: 39,
+          clearoutStatus: currentSuburbs.includes("GRACEVILLE") ? "current" : nextSuburbs.includes("GRACEVILLE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "OXLEY",
+          population: 7456,
+          populationDensity: 2890,
+          area: 2.58,
+          medianHousePrice: 750000,
+          medianIncome: 71000,
+          medianAge: 35,
+          clearoutStatus: currentSuburbs.includes("OXLEY") ? "current" : nextSuburbs.includes("OXLEY") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "SUMNER",
+          population: 2934,
+          populationDensity: 2560,
+          area: 1.15,
+          medianHousePrice: 890000,
+          medianIncome: 79000,
+          medianAge: 37,
+          clearoutStatus: currentSuburbs.includes("SUMNER") ? "current" : nextSuburbs.includes("SUMNER") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "SHERWOOD",
+          population: 4567,
+          populationDensity: 3210,
+          area: 1.42,
+          medianHousePrice: 1045000,
+          medianIncome: 84000,
+          medianAge: 38,
+          clearoutStatus: currentSuburbs.includes("SHERWOOD") ? "current" : nextSuburbs.includes("SHERWOOD") ? "next" : null,
           dataSource: "abs-census-2021"
         }
       ];
