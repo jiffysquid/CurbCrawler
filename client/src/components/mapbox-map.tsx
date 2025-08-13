@@ -807,40 +807,74 @@ export default function MapboxMap({
         const map = mapRef.current;
         const { lat, lng } = interpolatedPosition;
         
-        console.log('🎯 GPS Interpolator -> Camera:', lat.toFixed(6), lng.toFixed(6));
+        console.log('🎯 GPS Interpolator -> Vehicle & Camera:', lat.toFixed(6), lng.toFixed(6));
         
-        // Direct camera update for KML simulation
+        // Create or update vehicle marker directly here
+        if (!vehicleMarkerRef.current || !vehicleMarkerRef.current.getElement().isConnected) {
+          // Remove old marker if it exists but isn't connected
+          if (vehicleMarkerRef.current) {
+            try {
+              vehicleMarkerRef.current.remove();
+            } catch (e) {
+              console.log('🚐 Old marker cleanup failed, continuing...');
+            }
+          }
+          
+          const vehicleElement = document.createElement('div');
+          vehicleElement.className = 'vehicle-marker';
+          vehicleElement.style.cssText = `
+            width: 30px;
+            height: 30px;
+            background-image: url(${iMaxVanPath});
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: pointer;
+            z-index: 1000;
+            position: relative;
+            border: 2px solid red;
+          `;
+
+          // Debug: Check if the image path is loading
+          console.log('🚐 Van image path:', iMaxVanPath);
+          console.log('🚐 Vehicle element HTML:', vehicleElement.outerHTML);
+          
+          // Test if image loads by creating an img element
+          const testImg = new Image();
+          testImg.onload = () => console.log('✅ Van image loaded successfully');
+          testImg.onerror = () => console.error('❌ Van image failed to load');
+          testImg.src = iMaxVanPath;
+
+          vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
+            .setLngLat([lng, lat])
+            .addTo(map);
+
+          console.log('🚐 Vehicle marker created at:', lat, lng);
+          console.log('🚐 Vehicle marker DOM element:', vehicleMarkerRef.current.getElement());
+        } else {
+          // Update existing vehicle marker position
+          vehicleMarkerRef.current.setLngLat([lng, lat]);
+          console.log('🚐 Vehicle marker updated to:', lat.toFixed(6), lng.toFixed(6));
+        }
+
+        // Update camera to follow vehicle
         try {
           if (!map.loaded()) {
             console.warn('⚠️ Map not loaded yet, skipping camera movement');
             return;
           }
           
-          map.stop();
-          console.log('🛑 Stopped existing map animations');
-          
-          const cameraOptions = {
-            center: [lng, lat] as [number, number],
+          map.easeTo({
+            center: [lng, lat],
             zoom: 16.5,
             pitch: 40,
             duration: 500,
             easing: (t: number) => 1 - Math.pow(1 - t, 3)
-          };
+          });
           
           console.log('🎬 GPS Interpolator camera update:', lat.toFixed(6), lng.toFixed(6));
-          map.easeTo(cameraOptions);
-          
-          // Update vehicle marker position
-          if (vehicleMarkerRef.current) {
-            vehicleMarkerRef.current.setLngLat([lng, lat]);
-            console.log('🚐 Vehicle marker updated to:', lat.toFixed(6), lng.toFixed(6));
-          }
-          
         } catch (error) {
           console.error('🚨 GPS Interpolator camera update failed:', error);
-          map.setCenter([lng, lat]);
-          map.setZoom(16.5);
-          map.setPitch(40);
         }
       });
       
@@ -879,8 +913,19 @@ export default function MapboxMap({
         cursor: pointer;
         z-index: 1000;
         position: relative;
+        border: 2px solid red;
         ${isDrivingMode ? 'transform: rotate(0deg);' : ''}
       `;
+
+      // Debug: Check if the image path is loading
+      console.log('🚐 Van image path:', iMaxVanPath);
+      console.log('🚐 Vehicle element HTML:', vehicleElement.outerHTML);
+      
+      // Test if image loads by creating an img element
+      const testImg = new Image();
+      testImg.onload = () => console.log('✅ Van image loaded successfully');
+      testImg.onerror = () => console.error('❌ Van image failed to load');
+      testImg.src = iMaxVanPath;
 
       vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
         .setLngLat([lng, lat])
@@ -888,6 +933,7 @@ export default function MapboxMap({
 
       currentVehiclePositionRef.current = { lat, lng };
       console.log('🚐 Vehicle marker created at:', lat, lng);
+      console.log('🚐 Vehicle marker DOM element:', vehicleMarkerRef.current.getElement());
     } else {
       // Update vehicle position with smooth animation
       targetVehiclePositionRef.current = { lat, lng };
@@ -976,12 +1022,58 @@ export default function MapboxMap({
     // Update previous location for future reference
     previousLocationRef.current = currentLocation;
     
-    // For KML simulation, also directly update the map camera if GPS interpolator isn't moving enough
+    // For KML simulation, also directly update the map camera and vehicle marker if GPS interpolator isn't moving enough
     if (mapRef.current && mapReady && accuracy && accuracy <= 10) {
       console.log('🗺️ KML simulation detected, ensuring camera follows');
       
-      // Force camera update for KML simulation (high accuracy indicates simulation)
       const map = mapRef.current;
+      
+      // Ensure vehicle marker exists (fallback when GPS interpolator skips small movements)
+      if (!vehicleMarkerRef.current || !vehicleMarkerRef.current.getElement().isConnected) {
+        console.log('🚐 Creating vehicle marker as fallback for KML simulation');
+        
+        if (vehicleMarkerRef.current) {
+          try {
+            vehicleMarkerRef.current.remove();
+          } catch (e) {
+            console.log('🚐 Old marker cleanup failed, continuing...');
+          }
+        }
+        
+        const vehicleElement = document.createElement('div');
+        vehicleElement.className = 'vehicle-marker';
+        vehicleElement.style.cssText = `
+          width: 30px;
+          height: 30px;
+          background-image: url(${iMaxVanPath});
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+          cursor: pointer;
+          z-index: 1000;
+          position: relative;
+          border: 2px solid red;
+        `;
+
+        console.log('🚐 Van image path (fallback):', iMaxVanPath);
+        
+        const testImg = new Image();
+        testImg.onload = () => console.log('✅ Van image loaded successfully (fallback)');
+        testImg.onerror = () => console.error('❌ Van image failed to load (fallback)');
+        testImg.src = iMaxVanPath;
+
+        vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        console.log('🚐 Vehicle marker created (fallback) at:', lat, lng);
+      } else {
+        // Update existing vehicle marker
+        vehicleMarkerRef.current.setLngLat([lng, lat]);
+        console.log('🚐 Vehicle marker updated (fallback) to:', lat.toFixed(6), lng.toFixed(6));
+      }
+      
+      // Force camera update for KML simulation (high accuracy indicates simulation)
       try {
         map.easeTo({
           center: [lng, lat],
@@ -997,6 +1089,45 @@ export default function MapboxMap({
       }
     }
   }, [currentLocation, mapReady]);
+
+  // Ensure vehicle marker is created when map is ready and has location (emergency fallback)
+  useEffect(() => {
+    if (mapRef.current && mapReady && currentLocation && !vehicleMarkerRef.current) {
+      console.log('🚐 Emergency fallback: Creating vehicle marker for initial location');
+      
+      const map = mapRef.current;
+      const { lat, lng } = currentLocation;
+      
+      const vehicleElement = document.createElement('div');
+      vehicleElement.className = 'vehicle-marker';
+      vehicleElement.style.cssText = `
+        width: 30px;
+        height: 30px;
+        background-image: url(${iMaxVanPath});
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        cursor: pointer;
+        z-index: 1000;
+        position: relative;
+        border: 2px solid red;
+      `;
+
+      console.log('🚐 Van image path (emergency):', iMaxVanPath);
+      
+      const testImg = new Image();
+      testImg.onload = () => console.log('✅ Van image loaded successfully (emergency)');
+      testImg.onerror = () => console.error('❌ Van image failed to load (emergency)');
+      testImg.src = iMaxVanPath;
+
+      vehicleMarkerRef.current = new mapboxgl.Marker(vehicleElement)
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      console.log('🚐 Emergency vehicle marker created at:', lat, lng);
+      console.log('🚐 Emergency vehicle marker DOM element:', vehicleMarkerRef.current.getElement());
+    }
+  }, [mapReady, currentLocation]);
 
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery<ClearoutSchedule>({
