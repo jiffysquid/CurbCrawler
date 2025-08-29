@@ -249,17 +249,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Current Brisbane time: ${brisbaneTime.toISOString()}`);
       console.log(`Brisbane date: ${brisbaneTime.getDate()}/${brisbaneTime.getMonth() + 1}/${brisbaneTime.getFullYear()}`);
 
-      // For clearout schedules, we need to look ahead for upcoming collections
-      // Current: Look for clearouts in the next 7 days (current week)
-      const currentWeekStart = new Date(brisbaneTime.getFullYear(), brisbaneTime.getMonth(), brisbaneTime.getDate());
-      const currentWeekEnd = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000); // Add 6 days
+      // Calculate which collection week we're in based on Tuesday midnight switches
+      // People put items out Wednesday before official start, collection runs through week + Monday/Tuesday
+      const currentDay = brisbaneTime.getDay(); // 0=Sunday, 1=Monday, 2=Tuesday, etc.
+      const currentDate = brisbaneTime.getDate();
+      
+      // Find the most recent Tuesday midnight (start of current collection period)
+      let daysBackToTuesday;
+      if (currentDay === 2) { // If today is Tuesday
+        daysBackToTuesday = 0; // Switch happened at midnight today
+      } else if (currentDay < 2) { // Sunday (0) or Monday (1)
+        daysBackToTuesday = currentDay + 5; // Go back to previous Tuesday (5-6 days)
+      } else { // Wednesday (3) through Saturday (6)
+        daysBackToTuesday = currentDay - 2; // Go back to Tuesday this week (1-4 days)
+      }
+      
+      const currentWeekStart = new Date(brisbaneTime.getFullYear(), brisbaneTime.getMonth(), currentDate - daysBackToTuesday);
+      const currentWeekEnd = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000); // Add 6 days (Tue-Mon)
 
-      // Next: Look for clearouts in the following 7 days (next week)
-      const nextWeekStart = new Date(currentWeekEnd.getTime() + 24 * 60 * 60 * 1000); // Day after current period
+      // Next period starts the Tuesday after current period ends
+      const nextWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 7 days
       const nextWeekEnd = new Date(nextWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000); // Add 6 days
 
-      console.log(`Current period: ${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`);
-      console.log(`Next period: ${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`);
+      console.log(`Today is ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][currentDay]} (${currentDay}), went back ${daysBackToTuesday} days to Tuesday`);
+      console.log(`Current collection week: ${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}`);
+      console.log(`Next collection week: ${nextWeekStart.toISOString().split('T')[0]} to ${nextWeekEnd.toISOString().split('T')[0]}`);
 
       // Fetch current period clearouts (next 2 weeks)
       const currentResponse = await axios.get(`https://data.brisbane.qld.gov.au/api/explore/v2.1/catalog/datasets/kerbside-large-item-collection-schedule/records`, {
@@ -299,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         month: brisbaneTime.getMonth() + 1,
         date: brisbaneTime.getDate(),
         lastUpdated: new Date().toISOString(),
-        message: `Real clearout schedule from Brisbane Council API for current period (${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]})`
+        message: `Real clearout schedule from Brisbane Council API for current collection week (${currentWeekStart.toISOString().split('T')[0]} to ${currentWeekEnd.toISOString().split('T')[0]}) - switches Tuesday midnight`
       });
     } catch (error: any) {
       console.error("Brisbane Council API error:", error);

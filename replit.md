@@ -63,3 +63,4 @@ Mobile Requirements: Needs phone screen to stay on during recording sessions for
 - August 6, 2025: FIXED demographics panel - Next week clearout suburbs now display correctly in blue section with complete population and pricing data
 - August 6, 2025: ENHANCED map following - Map now follows vehicle location in both recording and non-recording modes with smooth 1-second transitions
 - August 23, 2025: FIXED recurring weekly suburb display issue - Added comprehensive demographics data for all current and next week clearout suburbs, plus dynamic fallback system to handle any missing suburbs from Brisbane Council API automatically
+- August 29, 2025: ALIGNED weekly switch logic with real collection practices - Changed from daily rolling windows to Tuesday midnight weekly switches. Collection weeks now align with real-world practice where people put items out Wednesday before official start, collection runs through the week and sometimes Monday/Tuesday
