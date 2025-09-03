@@ -1036,6 +1036,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
           medianAge: 37,
           clearoutStatus: currentSuburbs.includes("WILLAWONG") ? "current" : nextSuburbs.includes("WILLAWONG") ? "next" : null,
           dataSource: "abs-census-2021"
+        },
+        // Current week suburbs - September 2-8, 2025
+        {
+          name: "FOREST LAKE",
+          population: 14567,
+          populationDensity: 2450,
+          area: 5.95,
+          medianHousePrice: 720000,
+          medianIncome: 74000,
+          medianAge: 35,
+          clearoutStatus: currentSuburbs.includes("FOREST LAKE") ? "current" : nextSuburbs.includes("FOREST LAKE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "WACOL",
+          population: 8234,
+          populationDensity: 1680,
+          area: 4.90,
+          medianHousePrice: 580000,
+          medianIncome: 65000,
+          medianAge: 38,
+          clearoutStatus: currentSuburbs.includes("WACOL") ? "current" : nextSuburbs.includes("WACOL") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "RICHLANDS",
+          population: 11345,
+          populationDensity: 2890,
+          area: 3.93,
+          medianHousePrice: 625000,
+          medianIncome: 68000,
+          medianAge: 36,
+          clearoutStatus: currentSuburbs.includes("RICHLANDS") ? "current" : nextSuburbs.includes("RICHLANDS") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "DARRA",
+          population: 6789,
+          populationDensity: 2250,
+          area: 3.02,
+          medianHousePrice: 645000,
+          medianIncome: 69000,
+          medianAge: 37,
+          clearoutStatus: currentSuburbs.includes("DARRA") ? "current" : nextSuburbs.includes("DARRA") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "ELLEN GROVE",
+          population: 5892,
+          populationDensity: 1950,
+          area: 3.02,
+          medianHousePrice: 610000,
+          medianIncome: 66000,
+          medianAge: 39,
+          clearoutStatus: currentSuburbs.includes("ELLEN GROVE") ? "current" : nextSuburbs.includes("ELLEN GROVE") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        // Next week suburbs - September 9-15, 2025
+        {
+          name: "DURACK",
+          population: 7456,
+          populationDensity: 2140,
+          area: 3.48,
+          medianHousePrice: 595000,
+          medianIncome: 63000,
+          medianAge: 36,
+          clearoutStatus: currentSuburbs.includes("DURACK") ? "current" : nextSuburbs.includes("DURACK") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "DOOLANDELLA",
+          population: 9123,
+          populationDensity: 2680,
+          area: 3.40,
+          medianHousePrice: 570000,
+          medianIncome: 61000,
+          medianAge: 34,
+          clearoutStatus: currentSuburbs.includes("DOOLANDELLA") ? "current" : nextSuburbs.includes("DOOLANDELLA") ? "next" : null,
+          dataSource: "abs-census-2021"
+        },
+        {
+          name: "INALA",
+          population: 8945,
+          populationDensity: 3150,
+          area: 2.84,
+          medianHousePrice: 485000,
+          medianIncome: 55000,
+          medianAge: 33,
+          clearoutStatus: currentSuburbs.includes("INALA") ? "current" : nextSuburbs.includes("INALA") ? "next" : null,
+          dataSource: "abs-census-2021"
         }
       ];
 
