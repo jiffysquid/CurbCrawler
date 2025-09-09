@@ -300,10 +300,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentSuburbs = [...new Set(currentResponse.data.results?.map((r: any) => r.suburb?.toUpperCase()) || [])];
       let nextSuburbs = [...new Set(nextResponse.data.results?.map((r: any) => r.suburb?.toUpperCase()) || [])];
 
-      // Fallback system: If Brisbane Council API doesn't have next week's data, provide known Brisbane suburbs
+      // If Brisbane Council API doesn't have next week's data, it means no clearouts are scheduled
       if (nextSuburbs.length === 0) {
-        console.log(`No next week clearouts from API, using fallback Brisbane suburbs`);
-        nextSuburbs = ["STRETTON", "CALAMVALE", "MACGREGOR", "ROBERTSON", "SUNNYBANK HILLS"];
+        console.log(`No next week clearouts from API - no collection scheduled`);
+        // Leave nextSuburbs empty to indicate no collection
       }
 
       console.log(`Current period clearouts: ${currentSuburbs.join(', ')}`);

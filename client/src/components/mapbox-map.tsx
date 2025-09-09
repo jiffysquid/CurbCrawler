@@ -1629,24 +1629,35 @@ export default function MapboxMap({
               Next Week
             </h4>
             <div className="space-y-2">
-              {demographicsArray.filter(suburb => suburb.clearoutStatus === 'next').map((suburb, index) => (
-                <div key={suburb.name} className="bg-blue-50 border border-blue-200 rounded p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{suburb.name}</span>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-xs ${i < (suburb.starRating || 0) ? 'text-yellow-500' : 'text-gray-300'}`}>
-                          ★
-                        </span>
-                      ))}
+              {(() => {
+                const nextWeekSuburbs = demographicsArray.filter(suburb => suburb.clearoutStatus === 'next');
+                if (nextWeekSuburbs.length === 0) {
+                  return (
+                    <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                      <span className="text-sm text-gray-600 font-medium">No Collection</span>
+                      <div className="text-xs text-gray-500 mt-1">No clearouts scheduled</div>
+                    </div>
+                  );
+                }
+                return nextWeekSuburbs.map((suburb, index) => (
+                  <div key={suburb.name} className="bg-blue-50 border border-blue-200 rounded p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{suburb.name}</span>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={`text-xs ${i < (suburb.starRating || 0) ? 'text-yellow-500' : 'text-gray-300'}`}>
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div>Population: {suburb.population?.toLocaleString() || 'N/A'}</div>
+                      <div>Median Price: ${suburb.medianHousePrice?.toLocaleString() || 'N/A'}</div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <div>Population: {suburb.population?.toLocaleString() || 'N/A'}</div>
-                    <div>Median Price: ${suburb.medianHousePrice?.toLocaleString() || 'N/A'}</div>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>
