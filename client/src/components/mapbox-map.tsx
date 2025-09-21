@@ -35,6 +35,11 @@ interface SuburbInfo {
 interface ClearoutSchedule {
   current?: string[];
   next?: string[];
+  currentPeriod?: string;
+  nextPeriod?: string;
+  dataSource?: string;
+  brisbaneDate?: string;
+  message?: string;
 }
 
 interface SuburbData {
@@ -48,6 +53,12 @@ interface DemographicsData {
   population: number;
   medianHousePrice: number;
   starRating: number;
+  clearoutStatus?: 'current' | 'next';
+  populationDensity?: number;
+  area?: number;
+  medianIncome?: number;
+  medianAge?: number;
+  dataSource?: string;
 }
 
 export default function MapboxMap({
@@ -65,6 +76,7 @@ export default function MapboxMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const vehicleMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [webglError, setWebglError] = useState(false);
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const gpsInterpolatorRef = useRef<GPSInterpolator | null>(null);
 
@@ -489,13 +501,22 @@ export default function MapboxMap({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return; // Don't re-initialize if map already exists
 
-    console.log('🗺️ Initializing Mapbox GL JS map');
-    console.log('🗺️ Using custom Mapbox style: cmd422kxy01t601rf67tl9ra2');
+    // Check WebGL support before initializing map
+    if (!mapboxgl.supported()) {
+      console.error('❌ WebGL not supported, cannot initialize Mapbox GL JS map');
+      setMapReady(false);
+      setWebglError(true);
+      return;
+    }
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: 'mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2',
-      center: currentLocation ? [currentLocation.lng, currentLocation.lat] : [153.0281, -27.4698],
+    try {
+      console.log('🗺️ Initializing Mapbox GL JS map');
+      console.log('🗺️ Using custom Mapbox style: cmd422kxy01t601rf67tl9ra2');
+
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: 'mapbox://styles/jifysquid/cmd422kxy01t601rf67tl9ra2',
+        center: currentLocation ? [currentLocation.lng, currentLocation.lat] : [153.0281, -27.4698],
       zoom: 16.5,
       pitch: 40, // 40-degree tilt for enhanced 3D perspective
       bearing: 0
@@ -711,6 +732,13 @@ export default function MapboxMap({
     });
 
     mapRef.current = map;
+
+    } catch (error) {
+      console.error('❌ Failed to initialize Mapbox GL JS map:', error);
+      setMapReady(false);
+      setWebglError(true);
+      return;
+    }
 
     return () => {
       if (vehicleMarkerRef.current) {
@@ -1507,6 +1535,35 @@ export default function MapboxMap({
     }
   }, [mapPins, mapReady]);
 
+  // Fallback UI when WebGL is not supported
+  if (webglError) {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-gray-100">
+        <div className="text-center p-8 max-w-md">
+          <div className="text-6xl mb-4">🗺️</div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Map Not Available</h3>
+          <p className="text-gray-600 mb-4">
+            Your device doesn't support the advanced mapping features needed for this application.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Current Location:</strong><br />
+              {currentLocation ? 
+                `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}` : 
+                'Location not available'
+              }
+            </p>
+            {isRecording && (
+              <p className="text-sm text-green-600 mt-2">
+                📍 Recording is active but map view is unavailable
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full">
       <div
@@ -1658,6 +1715,41 @@ export default function MapboxMap({
                   </div>
                 ));
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Clearouts Message - when info button is clicked but no data */}
+      {showDemographics && (!demographicsArray || demographicsArray.length === 0) && (
+        <div className="absolute top-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Clearout Information
+            </h3>
+            <Button
+              onClick={() => setShowDemographics(false)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              title="Close"
+            >
+              <X className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
+          
+          <div className="text-center py-6">
+            <div className="text-gray-500 mb-2">
+              <Building className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            </div>
+            <h4 className="text-lg font-medium text-gray-700 mb-2">No Clearouts Scheduled</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              There are no clearout collections scheduled for this week or next week.
+            </p>
+            <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
+              Current Period: {clearoutSchedule?.currentPeriod || 'N/A'}<br />
+              Next Period: {clearoutSchedule?.nextPeriod || 'N/A'}
             </div>
           </div>
         </div>
