@@ -876,24 +876,28 @@ export default function MapboxMap({
           console.log('🚐 Vehicle marker updated to:', lat.toFixed(6), lng.toFixed(6));
         }
 
-        // Update camera to follow vehicle
-        try {
-          if (!map.loaded()) {
-            console.warn('⚠️ Map not loaded yet, skipping camera movement');
-            return;
+        // Update camera to follow vehicle ONLY during recording
+        if (isRecording) {
+          try {
+            if (!map.loaded()) {
+              console.warn('⚠️ Map not loaded yet, skipping camera movement');
+              return;
+            }
+            
+            map.easeTo({
+              center: [lng, lat],
+              zoom: 16.5,
+              pitch: 40,
+              duration: 500,
+              easing: (t: number) => 1 - Math.pow(1 - t, 3)
+            });
+            
+            console.log('🎬 GPS Interpolator camera update (recording):', lat.toFixed(6), lng.toFixed(6));
+          } catch (error) {
+            console.error('🚨 GPS Interpolator camera update failed:', error);
           }
-          
-          map.easeTo({
-            center: [lng, lat],
-            zoom: 16.5,
-            pitch: 40,
-            duration: 500,
-            easing: (t: number) => 1 - Math.pow(1 - t, 3)
-          });
-          
-          console.log('🎬 GPS Interpolator camera update:', lat.toFixed(6), lng.toFixed(6));
-        } catch (error) {
-          console.error('🚨 GPS Interpolator camera update failed:', error);
+        } else {
+          console.log('📍 Vehicle position updated, but camera staying put (not recording)');
         }
       });
       
@@ -905,7 +909,7 @@ export default function MapboxMap({
     return () => {
       gpsInterpolatorRef.current?.stop();
     };
-  }, [mapReady]);
+  }, [mapReady, isRecording]);
 
   // Handle interpolated location updates (keeps existing vehicle/camera logic)
   const handleInterpolatedLocationUpdate = useCallback((map: mapboxgl.Map, lat: number, lng: number) => {
@@ -959,67 +963,71 @@ export default function MapboxMap({
       console.log('🚐 Vehicle smoothly moving to:', lat, lng);
     }
 
-    // Existing camera following logic (keep as-is)
-    try {
-      console.log('🗺️ Map ready state:', mapReady, 'Map loaded:', map.loaded());
-      
-      if (!map.loaded()) {
-        console.warn('⚠️ Map not loaded yet, skipping camera movement');
-        return;
+    // Camera following logic - ONLY during recording
+    if (isRecording) {
+      try {
+        console.log('🗺️ Map ready state:', mapReady, 'Map loaded:', map.loaded());
+        
+        if (!map.loaded()) {
+          console.warn('⚠️ Map not loaded yet, skipping camera movement');
+          return;
+        }
+        
+        map.stop();
+        console.log('🛑 Stopped existing map animations');
+        
+        const currentCenter = map.getCenter();
+        const currentZoom = map.getZoom();
+        console.log('📍 Current camera:', currentCenter.lat.toFixed(6), currentCenter.lng.toFixed(6), 'zoom:', currentZoom.toFixed(1));
+        console.log('🎯 Target camera:', lat.toFixed(6), lng.toFixed(6), 'zoom: 16.5');
+        
+        const cameraOptions = {
+          center: [lng, lat] as [number, number],
+          zoom: 16.5,
+          pitch: 40,
+          duration: 500,
+          easing: (t: number) => 1 - Math.pow(1 - t, 3)
+        };
+        
+        console.log('🎬 Starting easeTo animation with options:', cameraOptions);
+        map.easeTo(cameraOptions);
+        
+        setTimeout(() => {
+          const newCenter = map.getCenter();
+          const newZoom = map.getZoom();
+          console.log('🔍 After animation start - Camera:', newCenter.lat.toFixed(6), newCenter.lng.toFixed(6), 'zoom:', newZoom.toFixed(1));
+          
+          const distanceMoved = Math.sqrt(
+            Math.pow(newCenter.lat - currentCenter.lat, 2) + 
+            Math.pow(newCenter.lng - currentCenter.lng, 2)
+          );
+          
+          if (distanceMoved < 0.00001) {
+            console.warn('⚠️ easeTo animation failed, using direct fallback');
+            map.setCenter([lng, lat]);
+            map.setZoom(16.5);
+            map.setPitch(40);
+            console.log('✅ Applied direct camera movement as fallback');
+          } else {
+            console.log('✅ easeTo animation working correctly');
+          }
+        }, 100);
+        
+        console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
+      } catch (error) {
+        console.error('🚨 Smooth camera movement failed, using fallback:', error);
+        map.setCenter([lng, lat]);
+        map.setZoom(16.5);
+        map.setPitch(40);
+        console.log('✅ Applied fallback camera movement');
       }
       
-      map.stop();
-      console.log('🛑 Stopped existing map animations');
-      
-      const currentCenter = map.getCenter();
-      const currentZoom = map.getZoom();
-      console.log('📍 Current camera:', currentCenter.lat.toFixed(6), currentCenter.lng.toFixed(6), 'zoom:', currentZoom.toFixed(1));
-      console.log('🎯 Target camera:', lat.toFixed(6), lng.toFixed(6), 'zoom: 16.5');
-      
-      const cameraOptions = {
-        center: [lng, lat] as [number, number],
-        zoom: 16.5,
-        pitch: 40,
-        duration: 500,
-        easing: (t: number) => 1 - Math.pow(1 - t, 3)
-      };
-      
-      console.log('🎬 Starting easeTo animation with options:', cameraOptions);
-      map.easeTo(cameraOptions);
-      
-      setTimeout(() => {
-        const newCenter = map.getCenter();
-        const newZoom = map.getZoom();
-        console.log('🔍 After animation start - Camera:', newCenter.lat.toFixed(6), newCenter.lng.toFixed(6), 'zoom:', newZoom.toFixed(1));
-        
-        const distanceMoved = Math.sqrt(
-          Math.pow(newCenter.lat - currentCenter.lat, 2) + 
-          Math.pow(newCenter.lng - currentCenter.lng, 2)
-        );
-        
-        if (distanceMoved < 0.00001) {
-          console.warn('⚠️ easeTo animation failed, using direct fallback');
-          map.setCenter([lng, lat]);
-          map.setZoom(16.5);
-          map.setPitch(40);
-          console.log('✅ Applied direct camera movement as fallback');
-        } else {
-          console.log('✅ easeTo animation working correctly');
-        }
-      }, 100);
-      
-      console.log('🗺️ Smooth camera following vehicle to:', lat, lng);
-    } catch (error) {
-      console.error('🚨 Smooth camera movement failed, using fallback:', error);
-      map.setCenter([lng, lat]);
-      map.setZoom(16.5);
-      map.setPitch(40);
-      console.log('✅ Applied fallback camera movement');
+      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      console.log('🗺️ Map following vehicle at:', lat, lng);
+    } else {
+      console.log('📍 Vehicle marker updated, camera free to explore (not recording)');
     }
-    
-    map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-    console.log('🗺️ Map following vehicle at:', lat, lng);
-  }, [mapReady, isDrivingMode, animateVehiclePosition]);
+  }, [mapReady, isDrivingMode, animateVehiclePosition, isRecording]);
 
   // Handle raw location updates - now feeds into GPS interpolator
   useEffect(() => {
@@ -1042,7 +1050,7 @@ export default function MapboxMap({
     
     // For KML simulation, also directly update the map camera and vehicle marker if GPS interpolator isn't moving enough
     if (mapRef.current && mapReady && accuracy && accuracy <= 10) {
-      console.log('🗺️ KML simulation detected, ensuring camera follows');
+      console.log('🗺️ KML simulation detected');
       
       const map = mapRef.current;
       
@@ -1086,22 +1094,26 @@ export default function MapboxMap({
         console.log('🚐 Vehicle marker updated (fallback) to:', lat.toFixed(6), lng.toFixed(6));
       }
       
-      // Force camera update for KML simulation (high accuracy indicates simulation)
-      try {
-        map.easeTo({
-          center: [lng, lat],
-          zoom: 16.5,
-          pitch: 40,
-          duration: 800,
-          essential: true,
-          easing: (t: number) => 1 - Math.pow(1 - t, 3)
-        });
-        console.log('🎬 Force camera update for KML simulation to:', lat.toFixed(6), lng.toFixed(6));
-      } catch (error) {
-        console.error('🚨 Force camera update failed:', error);
+      // Force camera update for KML simulation ONLY when recording
+      if (isRecording) {
+        try {
+          map.easeTo({
+            center: [lng, lat],
+            zoom: 16.5,
+            pitch: 40,
+            duration: 800,
+            essential: true,
+            easing: (t: number) => 1 - Math.pow(1 - t, 3)
+          });
+          console.log('🎬 Force camera update for KML simulation (recording) to:', lat.toFixed(6), lng.toFixed(6));
+        } catch (error) {
+          console.error('🚨 Force camera update failed:', error);
+        }
+      } else {
+        console.log('📍 KML vehicle marker updated, camera free (not recording)');
       }
     }
-  }, [currentLocation, mapReady]);
+  }, [currentLocation, mapReady, isRecording]);
 
   // Ensure vehicle marker is created when map is ready and has location (emergency fallback)
   useEffect(() => {
