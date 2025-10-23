@@ -1211,6 +1211,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let suburbData: any = null;
           
           switch(suburbName) {
+            case "ALBION":
+              suburbData = {
+                name: "ALBION",
+                population: 2518,
+                populationDensity: 3598,
+                area: 0.7,
+                medianHousePrice: 1350000,
+                medianIncome: 93000,
+                medianAge: 34,
+                clearoutStatus: currentSuburbs.includes("ALBION") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "GEEBUNG":
+              suburbData = {
+                name: "GEEBUNG",
+                population: 4453,
+                populationDensity: 1784,
+                area: 2.5,
+                medianHousePrice: 715000,
+                medianIncome: 74000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("GEEBUNG") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "KALINGA":
+              suburbData = {
+                name: "KALINGA",
+                population: 2215,
+                populationDensity: 2461,
+                area: 0.9,
+                medianHousePrice: 1150000,
+                medianIncome: 86000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("KALINGA") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "BANYO":
+              suburbData = {
+                name: "BANYO",
+                population: 3865,
+                populationDensity: 1933,
+                area: 2.0,
+                medianHousePrice: 795000,
+                medianIncome: 76000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("BANYO") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "NORTHGATE":
+              suburbData = {
+                name: "NORTHGATE",
+                population: 4256,
+                populationDensity: 2661,
+                area: 1.6,
+                medianHousePrice: 770000,
+                medianIncome: 75000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("NORTHGATE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WOOLOOWIN":
+              suburbData = {
+                name: "WOOLOOWIN",
+                population: 3287,
+                populationDensity: 3652,
+                area: 0.9,
+                medianHousePrice: 1050000,
+                medianIncome: 84000,
+                medianAge: 35,
+                clearoutStatus: currentSuburbs.includes("WOOLOOWIN") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CLAYFIELD":
+              suburbData = {
+                name: "CLAYFIELD",
+                population: 10578,
+                populationDensity: 2370,
+                area: 4.46,
+                medianHousePrice: 1450000,
+                medianIncome: 95000,
+                medianAge: 40,
+                clearoutStatus: currentSuburbs.includes("CLAYFIELD") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "HENDRA":
+              suburbData = {
+                name: "HENDRA",
+                population: 4276,
+                populationDensity: 2138,
+                area: 2.0,
+                medianHousePrice: 1280000,
+                medianIncome: 89000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("HENDRA") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "HAMILTON":
+              suburbData = {
+                name: "HAMILTON",
+                population: 6088,
+                populationDensity: 2435,
+                area: 2.5,
+                medianHousePrice: 1650000,
+                medianIncome: 98000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("HAMILTON") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "ASCOT":
+              suburbData = {
+                name: "ASCOT",
+                population: 5376,
+                populationDensity: 2125,
+                area: 2.53,
+                medianHousePrice: 1350000,
+                medianIncome: 92000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("ASCOT") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
             case "BRIGHTON":
               suburbData = {
                 name: "BRIGHTON",
