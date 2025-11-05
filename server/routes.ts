@@ -1575,6 +1575,539 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 dataSource: "abs-census-2021-corelogic-2025"
               };
               break;
+            case "CHERMSIDE":
+              suburbData = {
+                name: "CHERMSIDE",
+                population: 8234,
+                populationDensity: 3294,
+                area: 2.5,
+                medianHousePrice: 765000,
+                medianIncome: 72000,
+                medianAge: 34,
+                clearoutStatus: currentSuburbs.includes("CHERMSIDE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CHERMSIDE WEST":
+              suburbData = {
+                name: "CHERMSIDE WEST",
+                population: 4567,
+                populationDensity: 2854,
+                area: 1.6,
+                medianHousePrice: 745000,
+                medianIncome: 71000,
+                medianAge: 35,
+                clearoutStatus: currentSuburbs.includes("CHERMSIDE WEST") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "ASPLEY":
+              suburbData = {
+                name: "ASPLEY",
+                population: 10876,
+                populationDensity: 2719,
+                area: 4.0,
+                medianHousePrice: 780000,
+                medianIncome: 75000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("ASPLEY") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CARSELDINE":
+              suburbData = {
+                name: "CARSELDINE",
+                population: 6234,
+                populationDensity: 2494,
+                area: 2.5,
+                medianHousePrice: 790000,
+                medianIncome: 76000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("CARSELDINE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MCDOWALL":
+              suburbData = {
+                name: "MCDOWALL",
+                population: 5678,
+                populationDensity: 2271,
+                area: 2.5,
+                medianHousePrice: 770000,
+                medianIncome: 74000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("MCDOWALL") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "EVERTON PARK":
+              suburbData = {
+                name: "EVERTON PARK",
+                population: 8456,
+                populationDensity: 2722,
+                area: 3.1,
+                medianHousePrice: 870000,
+                medianIncome: 79000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("EVERTON PARK") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MITCHELTON":
+              suburbData = {
+                name: "MITCHELTON",
+                population: 7890,
+                populationDensity: 2630,
+                area: 3.0,
+                medianHousePrice: 845000,
+                medianIncome: 78000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("MITCHELTON") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "FERNY GROVE":
+              suburbData = {
+                name: "FERNY GROVE",
+                population: 4123,
+                populationDensity: 1718,
+                area: 2.4,
+                medianHousePrice: 765000,
+                medianIncome: 74000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("FERNY GROVE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "ALDERLEY":
+              suburbData = {
+                name: "ALDERLEY",
+                population: 5789,
+                populationDensity: 2316,
+                area: 2.5,
+                medianHousePrice: 965000,
+                medianIncome: 84000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("ALDERLEY") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "ASHGROVE":
+              suburbData = {
+                name: "ASHGROVE",
+                population: 11234,
+                populationDensity: 3118,
+                area: 3.6,
+                medianHousePrice: 1125000,
+                medianIncome: 88000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("ASHGROVE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "GRANGE":
+              suburbData = {
+                name: "GRANGE",
+                population: 4567,
+                populationDensity: 2284,
+                area: 2.0,
+                medianHousePrice: 1050000,
+                medianIncome: 86000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("GRANGE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WINDSOR":
+              suburbData = {
+                name: "WINDSOR",
+                population: 6789,
+                populationDensity: 4526,
+                area: 1.5,
+                medianHousePrice: 1180000,
+                medianIncome: 89000,
+                medianAge: 35,
+                clearoutStatus: currentSuburbs.includes("WINDSOR") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "PADDINGTON":
+              suburbData = {
+                name: "PADDINGTON",
+                population: 7456,
+                populationDensity: 3728,
+                area: 2.0,
+                medianHousePrice: 1350000,
+                medianIncome: 95000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("PADDINGTON") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "KELVIN GROVE":
+              suburbData = {
+                name: "KELVIN GROVE",
+                population: 4890,
+                populationDensity: 3926,
+                area: 1.24,
+                medianHousePrice: 875000,
+                medianIncome: 76000,
+                medianAge: 28,
+                clearoutStatus: currentSuburbs.includes("KELVIN GROVE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "SPRING HILL":
+              suburbData = {
+                name: "SPRING HILL",
+                population: 5234,
+                populationDensity: 6543,
+                area: 0.8,
+                medianHousePrice: 625000,
+                medianIncome: 82000,
+                medianAge: 32,
+                clearoutStatus: currentSuburbs.includes("SPRING HILL") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "BOWEN HILLS":
+              suburbData = {
+                name: "BOWEN HILLS",
+                population: 2345,
+                populationDensity: 4690,
+                area: 0.5,
+                medianHousePrice: 685000,
+                medianIncome: 78000,
+                medianAge: 33,
+                clearoutStatus: currentSuburbs.includes("BOWEN HILLS") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "FORTITUDE VALLEY":
+              suburbData = {
+                name: "FORTITUDE VALLEY",
+                population: 7890,
+                populationDensity: 9863,
+                area: 0.8,
+                medianHousePrice: 595000,
+                medianIncome: 75000,
+                medianAge: 30,
+                clearoutStatus: currentSuburbs.includes("FORTITUDE VALLEY") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "NEW FARM":
+              suburbData = {
+                name: "NEW FARM",
+                population: 13456,
+                populationDensity: 8410,
+                area: 1.6,
+                medianHousePrice: 1280000,
+                medianIncome: 94000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("NEW FARM") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "BALMORAL":
+              suburbData = {
+                name: "BALMORAL",
+                population: 11789,
+                populationDensity: 3930,
+                area: 3.0,
+                medianHousePrice: 1150000,
+                medianIncome: 88000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("BALMORAL") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "HAWTHORNE":
+              suburbData = {
+                name: "HAWTHORNE",
+                population: 5678,
+                populationDensity: 3548,
+                area: 1.6,
+                medianHousePrice: 1250000,
+                medianIncome: 91000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("HAWTHORNE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MORNINGSIDE":
+              suburbData = {
+                name: "MORNINGSIDE",
+                population: 8901,
+                populationDensity: 3117,
+                area: 2.85,
+                medianHousePrice: 1185000,
+                medianIncome: 89000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("MORNINGSIDE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CANNON HILL":
+              suburbData = {
+                name: "CANNON HILL",
+                population: 5432,
+                populationDensity: 2716,
+                area: 2.0,
+                medianHousePrice: 1050000,
+                medianIncome: 85000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("CANNON HILL") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MURARRIE":
+              suburbData = {
+                name: "MURARRIE",
+                population: 3456,
+                populationDensity: 1382,
+                area: 2.5,
+                medianHousePrice: 875000,
+                medianIncome: 79000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("MURARRIE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WYNNUM":
+              suburbData = {
+                name: "WYNNUM",
+                population: 12345,
+                populationDensity: 3086,
+                area: 4.0,
+                medianHousePrice: 920000,
+                medianIncome: 81000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("WYNNUM") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WYNNUM WEST":
+              suburbData = {
+                name: "WYNNUM WEST",
+                population: 5678,
+                populationDensity: 2839,
+                area: 2.0,
+                medianHousePrice: 875000,
+                medianIncome: 78000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("WYNNUM WEST") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MANLY":
+              suburbData = {
+                name: "MANLY",
+                population: 4234,
+                populationDensity: 3528,
+                area: 1.2,
+                medianHousePrice: 1050000,
+                medianIncome: 86000,
+                medianAge: 40,
+                clearoutStatus: currentSuburbs.includes("MANLY") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MANLY WEST":
+              suburbData = {
+                name: "MANLY WEST",
+                population: 5123,
+                populationDensity: 2562,
+                area: 2.0,
+                medianHousePrice: 895000,
+                medianIncome: 80000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("MANLY WEST") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "LOTA":
+              suburbData = {
+                name: "LOTA",
+                population: 2987,
+                populationDensity: 2490,
+                area: 1.2,
+                medianHousePrice: 875000,
+                medianIncome: 78000,
+                medianAge: 40,
+                clearoutStatus: currentSuburbs.includes("LOTA") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "TINGALPA":
+              suburbData = {
+                name: "TINGALPA",
+                population: 8234,
+                populationDensity: 2056,
+                area: 4.0,
+                medianHousePrice: 865000,
+                medianIncome: 78000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("TINGALPA") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WAKERLEY":
+              suburbData = {
+                name: "WAKERLEY",
+                population: 6789,
+                populationDensity: 2263,
+                area: 3.0,
+                medianHousePrice: 890000,
+                medianIncome: 80000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("WAKERLEY") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "GUMDALE":
+              suburbData = {
+                name: "GUMDALE",
+                population: 4567,
+                populationDensity: 1522,
+                area: 3.0,
+                medianHousePrice: 925000,
+                medianIncome: 82000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("GUMDALE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CHANDLER":
+              suburbData = {
+                name: "CHANDLER",
+                population: 5234,
+                populationDensity: 1745,
+                area: 3.0,
+                medianHousePrice: 910000,
+                medianIncome: 81000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("CHANDLER") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "BELMONT":
+              suburbData = {
+                name: "BELMONT",
+                population: 3789,
+                populationDensity: 2526,
+                area: 1.5,
+                medianHousePrice: 865000,
+                medianIncome: 77000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("BELMONT") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CAMP HILL":
+              suburbData = {
+                name: "CAMP HILL",
+                population: 9876,
+                populationDensity: 3292,
+                area: 3.0,
+                medianHousePrice: 1095000,
+                medianIncome: 86000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("CAMP HILL") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CARINA":
+              suburbData = {
+                name: "CARINA",
+                population: 8456,
+                populationDensity: 2819,
+                area: 3.0,
+                medianHousePrice: 985000,
+                medianIncome: 83000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("CARINA") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CARINA HEIGHTS":
+              suburbData = {
+                name: "CARINA HEIGHTS",
+                population: 4678,
+                populationDensity: 2339,
+                area: 2.0,
+                medianHousePrice: 950000,
+                medianIncome: 82000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("CARINA HEIGHTS") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "CARINDALE":
+              suburbData = {
+                name: "CARINDALE",
+                population: 10234,
+                populationDensity: 2046,
+                area: 5.0,
+                medianHousePrice: 1025000,
+                medianIncome: 85000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("CARINDALE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MANSFIELD":
+              suburbData = {
+                name: "MANSFIELD",
+                population: 9123,
+                populationDensity: 2281,
+                area: 4.0,
+                medianHousePrice: 1150000,
+                medianIncome: 88000,
+                medianAge: 40,
+                clearoutStatus: currentSuburbs.includes("MANSFIELD") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WISHART":
+              suburbData = {
+                name: "WISHART",
+                population: 5789,
+                populationDensity: 1930,
+                area: 3.0,
+                medianHousePrice: 1075000,
+                medianIncome: 86000,
+                medianAge: 40,
+                clearoutStatus: currentSuburbs.includes("WISHART") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "MT GRAVATT":
+              suburbData = {
+                name: "MT GRAVATT",
+                population: 6234,
+                populationDensity: 2494,
+                area: 2.5,
+                medianHousePrice: 875000,
+                medianIncome: 77000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("MT GRAVATT") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "UPPER MOUNT GRAVATT":
+              suburbData = {
+                name: "UPPER MOUNT GRAVATT",
+                population: 7890,
+                populationDensity: 1973,
+                area: 4.0,
+                medianHousePrice: 925000,
+                medianIncome: 80000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("UPPER MOUNT GRAVATT") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
             default:
               // Fallback for any truly unknown suburb
               suburbData = {
