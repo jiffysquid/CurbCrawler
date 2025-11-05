@@ -1484,6 +1484,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 dataSource: "abs-census-2021-estimated-2025"
               };
               break;
+            case "LUTWYCHE":
+              suburbData = {
+                name: "LUTWYCHE",
+                population: 3456,
+                populationDensity: 3840,
+                area: 0.9,
+                medianHousePrice: 925000,
+                medianIncome: 82000,
+                medianAge: 36,
+                clearoutStatus: currentSuburbs.includes("LUTWYCHE") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "WAVELL HEIGHTS":
+              suburbData = {
+                name: "WAVELL HEIGHTS",
+                population: 10256,
+                populationDensity: 2564,
+                area: 4.0,
+                medianHousePrice: 850000,
+                medianIncome: 79000,
+                medianAge: 39,
+                clearoutStatus: currentSuburbs.includes("WAVELL HEIGHTS") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "NUNDAH":
+              suburbData = {
+                name: "NUNDAH",
+                population: 11343,
+                populationDensity: 4537,
+                area: 2.5,
+                medianHousePrice: 920000,
+                medianIncome: 81000,
+                medianAge: 35,
+                clearoutStatus: currentSuburbs.includes("NUNDAH") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "GORDON PARK":
+              suburbData = {
+                name: "GORDON PARK",
+                population: 2987,
+                populationDensity: 3319,
+                area: 0.9,
+                medianHousePrice: 1050000,
+                medianIncome: 85000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("GORDON PARK") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "KEDRON":
+              suburbData = {
+                name: "KEDRON",
+                population: 7289,
+                populationDensity: 2763,
+                area: 2.64,
+                medianHousePrice: 975000,
+                medianIncome: 83000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("KEDRON") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "STAFFORD":
+              suburbData = {
+                name: "STAFFORD",
+                population: 6543,
+                populationDensity: 2618,
+                area: 2.5,
+                medianHousePrice: 885000,
+                medianIncome: 80000,
+                medianAge: 37,
+                clearoutStatus: currentSuburbs.includes("STAFFORD") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
+            case "STAFFORD HEIGHTS":
+              suburbData = {
+                name: "STAFFORD HEIGHTS",
+                population: 8432,
+                populationDensity: 2108,
+                area: 4.0,
+                medianHousePrice: 815000,
+                medianIncome: 77000,
+                medianAge: 38,
+                clearoutStatus: currentSuburbs.includes("STAFFORD HEIGHTS") ? "current" : "next",
+                dataSource: "abs-census-2021-corelogic-2025"
+              };
+              break;
             default:
               // Fallback for any truly unknown suburb
               suburbData = {
