@@ -81,6 +81,7 @@ export default function MapboxMap({
   const [webglError, setWebglError] = useState(false);
   const previousLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const gpsInterpolatorRef = useRef<GPSInterpolator | null>(null);
+  const hasInitialCenteredRef = useRef(false);
 
   const lastRotationTime = useRef<number>(0);
   const [currentSuburbInfo, setCurrentSuburbInfo] = useState<SuburbInfo | null>(null);
@@ -1151,8 +1152,9 @@ export default function MapboxMap({
 
   // Center map on current location when it first becomes available
   useEffect(() => {
-    if (mapRef.current && mapReady && currentLocation && !previousLocationRef.current) {
+    if (mapRef.current && mapReady && currentLocation && !hasInitialCenteredRef.current) {
       console.log('🎯 Centering map on initial GPS location:', currentLocation.lat, currentLocation.lng);
+      hasInitialCenteredRef.current = true; // Mark that we've done initial centering
       mapRef.current.easeTo({
         center: [currentLocation.lng, currentLocation.lat],
         zoom: 16.5,
