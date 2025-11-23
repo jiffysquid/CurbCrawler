@@ -83,9 +83,7 @@ export default function SessionTotals({ sessions }: SessionTotalsProps) {
   };
 
   const formatDistance = (km: number) => {
-    if (km < 1) {
-      return `${Math.round(km * 1000)}m`;
-    }
+    // Always show km for consistency with sessions display
     return `${km.toFixed(1)}km`;
   };
 
