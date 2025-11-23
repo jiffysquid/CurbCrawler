@@ -1149,6 +1149,20 @@ export default function MapboxMap({
     }
   }, [mapReady, currentLocation]);
 
+  // Center map on current location when it first becomes available
+  useEffect(() => {
+    if (mapRef.current && mapReady && currentLocation && !previousLocationRef.current) {
+      console.log('🎯 Centering map on initial GPS location:', currentLocation.lat, currentLocation.lng);
+      mapRef.current.easeTo({
+        center: [currentLocation.lng, currentLocation.lat],
+        zoom: 16.5,
+        pitch: 40,
+        duration: 1500,
+        essential: true
+      });
+    }
+  }, [currentLocation, mapReady]);
+
   // Load clearout schedule to get current and next suburbs
   const { data: clearoutSchedule } = useQuery<ClearoutSchedule>({
     queryKey: ['/api/clearout-schedule'],

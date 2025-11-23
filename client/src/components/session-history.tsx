@@ -110,7 +110,7 @@ export default function SessionHistory({ sessions, isLoading, isMobile = false }
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-medium text-gray-900 text-sm">
-                        {formatDate(session.startTime)}
+                        {formatDate(typeof session.startTime === 'string' ? session.startTime : session.startTime.toISOString())}
                       </div>
                       <div className="text-xs text-gray-500 flex items-center space-x-3 mt-1">
                         <span className="flex items-center space-x-1">
