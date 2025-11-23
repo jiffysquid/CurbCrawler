@@ -32,6 +32,7 @@ export default function Home() {
   const [persistentPaths, setPersistentPaths] = useState<any[]>([]);
   const [showSuburbBoundaries, setShowSuburbBoundaries] = useState<boolean>(true);
   const [showToilets, setShowToilets] = useState<boolean>(false);
+  const [pathColorScheme, setPathColorScheme] = useState<'bright' | 'fade'>('bright');
   
   const { toast } = useToast();
   
@@ -45,6 +46,29 @@ export default function Home() {
   const { data: sessions = [] } = useQuery<SessionWithStats[]>({
     queryKey: ['/api/sessions'],
   });
+
+  // Load settings from localStorage on mount (before GPS initialization)
+  useEffect(() => {
+    // Load settings from localStorage
+    const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
+    const savedShowToilets = localStorage.getItem('showToilets');
+    const savedPathColorScheme = localStorage.getItem('pathColorScheme');
+    
+    if (savedShowSuburbs !== null) {
+      setShowSuburbBoundaries(savedShowSuburbs === 'true');
+    }
+    if (savedShowToilets !== null) {
+      setShowToilets(savedShowToilets === 'true');
+    }
+    if (savedPathColorScheme === 'fade' || savedPathColorScheme === 'bright') {
+      setPathColorScheme(savedPathColorScheme);
+    }
+
+    // Load persistent paths from localStorage
+    const paths = loadPersistentPaths();
+    setPersistentPaths(paths);
+    console.log('🗺️ Loaded persistent paths:', paths.length);
+  }, []);
 
   // Initialize GPS tracking on page load
   useEffect(() => {
@@ -67,11 +91,6 @@ export default function Home() {
       console.log("Production mode: Checking location permissions for mobile device");
       startWatching();
       
-      // Load persistent paths from localStorage
-      const paths = loadPersistentPaths();
-      setPersistentPaths(paths);
-      console.log('🗺️ Loaded persistent paths:', paths.length);
-      
       // Listen for storage events to update persistent paths when cleared
       const handleStorageEvent = (e: StorageEvent) => {
         if (e.key === 'persistentPaths') {
@@ -79,6 +98,13 @@ export default function Home() {
           const updatedPaths = loadPersistentPaths();
           setPersistentPaths(updatedPaths);
           console.log('✅ Updated persistent paths:', updatedPaths.length, 'paths');
+        }
+        if (e.key === 'pathColorScheme') {
+          const savedScheme = localStorage.getItem('pathColorScheme');
+          if (savedScheme === 'fade' || savedScheme === 'bright') {
+            setPathColorScheme(savedScheme);
+            console.log('🎨 Path color scheme updated to:', savedScheme);
+          }
         }
       };
       
@@ -90,6 +116,13 @@ export default function Home() {
           setPersistentPaths(updatedPaths);
           console.log('✅ Updated persistent paths:', updatedPaths.length, 'paths');
         }
+        if (customEvent.detail?.key === 'pathColorScheme') {
+          const savedScheme = localStorage.getItem('pathColorScheme');
+          if (savedScheme === 'fade' || savedScheme === 'bright') {
+            setPathColorScheme(savedScheme);
+            console.log('🎨 Path color scheme updated to:', savedScheme);
+          }
+        }
       };
       
       window.addEventListener('storage', handleStorageEvent);
@@ -99,17 +132,6 @@ export default function Home() {
         window.removeEventListener('storage', handleStorageEvent);
         window.removeEventListener('customStorageEvent', handleCustomStorageEvent);
       };
-      
-      // Load settings from localStorage
-      const savedShowSuburbs = localStorage.getItem('showSuburbBoundaries');
-      const savedShowToilets = localStorage.getItem('showToilets');
-      
-      if (savedShowSuburbs !== null) {
-        setShowSuburbBoundaries(savedShowSuburbs === 'true');
-      }
-      if (savedShowToilets !== null) {
-        setShowToilets(savedShowToilets === 'true');
-      }
     } else {
       toast({
         title: "Geolocation Not Supported",
@@ -865,6 +887,7 @@ export default function Home() {
           focusArea="imax-van"
           showSuburbs={showSuburbBoundaries}
           showToilets={showToilets}
+          pathColorScheme={pathColorScheme}
           currentSuburb={{ suburb: currentSuburb }}
         />
         
@@ -878,14 +901,14 @@ export default function Home() {
           recordingStats={recordingStats}
         />
         
-        {/* GPS Debug Panel */}
-        <GPSDebug
+        {/* GPS Debug Panel - Hidden in production */}
+        {/* <GPSDebug
           location={location}
           error={gpsError}
           isWatching={isWatching}
           onTestGPS={startWatching}
           onLocationUpdate={handleKMLLocationUpdate}
-        />
+        /> */}
 
 
         {/* Mobile Menu Button */}

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
-import { calculateBearing, calculateDistance, loadMapPins, addMapPin, deleteMapPin, MapPin as Pin } from '../lib/utils';
+import { calculateBearing, calculateDistance, loadMapPins, addMapPin, deleteMapPin, MapPin as Pin, getPathColor } from '../lib/utils';
 import { PersistentPath } from '../lib/utils';
 import iMaxVanPath from '@assets/imax_1750683369388.png';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ interface MapboxMapProps {
   focusArea?: string;
   showSuburbs?: boolean;
   showToilets?: boolean;
+  pathColorScheme?: 'bright' | 'fade';
   currentSuburb?: { suburb: string } | null;
 }
 
@@ -70,6 +71,7 @@ export default function MapboxMap({
   focusArea = 'imax-van',
   showSuburbs = true,
   showToilets = false,
+  pathColorScheme = 'bright',
   currentSuburb: propCurrentSuburb
 }: MapboxMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -598,15 +600,15 @@ export default function MapboxMap({
         }
       });
 
-      // Add persistent paths layer
+      // Add persistent paths layer with data-driven styling
       map.addLayer({
         id: 'persistent-paths',
         type: 'line',
         source: 'persistent-paths',
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 8,
-          'line-opacity': 0.75
+          'line-width': ['get', 'weight'],
+          'line-opacity': ['get', 'opacity']
         }
       });
 
@@ -1364,18 +1366,23 @@ export default function MapboxMap({
     const arrowSource = map.getSource('persistent-path-arrows') as mapboxgl.GeoJSONSource;
     
     if (pathSource) {
-      const pathFeatures = persistentPaths.map((path, index) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: path.coordinates.map(coord => [coord.lng, coord.lat])
-        },
-        properties: {
-          name: path.name,
-          color: path.color || `hsl(${index * 45}, 70%, 50%)`,
-          pathIndex: index
-        }
-      }));
+      const pathFeatures = persistentPaths.map((path, index) => {
+        const pathStyle = getPathColor(index, pathColorScheme, persistentPaths.length);
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: path.coordinates.map(coord => [coord.lng, coord.lat])
+          },
+          properties: {
+            name: path.name,
+            color: pathStyle.color,
+            opacity: pathStyle.opacity,
+            weight: pathStyle.weight,
+            pathIndex: index
+          }
+        };
+      });
 
       pathSource.setData({ type: 'FeatureCollection', features: pathFeatures });
       console.log('✅ Updated persistent paths:', pathFeatures.length, 'paths');
@@ -1386,7 +1393,7 @@ export default function MapboxMap({
       
       persistentPaths.forEach((path, pathIndex) => {
         if (path.coordinates && path.coordinates.length > 1) {
-          const pathColor = path.color || `hsl(${pathIndex * 45}, 70%, 50%)`;
+          const pathStyle = getPathColor(pathIndex, pathColorScheme, persistentPaths.length);
           const arrows = calculateArrowPositions(path.coordinates);
           
           arrows.forEach((arrow, arrowIndex) => {
@@ -1400,7 +1407,7 @@ export default function MapboxMap({
                 pathIndex: pathIndex,
                 arrowIndex: arrowIndex,
                 rotation: arrow.rotation,
-                color: darkenColor(pathColor)
+                color: darkenColor(pathStyle.color)
               }
             });
           });
@@ -1410,7 +1417,7 @@ export default function MapboxMap({
       arrowSource.setData({ type: 'FeatureCollection', features: arrowFeatures });
       console.log('🏹 Updated path arrows:', arrowFeatures.length, 'arrows for', persistentPaths.length, 'paths');
     }
-  }, [persistentPaths, mapReady]);
+  }, [persistentPaths, pathColorScheme, mapReady]);
 
   // Update current recording path and arrows in real-time
   useEffect(() => {
@@ -1586,7 +1593,7 @@ export default function MapboxMap({
       
       {/* Current Suburb Info Window - Reduced Height */}
       {stableCurrentSuburb && stableCurrentSuburb.suburb && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border z-[1000] min-w-[280px]">
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border z-40 min-w-[280px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-gray-500" />
@@ -1646,7 +1653,7 @@ export default function MapboxMap({
 
       {/* All Clearout Suburbs Demographics Window - positioned below current location */}
       {showDemographics && demographicsArray && demographicsArray.length > 0 && (
-        <div className="absolute top-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md max-h-96 overflow-y-auto">
+        <div className="absolute top-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-40 max-w-md max-h-96 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Building className="h-5 w-5" />
@@ -1734,7 +1741,7 @@ export default function MapboxMap({
 
       {/* No Clearouts Message - when info button is clicked but no data */}
       {showDemographics && (!demographicsArray || demographicsArray.length === 0) && (
-        <div className="absolute top-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] max-w-md">
+        <div className="absolute top-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-40 max-w-md">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Building className="h-5 w-5" />
@@ -1768,7 +1775,7 @@ export default function MapboxMap({
       )}
 
       {/* Map Controls */}
-      <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2 z-[1000]">
+      <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-2 z-40">
         <Button
           onClick={handleDropPin}
           size="sm"
@@ -1818,7 +1825,7 @@ export default function MapboxMap({
 
       {/* Pin Info Popup */}
       {selectedPin && (
-        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-[1000] min-w-[250px]">
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border p-4 z-40 min-w-[250px]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center">
